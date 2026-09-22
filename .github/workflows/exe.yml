@@ -1,0 +1,45 @@
+# Compila LolcitoScout.exe en una PC Windows de GitHub, apuntado a las estadísticas de este repo,
+# y lo publica en la sección "Releases" para que tus amigos lo descarguen.
+name: Compilar LolcitoScout.exe
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  compilar:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyinstaller requests psutil
+
+      - name: Apuntar la app a las estadísticas de este repositorio
+        shell: bash
+        run: |
+          echo '{"repo": "${{ github.repository }}"}' > lolscout/servidor.json
+
+      - name: Compilar
+        run: >
+          pyinstaller --noconfirm --clean --onefile --noconsole --name LolcitoScout --icon lolscout.ico
+          --add-data "lolscout/live/page.html;lolscout/live"
+          --add-data "lolscout/live/static;lolscout/live/static"
+          --add-data "lolscout/servidor.json;lolscout"
+          --collect-submodules lolscout app.py
+
+      - name: Publicar en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ultima
+          name: Lolcito Scout (última versión)
+          body: Descargá LolcitoScout.exe y abrilo con doble clic. No hace falta instalar nada ni tener API key.
+          files: dist/LolcitoScout.exe
+          make_latest: true

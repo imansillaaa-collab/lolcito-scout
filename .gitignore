@@ -1,0 +1,10 @@
+.env
+data/
+reportes/
+publicado/
+build/
+dist/
+*.spec
+__pycache__/
+lolscout/servidor.json
+lolscout/live/static/fonts/privadas/

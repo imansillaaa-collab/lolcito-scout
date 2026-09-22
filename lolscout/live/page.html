@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lolcito Scout</title>
+<link rel="icon" href="/static/icon.png">
+<style>
+/* Tipografía:
+   - League (instalada en tu PC): logo, "VS" y números grandes (solo textos sin tildes, porque League no las tiene).
+   - Beaufort for LOL (instalada en tu PC): títulos, pestañas y botones. Tiene tildes y ñ.
+   - Texto: Spiegel completa si algún día la instalás; si no, Hanken Grotesk (libre, muy parecida, incluida).
+   Si en otra PC no están League/Beaufort, se usa Cinzel (incluida). El logo es una imagen hecha con League,
+   así se ve igual en todas las PC. */
+@font-face{font-family:"LS Display";src:local("League"),local("LeagueRegular"),url(/static/fonts/privadas/League.otf) format("opentype");unicode-range:U+0020-007E}
+@font-face{font-family:"LS Numbers";font-weight:400 900;src:url(/static/fonts/Cinzel.ttf) format("truetype")}
+@font-face{font-family:"LS Title";font-weight:400;src:local("Beaufort for LOL"),local("BeaufortforLOL-Regular"),url(/static/fonts/privadas/BeaufortforLOL-Regular.ttf) format("truetype"),url(/static/fonts/Cinzel.ttf) format("truetype")}
+@font-face{font-family:"LS Title";font-weight:500;src:local("Beaufort for LOL Medium"),local("BeaufortforLOL-Medium"),url(/static/fonts/privadas/BeaufortforLOL-Regular.ttf) format("truetype"),url(/static/fonts/Cinzel.ttf) format("truetype")}
+@font-face{font-family:"LS Title";font-weight:600 700;src:local("Beaufort for LOL Bold"),local("BeaufortforLOL-Bold"),url(/static/fonts/privadas/BeaufortforLOL-Bold.ttf) format("truetype"),url(/static/fonts/Cinzel.ttf) format("truetype")}
+@font-face{font-family:"LS Title";font-weight:800 900;src:local("Beaufort for LOL Heavy"),local("BeaufortforLOL-Heavy"),url(/static/fonts/privadas/BeaufortforLOL-Bold.ttf) format("truetype"),url(/static/fonts/Cinzel.ttf) format("truetype")}
+@font-face{font-family:"LS Body";font-weight:400;src:local("Spiegel Regular"),local("Spiegel-Regular"),local("SpiegelSans-Regular"),url(/static/fonts/HankenGrotesk.ttf) format("truetype")}
+@font-face{font-family:"LS Body";font-weight:500 600;src:local("Spiegel SemiBold"),local("Spiegel-SemiBold"),local("SpiegelSans-SemiBold"),url(/static/fonts/HankenGrotesk.ttf) format("truetype")}
+@font-face{font-family:"LS Body";font-weight:700 900;src:local("Spiegel Bold"),local("Spiegel-Bold"),local("SpiegelSans-Bold"),url(/static/fonts/HankenGrotesk.ttf) format("truetype")}
+:root{
+  --bg:#010a13;--bg2:#091428;--panel:#0b1520;--panel2:#111c28;--line:#1e2d3d;
+  --gold:#c8aa6e;--gold-hi:#f0e6d2;--gold-lo:#785a28;--text:#cdbe91;--body:#a09b8c;--muted:#6b7480;
+  --hex:#0ac8b9;--ally:#1e9cd8;--enemy:#e0484b;--good:#0acbe6;--ok:#3fb27f;--bad:#e0484b;
+  --S:#e8b84a;--A:#6fc27a;--B:#5a9bd8;--C:#9a8fc9;--D:#6b7480;
+  --display:"LS Display","LS Numbers",Georgia,serif;--title:"LS Title",Georgia,serif;--sans:"LS Body","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -200px,#0c2233 0%,var(--bg) 60%) fixed,var(--bg);color:var(--body);font:14px/1.45 var(--sans)}
+a{color:var(--hex)}
+/* Barra superior */
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:22px;padding:0 20px;height:58px;background:linear-gradient(#0a1520,#010a13);border-bottom:1px solid var(--gold-lo)}
+.logo{height:24px;width:auto;display:block}
+.acct{display:flex;align-items:center;gap:8px;border:1px solid var(--gold-lo);background:var(--panel);padding:2px 10px 2px 2px;white-space:nowrap}
+.acct img{width:30px;height:30px;border:1px solid var(--gold)}
+.acct b{color:var(--gold-hi);font-weight:600}
+.acct span{font-size:12px;color:var(--body)}
+.me-card{display:flex;align-items:center;gap:16px;justify-content:center;margin:0 auto 26px;max-width:720px;text-align:left}
+.me-card .ic{width:72px;height:72px;border:2px solid var(--gold)}
+.pool{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.pool .p{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:rgba(1,10,19,.6);padding:5px 10px 5px 5px;text-align:left}
+details.adv summary{cursor:pointer;font:600 12px var(--title);letter-spacing:1.3px;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+select.sel{background:#010a13;border:1px solid var(--gold-lo);color:var(--gold-hi);padding:8px;font:14px var(--sans)}
+.err{color:#f2b0b1;font-size:12px;margin-top:6px}
+nav{display:flex;gap:4px;height:100%}
+nav button{white-space:nowrap;background:none;border:0;border-bottom:2px solid transparent;color:var(--body);font:600 13px var(--title);letter-spacing:1.5px;text-transform:uppercase;padding:0 14px;cursor:pointer}
+nav button:hover{color:var(--gold-hi)}
+nav button.on{color:var(--gold-hi);border-bottom-color:var(--gold)}
+.status{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pill{border:1px solid var(--line);background:var(--panel);padding:3px 10px;font-size:12px;color:var(--body);white-space:nowrap}
+.pill b{color:var(--gold-hi);font-weight:600}
+.pill.live{border-color:var(--hex);color:var(--hex)}
+.pill.sim{border-color:var(--gold);color:var(--gold)}
+main{padding:14px 18px 30px;max-width:1920px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+/* Paneles y títulos */
+.panel{background:linear-gradient(180deg,rgba(17,28,40,.92),rgba(9,20,32,.92));border:1px solid var(--gold-lo);padding:14px;margin-bottom:14px;position:relative}
+.panel::before{content:"";position:absolute;inset:3px;border:1px solid rgba(200,170,110,.08);pointer-events:none}
+h2{font-family:var(--title);font-weight:700;color:var(--gold);font-size:15px;letter-spacing:1.6px;text-transform:uppercase;margin:0 0 12px}
+h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
+.btn{font:700 12px var(--title);letter-spacing:1.4px;text-transform:uppercase;color:var(--gold-hi);background:linear-gradient(#1e2328,#12161a);border:2px solid var(--gold);padding:9px 18px;cursor:pointer}
+.btn:hover{border-color:var(--gold-hi);box-shadow:0 0 12px rgba(200,170,110,.35)}
+.btn.sec{border-color:var(--gold-lo);color:var(--text)}
+.btn:disabled{opacity:.5;cursor:default;box-shadow:none}
+/* Campeones e ítems */
+.por{width:52px;height:52px;border:1px solid var(--gold-lo);flex:none;background:#000;object-fit:cover}
+.por.lg{width:64px;height:64px;border-width:2px;border-color:var(--gold)}
+.por.sm{width:38px;height:38px}
+.it{width:40px;height:40px;border:1px solid var(--gold-lo);flex:none}
+.xs{width:22px;height:22px;border:1px solid #2a3542;vertical-align:middle;flex:none}
+.empty-slot{width:52px;height:52px;border:1px dashed var(--line);flex:none;background:rgba(255,255,255,.02)}
+.tier{display:inline-block;min-width:20px;text-align:center;padding:0 5px;font:700 12px var(--sans);color:#111;margin-left:6px;vertical-align:1px}
+.tS{background:var(--S)}.tA{background:var(--A)}.tB{background:var(--B)}.tC{background:var(--C)}.tD{background:var(--D)}.t\?{background:var(--line);color:var(--text)}
+.name{color:var(--gold-hi);font-weight:600}
+.small{font-size:12px;color:var(--muted)}
+.why{font-size:12px;color:var(--body);margin-top:3px}
+.why div::before{content:"◆ ";color:var(--gold-lo);font-size:9px;vertical-align:1px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* Tres columnas: mi equipo | centro | rival */
+.board{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"ally center enemy";gap:16px;align-items:start}
+.col-ally{grid-area:ally}.col-center{grid-area:center}.col-enemy{grid-area:enemy}
+@media (max-width:1050px){.board{grid-template-columns:1fr;grid-template-areas:"center" "ally" "enemy"}}
+.team{padding:12px}
+.team.ally{border-left:3px solid var(--ally)}
+.team.enemy{border-right:3px solid var(--enemy)}
+.slot{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid rgba(30,45,61,.7)}
+.slot:last-child{border-bottom:0}
+.enemy .slot{flex-direction:row-reverse;text-align:right}
+.slot.me{background:linear-gradient(90deg,rgba(200,170,110,.14),transparent);outline:1px solid var(--gold-lo)}
+.slot .who{min-width:0;flex:1}
+.slot .role{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.slot.hover .por{opacity:.55}
+.slot .items{display:flex;gap:2px;margin-top:4px;flex-wrap:wrap}
+.enemy .slot .items{justify-content:flex-end}
+.slot .stat{font-size:12px;color:var(--body);font-variant-numeric:tabular-nums;white-space:nowrap}
+.slot .gold{color:var(--gold);font-weight:600}
+.slot.threat{background:linear-gradient(270deg,rgba(224,72,75,.16),transparent)}
+.slot.dead .por{filter:grayscale(1) brightness(.6)}
+.badge{font:600 10px var(--sans);letter-spacing:.5px;text-transform:uppercase;color:var(--enemy);border:1px solid var(--enemy);padding:0 4px;margin:0 4px}
+/* Centro */
+.vs{display:flex;align-items:center;justify-content:center;gap:18px;padding:6px 0}
+.vs .x{font:700 30px var(--display);color:var(--gold)}
+.vs .side{display:flex;align-items:center;gap:10px}
+.vs .side.r{flex-direction:row-reverse;text-align:right}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{display:flex;gap:12px;background:rgba(1,10,19,.55);border:1px solid var(--line);padding:10px}
+.card.best{border-color:var(--gold);box-shadow:inset 0 0 18px rgba(200,170,110,.12)}
+.card .t{font-weight:600;color:var(--gold-hi)}
+.tag{font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.6px;border:1px solid var(--hex);color:var(--hex);padding:0 4px;margin-left:6px;vertical-align:1px}
+.cost{color:var(--gold);font-weight:700}
+.ok{color:var(--ok);font-size:12px;font-weight:600}.no{color:var(--muted);font-size:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:rgba(1,10,19,.6);padding:4px 10px;font-size:12px;color:var(--text)}
+.chip.warn{border-color:var(--enemy);color:#f2b0b1}
+.core{display:flex;gap:5px}
+.core .c{position:relative}
+.core .c.own img{opacity:.35}
+.core .c.own::after{content:"✓";position:absolute;right:3px;bottom:0;color:var(--ok);font-weight:800}
+/* Marcador */
+.score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding:10px 16px}
+.score .l{color:var(--ally)}.score .r{color:var(--enemy);text-align:right}
+.score .big{font:700 30px var(--display)}
+.score .clock{font:700 28px var(--display);color:var(--gold-hi);text-align:center}
+.bar{display:flex;height:6px;margin-top:6px;background:#000}
+.bar .a{background:var(--ally)}.bar .e{background:var(--enemy)}
+/* Inactivo */
+.idle{text-align:center;padding:70px 20px}
+.idle .emblem{width:84px;height:84px;margin:0 auto 18px;border:2px solid var(--gold);transform:rotate(45deg);display:grid;place-items:center;box-shadow:0 0 30px rgba(10,200,185,.18)}
+.idle .emblem span{transform:rotate(-45deg);font:700 30px var(--display);color:var(--gold)}
+.idle h1{font:700 28px var(--title);color:var(--gold-hi);letter-spacing:1px;margin:0 0 6px}
+.idle p{margin:0 0 22px}
+.banner{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--gold);background:rgba(200,170,110,.08);padding:8px 12px;margin-bottom:14px;color:var(--text)}
+/* Formularios */
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+label.f{display:block;margin-bottom:14px}
+label.f>span{display:block;font:600 11px var(--title);letter-spacing:1.3px;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+input[type=text],input[type=password]{width:100%;background:#010a13;border:1px solid var(--gold-lo);color:var(--gold-hi);padding:9px 10px;font:14px var(--sans)}
+input:focus{outline:1px solid var(--gold)}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.checks label{border:1px solid var(--line);padding:5px 10px;cursor:pointer;font-size:13px;user-select:none}
+.checks input{accent-color:var(--gold);margin:0 5px 0 0;vertical-align:-1px}
+.log{background:#010a13;border:1px solid var(--line);padding:10px;font:12px/1.5 Consolas,monospace;color:var(--body);min-height:120px;max-height:260px;overflow:auto;white-space:pre-wrap}
+iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);background:var(--bg)}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+/* Partida: informe del rival, build y novedades */
+.dmg{font:700 10px var(--sans);padding:0 4px;margin-left:4px;border:1px solid;vertical-align:1px}
+.dAP{color:#b48cff;border-color:#6c4bb3}.dAD{color:#ff9b5c;border-color:#a45a2c}.dMixto{color:#d8c88a;border-color:#7a6c3a}
+.flags{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}
+.enemy .slot .flags{justify-content:flex-end}
+.flag{font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.4px;padding:0 4px;border:1px solid var(--line);color:var(--body)}
+.f-cura{color:#7fe3a0;border-color:#2f6b45}.f-peligroso{color:#ff8a8a;border-color:#7a2d2d}.f-tanque{color:#9fc3ff;border-color:#34507a}
+.f-control{color:#e6c46a;border-color:#6d5a26}.f-escudos{color:#8ee3e6;border-color:#2b6466}.f-crticos{color:#ffb070;border-color:#7a4a22}
+.lanecmp{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;font-size:12px}
+.lanecmp span{border:1px solid var(--line);padding:1px 8px}
+.lanecmp .up{color:var(--ok);border-color:#2f6b45}.lanecmp .down{color:#ff8a8a;border-color:#7a2d2d}
+.dmgbar{display:flex;height:22px;font:700 11px var(--sans);color:#fff;margin-bottom:8px;background:#000}
+.dmgbar div{display:flex;align-items:center;padding:0 8px;white-space:nowrap;overflow:hidden}
+.dmgbar .ap{background:linear-gradient(90deg,#4b2f8f,#6c4bb3)}.dmgbar .ad{background:linear-gradient(90deg,#a45a2c,#7a3f1c);justify-content:flex-end}
+.mydef{font-size:12px;color:var(--body);margin-bottom:10px}.mydef b{color:var(--gold-hi)}
+.alerts{display:grid;gap:6px}
+.al{border-left:3px solid var(--line);background:rgba(1,10,19,.55);padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.al b{color:var(--gold-hi);font-weight:600}.al span{font-size:12px;color:var(--body)}
+.al.lv-alta{border-left-color:var(--enemy)}.al.lv-alta b{color:#ffb3b3}
+.al.lv-media{border-left-color:var(--gold)}
+.al.lv-info{border-left-color:var(--line)}
+.shop{margin-top:10px;font-size:13px;color:var(--body);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.shop b{color:var(--gold-hi)}.shop.ok2 b{color:var(--ok)}
+.plan{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ps{position:relative}.ps span{position:absolute;left:2px;top:0;font:700 10px var(--sans);color:var(--gold-hi);text-shadow:0 0 3px #000}
+.ps.own img{opacity:.4}.ps.own::after{content:"✓";position:absolute;right:3px;bottom:0;color:var(--ok);font-weight:800}
+.ps.chg img{border-color:var(--hex);box-shadow:0 0 8px rgba(10,200,185,.5)}
+.ps.boots{margin-left:10px}
+.changes{margin-top:12px;display:grid;gap:8px}
+.chrow{font-size:13px}.chrow b{color:var(--hex)}.chrow s{color:var(--muted)}
+.events{display:grid;gap:4px;max-height:220px;overflow:auto}
+.ev{font-size:13px;color:var(--text);padding:3px 0;border-bottom:1px solid rgba(30,45,61,.6)}
+.ev .t{font:700 11px var(--sans);color:var(--gold);margin-right:8px}
+.ev-alert{color:#ffb3b3}.ev-fed{color:#ffcf9e}
+/* Objetivos y pelea */
+.duo2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:1300px){.duo2{grid-template-columns:1fr}}
+.duo2 .panel{margin-bottom:14px}
+.objs{display:grid;gap:6px}
+.obj{display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(1,10,19,.55);border:1px solid var(--line)}
+.obj .ol{flex:1;min-width:0}.obj .ol b{color:var(--gold-hi);font-weight:600;display:block}.obj .ol span{font-size:12px;color:var(--body)}
+.obj .ot{font:700 20px var(--display);color:var(--gold-hi);text-align:right;white-space:nowrap}
+.obj .ot small{display:block;font:11px var(--sans);color:var(--muted)}
+.obj.st-soon{border-color:var(--hex);box-shadow:inset 0 0 12px rgba(10,200,185,.18)}.obj.st-soon .ot{color:var(--hex)}
+.obj.st-up{border-color:var(--gold)}.obj.st-up .ot{color:#ffcf6b}
+.obj.st-taken,.obj.st-gone{opacity:.55}.obj.st-taken .ot,.obj.st-gone .ot{font:12px var(--sans);color:var(--body)}
+.oi{width:26px;height:26px;flex:none;border:1px solid var(--gold-lo);transform:rotate(45deg);background:#0b1520}
+.oi-drake{background:linear-gradient(135deg,#ff7b39,#7a2b10)}.oi-elder{background:linear-gradient(135deg,#d6b3ff,#4b2f8f)}
+.oi-grubs{background:linear-gradient(135deg,#b06cff,#2a1552)}.oi-herald{background:linear-gradient(135deg,#8a6cff,#1f1447)}
+.oi-baron{background:linear-gradient(135deg,#b04cff,#2a0f4a);border-color:var(--gold)}
+.buff{margin-top:8px;padding:5px 8px;font-size:13px;border-left:3px solid}
+.buff.mine{border-color:var(--ally);color:#9fd4ff}.buff.theirs{border-color:var(--enemy);color:#ffb3b3}
+.drakes{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
+.dk{display:inline-block;font:600 11px var(--sans);border:1px solid;padding:0 6px;margin:3px 3px 0 0}
+.fight .flabel{font:700 18px var(--title);letter-spacing:.5px;margin-bottom:8px}
+.fight.good .flabel{color:var(--ok)}.fight.bad .flabel{color:#ff8a8a}.fight.even .flabel{color:var(--gold-hi)}
+.fmeter{position:relative;display:flex;height:10px;background:#000}
+.fz{flex:1}.fz.bad{background:linear-gradient(90deg,#7a2020,#3a1818)}.fz.even{background:#2a3342}.fz.good{background:linear-gradient(90deg,#183a26,#1f7a44)}
+.fmark{position:absolute;top:-4px;width:4px;height:18px;background:var(--gold-hi);box-shadow:0 0 6px var(--gold);transform:translateX(-2px)}
+.fscale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
+.factors{margin-top:8px;display:grid;gap:3px}
+.fx{font-size:13px;color:var(--body)}.fx.g{color:#8fe3ad}.fx.b{color:#ffb3b3}
+.fobj{margin-top:8px;padding:6px 8px;border:1px solid var(--gold-lo);color:var(--gold-hi);font-size:13px}
+.quest{margin-top:12px;padding:8px 10px;border:1px solid var(--gold-lo);background:rgba(200,170,110,.06);font-size:13px}
+.quest b{color:var(--gold);font:700 12px var(--title);letter-spacing:1px;text-transform:uppercase}
+.deadb{font:600 10px var(--sans);text-transform:uppercase;color:#ddd;background:#3a1818;border:1px solid #7a2d2d;padding:0 4px;margin-left:4px}
+.ev-plan{color:var(--hex)}
+.objhead{display:flex;align-items:center;gap:12px;padding:8px 10px;border:1px solid var(--gold);background:rgba(200,170,110,.07);margin-bottom:8px}
+.objhead b{display:block;color:var(--gold-hi);font:700 17px var(--title)}.objhead span{font-size:13px;color:#ffcf6b}
+.objhead.st-soon{border-color:var(--hex)}.objhead.st-soon span{color:var(--hex)}
+.stake{font-size:13px;color:var(--text);margin:4px 0}
+.reading{font:700 15px var(--title);margin:8px 0}.reading.good{color:var(--ok)}.reading.bad{color:#ff8a8a}.reading.even{color:var(--gold-hi)}
+.alts{margin-top:10px;font-size:13px;color:var(--body);display:grid;gap:3px}
+.macro{display:grid;gap:8px;margin-top:12px}
+.mo{border:1px solid var(--line);background:rgba(1,10,19,.55);padding:8px 10px}
+.mo.best{border-color:var(--gold)}.mo b{color:var(--gold-hi)}.mo .tag{margin:0 6px 0 0}
+.f-invisible{color:#d6b3ff;border-color:#4b2f8f}.f-daoverdadero{color:#fff;border-color:#888}.f-devida{color:#ffb070;border-color:#7a4a22}
+/* Imágenes de objetivos: rombo con el retrato y fondo del recuadro */
+.oi{position:relative;overflow:hidden;background:#000!important}
+.oi img{position:absolute;left:50%;top:50%;width:142%;height:142%;transform:translate(-50%,-50%) rotate(-45deg);object-fit:cover}
+.oi.big{width:44px;height:44px;margin:6px;border:2px solid var(--gold)}
+.obj .oi{width:30px;height:30px;margin:4px}
+.obj.st-up .oi,.obj.st-soon .oi{border-color:var(--gold-hi);box-shadow:0 0 10px rgba(240,230,210,.35)}
+.objhead{position:relative;overflow:hidden;min-height:78px}
+.objhead::before{content:"";position:absolute;inset:0;background:var(--bg) right center/auto 150% no-repeat;opacity:.4;
+  mask-image:linear-gradient(90deg,transparent 30%,#000 75%);-webkit-mask-image:linear-gradient(90deg,transparent 30%,#000 75%)}
+.objhead>*{position:relative}
+.dk img{width:16px;height:16px;vertical-align:-4px;margin-right:4px;border-radius:2px}
+/* Vista de partida horizontal: 4 columnas en pantallas de PC */
+.gtop{display:grid;grid-template-columns:auto 1fr auto auto;grid-template-areas:"kl lane clock kr" "bar bar bar bar";align-items:center;gap:6px 22px;padding:10px 16px}
+.gtop .gk.l{grid-area:kl;color:var(--ally)}.gtop .gk.r{grid-area:kr;color:var(--enemy);text-align:right}
+.gtop .gk .big{font:700 30px var(--display);line-height:1}.gtop .gk .small{color:inherit;opacity:.85}
+.gtop .glane{grid-area:lane;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.gtop .clock{grid-area:clock;font:700 30px var(--display);color:var(--gold-hi)}
+.gtop .gbar{grid-area:bar}.gtop .gbar .bar{margin-top:2px}
+.gvs{display:flex;align-items:center;gap:10px}
+.gvn b{display:block;color:var(--gold-hi)}.gvn span{font-size:12px;color:var(--body)}.gvn.r{text-align:right}
+.gvs .x{font:700 24px var(--display);color:var(--gold);margin:0 4px}
+.por.md{width:46px;height:46px;border:2px solid var(--gold)}
+.gtop .lanecmp{margin-top:0}
+.gboard{display:grid;grid-template-columns:292px minmax(0,1fr) minmax(0,1.2fr) 292px;grid-template-areas:"ally a b enemy";gap:12px;align-items:start}
+.gboard .col-ally{grid-area:ally}.gboard .col-enemy{grid-area:enemy}.gboard .ga{grid-area:a}.gboard .gb{grid-area:b}
+.gcol .panel{margin-bottom:12px}
+.gboard .panel.team{padding:10px}
+.gboard .slot{padding:5px 2px;gap:8px}
+.gboard .alerts{grid-template-columns:1fr 1fr}
+.gboard .events{max-height:190px}
+.quest span{color:var(--text)}
+@media (max-width:1400px){.gboard{grid-template-columns:262px minmax(0,1fr) 262px;grid-template-areas:"ally a enemy" "ally b enemy"}
+  .gboard .slot .stat{white-space:normal}}
+@media (max-width:1050px){.gboard{grid-template-columns:1fr;grid-template-areas:"a" "b" "ally" "enemy"}.gtop{grid-template-columns:1fr auto 1fr;grid-template-areas:"kl clock kr" "lane lane lane" "bar bar bar"}.gboard .alerts{grid-template-columns:1fr}}
+.appicon{height:38px;width:38px;margin-right:-12px}
+.banner.slim{padding:4px 10px;margin-bottom:10px;font-size:13px}.banner.slim .btn{padding:4px 12px;font-size:11px}
+.gside .panel{margin-bottom:12px}
+.gboard .slot .stat{white-space:nowrap;font-size:11.5px}
+.badge{white-space:nowrap}
+.gboard .events{max-height:340px}
+.gside .ev{font-size:12px}
+.gboard .obj{padding:4px 8px}
+.gboard .fight .flabel{font-size:16px;margin-bottom:6px}
+.panel.quest{margin-top:0}.panel.quest h2{margin-bottom:6px}
+.gboard h2{margin-bottom:10px}
+.tag{white-space:nowrap}
+@media (max-width:1420px){.pill.meta{display:none}.top{gap:14px}}
+/* Inicio: cuentas e historial */
+.hbar{display:flex;align-items:center;gap:14px;padding:12px 16px}
+.hmsg{flex:1;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.hmsg b{font:600 18px var(--title);color:var(--gold-hi)}
+.atabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;border-bottom:1px solid var(--gold-lo)}
+.atab{display:flex;align-items:center;gap:8px;background:rgba(1,10,19,.6);border:1px solid var(--line);border-bottom:0;padding:6px 14px 6px 6px;color:var(--body);cursor:pointer;font:14px var(--sans);position:relative;top:1px}
+.atab img{width:30px;height:30px;border:1px solid var(--gold-lo)}
+.atab span{display:flex;flex-direction:column;text-align:left;line-height:1.15}.atab b{color:var(--text);font-weight:600}.atab small{font-size:11px;color:var(--muted)}
+.atab.on{background:linear-gradient(180deg,#14283a,#091420);border-color:var(--gold);border-bottom:1px solid #091420}.atab.on b{color:var(--gold-hi)}
+.atab:hover b{color:var(--gold-hi)}
+.atab i.live{font-style:normal;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--hex);border:1px solid var(--hex);padding:0 5px;margin-left:4px}
+.homegrid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;align-items:start}
+.hacc{display:flex;gap:14px;align-items:center}.hacc .ic{width:64px;height:64px;border:2px solid var(--gold)}
+.hacc .name{font:700 20px var(--title);color:var(--gold-hi)}
+.hsum{display:flex;justify-content:space-between;align-items:center}
+.hsum b{font:700 26px var(--display);color:var(--gold-hi);display:block}.hsum span{font-size:12px}
+.hsg{display:flex;flex-direction:column;align-items:center;gap:2px}
+.wrbar{height:6px;background:var(--enemy);margin-top:10px}.wrbar i{display:block;height:100%;background:var(--ally)}
+.hch{display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}
+.hch b{color:var(--gold-hi);font-weight:600;display:block}.hch span{font-size:12px}
+.hrow{display:grid;grid-template-columns:165px 205px 175px 130px 270px minmax(180px,1fr) 52px 16px;gap:22px;align-items:center;
+  padding:10px 16px;margin-bottom:6px;border:1px solid var(--line);border-left:4px solid var(--muted);background:rgba(1,10,19,.55);cursor:pointer;transition:background .12s}
+.hrow:hover{background:rgba(30,50,70,.55);border-color:var(--gold-lo)}
+/* Banner del campeón de fondo, con fade hacia la derecha */
+.hrow.hsp{position:relative;overflow:hidden;isolation:isolate}
+/* Fade del arte. Cada imagen además se desvanece sola hacia su borde derecho: las de campeones grandes
+   (más chicas) terminan antes, con un fade propio y suave, sin copias ni rellenos. */
+.hrow .hbw{position:absolute;left:0;top:0;bottom:0;width:72%;z-index:-1;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.9) 40%,rgba(0,0,0,.45) 70%,transparent 100%);mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.9) 40%,rgba(0,0,0,.45) 70%,transparent 100%)}
+.hrow .hbg{position:absolute;height:auto;max-width:none;transition:scale .3s;
+  -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 35%,rgba(0,0,0,.5) 70%,transparent 100%);mask-image:linear-gradient(90deg,#000 0%,#000 35%,rgba(0,0,0,.5) 70%,transparent 100%)}
+.hrow.hsp::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(1,10,19,.55),rgba(1,10,19,.25) 30%,rgba(1,10,19,0) 60%)}
+.hrow.hsp.win::after{background:linear-gradient(90deg,rgba(10,40,70,.55),rgba(1,10,19,.2) 35%,transparent 60%)}
+.hrow.hsp.loss::after{background:linear-gradient(90deg,rgba(60,10,14,.55),rgba(1,10,19,.2) 35%,transparent 60%)}
+.hrow.hsp:hover .hbg{scale:1.03}
+.hrow.hsp .hres b,.hrow.hsp .hres span,.hrow.hsp .hchamp b,.hrow.hsp .hchamp span,.hrow.hsp .hkda b,.hrow.hsp .hkda span{text-shadow:0 1px 3px #000,0 0 8px rgba(0,0,0,.8)}
+.hrow.win{border-left-color:var(--ally);background:linear-gradient(90deg,rgba(30,156,216,.12),rgba(1,10,19,.55) 40%)}
+.hrow.loss{border-left-color:var(--enemy);background:linear-gradient(90deg,rgba(224,72,75,.12),rgba(1,10,19,.55) 40%)}
+.hrow.remake{opacity:.6}
+.hrow span{display:block;font-size:12px;color:var(--body)}
+.hres b{font:600 16px var(--title)}.hrow.win .hres b{color:#7fc8ef}.hrow.loss .hres b{color:#ff8a8c}
+.hchamp{display:flex;gap:10px;align-items:center}.hchamp b{color:var(--gold-hi);font-weight:600}
+.hcsn{display:flex;align-items:center;gap:6px}.mn{height:14px;width:auto;opacity:.9}
+.hkda b{font:700 20px var(--display);color:var(--gold-hi);white-space:nowrap}.hrow .hkda .dd{display:inline;font-size:inherit;color:#ff8a8c}.hcs b{color:var(--gold-hi);font-weight:600}
+.hitems{display:flex;gap:4px;flex-wrap:wrap}.hitems img{width:33px;height:33px}
+.hfb{font-size:13px;line-height:1.6}
+.hgo{font-size:24px;color:var(--gold-lo)}.hrow:hover .hgo{color:var(--gold)}
+.gsm{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:relative;color:var(--gold)}
+.gsm::before{content:"";position:absolute;inset:6px;border:2px solid currentColor;transform:rotate(45deg);background:#010a13;box-shadow:0 0 10px currentColor,inset 0 0 6px rgba(0,0,0,.6)}
+.gsm span{position:relative;font:700 15px var(--display);color:inherit;text-shadow:0 0 8px currentColor,0 0 16px currentColor}
+.gsm.g-Sp,.gsm.g-S{color:var(--S)}.gsm.g-A{color:var(--A)}.gsm.g-B{color:var(--B)}.gsm.g-C{color:var(--C)}.gsm.g-D,.gsm.none{color:var(--D)}
+@media (max-width:1500px){.hrow{grid-template-columns:130px 175px 150px 110px minmax(150px,1fr) 52px 16px;gap:16px}.hfb{display:none}.hitems{flex-wrap:nowrap;gap:3px}.hitems img{width:28px;height:28px}}
+@media (max-width:1100px){.homegrid{grid-template-columns:1fr}.hrow{grid-template-columns:100px 1fr 120px 44px}.hcs,.hitems,.hgo{display:none}}
+/* Paneles movibles */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ph h2{flex:1;min-width:0}
+.pctl{display:flex;gap:2px;opacity:.28;transition:opacity .15s;flex-shrink:0;margin-top:-2px}
+.panel:hover .pctl{opacity:1}
+.pb{background:#010a13;border:1px solid var(--gold-lo);color:var(--gold);width:20px;height:20px;padding:0;font-size:9px;line-height:18px;cursor:pointer}
+.pb:hover:not(:disabled){border-color:var(--gold);color:var(--gold-hi)}
+.pb:disabled{opacity:.25;cursor:default}
+.panel.min{padding-bottom:4px}.panel.min h2{margin-bottom:6px}
+/* Resumen de fin de partida */
+.pghead{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:28px;padding:18px 24px;overflow:hidden}
+.pghead::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(200,170,110,.14),transparent 45%)}
+.pghead.win::after{background:linear-gradient(90deg,rgba(10,200,185,.18),transparent 50%)}
+.pghead.loss::after{background:linear-gradient(90deg,rgba(224,72,75,.2),transparent 50%)}
+.pgres .rt{font:700 54px var(--display);letter-spacing:3px;text-transform:uppercase;color:var(--gold-hi);line-height:1}
+.pghead.win .rt{color:#7fe8dd;text-shadow:0 0 22px rgba(10,200,185,.45)}
+.pghead.loss .rt{color:#ff8a8c;text-shadow:0 0 22px rgba(224,72,75,.45)}
+.pgme{display:flex;gap:14px;align-items:center}
+.pgme .name{font:700 20px var(--title);color:var(--gold-hi)}
+.kdabig{font:700 28px var(--display);color:var(--gold-hi);line-height:1.15}
+.dd{color:#ff8a8c}
+.kdacap{font-size:12px;color:var(--body);margin:1px 0 2px}.kdacap b{color:var(--gold-hi);font-weight:600}
+.pgme .small .mn{height:11px;vertical-align:-1px}
+.grade{position:relative;width:150px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gold)}
+.grade .gbg{position:absolute;inset:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:#010a13 center 18%/cover no-repeat}
+.grade::before{content:"";position:absolute;inset:22px;border:2px solid currentColor;transform:rotate(45deg);box-shadow:0 0 16px currentColor,0 0 38px -6px currentColor,inset 0 0 14px rgba(0,0,0,.6);z-index:1}
+.grade span{text-shadow:0 0 12px currentColor,0 0 26px currentColor,0 2px 6px #000 !important}
+.grade>span,.grade>small{position:relative;z-index:2;text-shadow:0 2px 8px #000,0 0 3px #000}
+.grade span{font:700 44px var(--display);line-height:1}
+.grade small{font-size:12px;color:var(--gold-hi);margin-top:2px}
+.grade.g-Sp,.grade.g-S{color:var(--S)}.grade.g-A{color:var(--A)}.grade.g-B{color:var(--B)}.grade.g-C{color:var(--C)}.grade.g-D{color:var(--D)}
+.grade span{color:inherit}
+.pgact{align-self:start}
+.headline{font:600 17px var(--title);color:var(--gold-hi);margin:0 0 14px;padding:10px 16px;border-left:3px solid var(--gold);background:rgba(200,170,110,.06)}
+.pgmain{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}
+.fbks{display:grid;gap:8px}
+.fbk{display:flex;gap:12px;padding:10px 12px;border:1px solid var(--line);background:rgba(1,10,19,.55)}
+.fbk b{color:var(--gold-hi);font-weight:600}
+.fbk .fi{font-size:13px;width:18px;flex-shrink:0;padding-top:1px}
+.fbk.good{border-left:3px solid var(--ok)}.fbk.good .fi{color:var(--ok)}
+.fbk.bad{border-left:3px solid var(--bad)}.fbk.bad .fi{color:var(--bad)}
+.fbk.tip{border-left:3px solid var(--gold)}.fbk.tip .fi{color:var(--gold)}
+.mets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.met{border:1px solid var(--line);padding:8px 10px;background:rgba(1,10,19,.55);display:flex;flex-direction:column}
+.met span{font-size:12px}.met b{font:700 22px var(--display);color:var(--gold-hi)}.met small{color:var(--muted)}
+.met.good{border-bottom:2px solid var(--ok)}.met.good b{color:#8fe0b5}
+.met.bad{border-bottom:2px solid var(--bad)}.met.bad b{color:#ff8a8c}
+.met.even{border-bottom:2px solid var(--gold-lo)}
+.pglane{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.pglane .x{font:700 18px var(--display);color:var(--gold)}
+.up{color:#8fe0b5}.down{color:#ff8a8c}
+/* Objetivos: el bloque ícono + nombre queda centrado entre los dos números, con los íconos alineados */
+.pgobj{display:grid;grid-template-columns:70px 1fr 34px max-content 34px 1fr 70px;column-gap:0;max-width:360px;margin:0 auto;align-items:center}
+.pgobj>*{padding:5px 0;border-bottom:1px solid var(--line);height:100%;display:flex;align-items:center}
+.pgobj>.h{border-bottom:0;padding:0 0 4px;font:600 11px var(--title);letter-spacing:1px;text-transform:uppercase}
+.pgobj>b,.pgobj>.h.a,.pgobj>.h.e{justify-content:center}
+.pgobj b{font:700 20px var(--display)}.pgobj .a{color:var(--ally)}.pgobj .e{color:var(--enemy)}
+.poi{font-style:normal;justify-content:center}
+.pgobj img{width:24px;height:24px;border:1px solid var(--gold-lo);border-radius:50%}
+.pod{width:24px;height:24px;border:1px solid var(--gold-lo);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--gold)}
+.poi{justify-content:flex-start !important}.pol{padding:0 0 0 0}
+.pgteams{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pgt{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.pgt th{font:600 11px var(--title);letter-spacing:1px;text-transform:uppercase;color:var(--gold);text-align:left;padding:4px 6px;border-bottom:1px solid var(--gold-lo);white-space:nowrap}
+.pgt td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.pgt tr.me td{background:rgba(200,170,110,.08)}
+.pgt .pc{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}.pgt .pc>div{min-width:0}.pgt .pc span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgt .pc b{color:var(--gold-hi);font-weight:600;margin-right:6px}.pgt .pc span{display:block}
+.pgt .num{white-space:nowrap;text-align:center}.pgt th.c{text-align:center}.pgt .dmgc{text-align:center}.pgt .dbar{margin:0 auto}.pgt .num small{display:block;color:var(--muted);font-size:11px}
+.pgt .kda{color:var(--gold-hi)}
+.pgt .pc .mvp{display:inline-block}
+.mvp{font:700 10px var(--title);letter-spacing:1px;color:#010a13;background:var(--S);padding:0 5px;vertical-align:2px}
+.dmgc{min-width:90px}.dbar{height:6px;background:#1a2733}.dbar i{display:block;height:100%;background:linear-gradient(90deg,#b8862f,#e8b84a)}
+.pgteam.ally .dbar i{background:linear-gradient(90deg,#15608a,#1e9cd8)}.pgteam.enemy .dbar i{background:linear-gradient(90deg,#8a2a2c,#e0484b)}
+.dmgc small{color:var(--muted);font-size:11px}
+.pgt .items,.pgme .items{display:flex;gap:2px;flex-wrap:wrap}
+.pgt .items img{width:22px;height:22px}
+@media (max-width:1500px){.pgteams{grid-template-columns:1fr}}
+@media (max-width:1100px){.pgmain{grid-template-columns:1fr}.pghead{grid-template-columns:1fr auto}.pgme{grid-column:1/-1;order:3}}
+</style>
+</head>
+<body>
+<div class="top">
+  <img class="appicon" src="/static/icon.png" alt=""><img class="logo" src="/static/logo.png" alt="Lolcito Scout">
+  <nav>
+    <button data-v="vivo" class="on">En vivo</button>
+    <button data-v="stats">Estadísticas</button>
+    <button data-v="cfg">Configuración</button>
+  </nav>
+  <div class="status" id="status"></div>
+</div>
+
+<main>
+  <section class="view on" id="v-vivo"><div id="app"><div class="idle"><h1>Conectando…</h1></div></div></section>
+
+  <section class="view" id="v-stats">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <div class="small" id="statsInfo"></div>
+      <div class="row"><button class="btn sec" onclick="reloadStats()">Recargar</button><button class="btn" onclick="refreshOnline().then(reloadStats)">Descargar ahora</button></div>
+    </div>
+    <iframe id="statsFrame" title="Estadísticas"></iframe>
+  </section>
+
+  <section class="view" id="v-cfg">
+    <div class="form">
+      <div>
+        <div class="panel">
+          <h2>Tu cuenta</h2>
+          <div id="acctBox" class="small">Abrí el LoL e iniciá sesión: la cuenta se detecta sola, no hace falta cargar nada.</div>
+          <label class="f" style="margin-top:14px"><span>Estadísticas de qué rango</span>
+            <select class="sel" id="bracket"><option value="auto">Automático (según tu rango)</option><option value="bajo">Hierro – Plata</option><option value="medio">Oro – Platino</option><option value="alto">Esmeralda – Maestro</option></select></label>
+          <label class="f"><span>Tu rol principal (para partidas sin rol asignado)</span><div class="checks" id="roles"></div></label>
+          <div class="row"><button class="btn" onclick="saveCfg()">Guardar</button><span class="small" id="saved"></span></div>
+        </div>
+        <div class="panel">
+          <h2>Estadísticas del meta</h2>
+          <div id="statsBox" class="small"></div>
+          <div class="row" style="margin-top:12px"><button class="btn" onclick="refreshOnline()">Descargar ahora</button></div>
+          <div class="note">Se descargan solas cada 6 horas. Las calcula todos los días un servidor con miles de partidas rankeds de LAS: no necesitás API key.</div>
+        </div>
+      </div>
+      <div>
+        <div class="panel">
+          <h2>Probar sin abrir el LoL</h2>
+          <div class="row"><button class="btn sec" onclick="simulate('draft')">Simular selección</button><button class="btn sec" onclick="simulate('partida')">Simular partida</button><button class="btn sec" onclick="simulate('resumen')">Simular fin de partida</button><button class="btn sec" onclick="simulate('inicio')">Simular historial</button><button class="btn sec" onclick="realMode()">Volver al juego real</button></div>
+          <div class="note">La simulación usa datos inventados: sirve para ver cómo funciona. La partida simulada dura unos 90 segundos y al final muestra el resumen.</div>
+          <div class="row" style="margin-top:12px"><button class="btn sec" onclick="resetLayout();this.textContent='Orden restablecido ✓'">Restablecer el orden de los paneles</button></div>
+        </div>
+        <div class="panel">
+          <details class="adv"><summary>Avanzado</summary>
+            <label class="f"><span>De dónde salen las estadísticas</span>
+              <select class="sel" id="source"><option value="online">Servidor online (recomendado)</option><option value="local">Calcularlas yo con mi propia API key</option></select></label>
+            <label class="f"><span>Servidor (repositorio de GitHub)</span><input type="text" id="repo" placeholder="usuario/lolcito-scout"></label>
+            <label class="f"><span>API key de Riot (solo para calcularlas vos)</span>
+              <div class="row" style="flex-wrap:nowrap"><input type="password" id="k" placeholder="RGAPI-..."><button class="btn sec" type="button" onclick="k.type=k.type==='password'?'text':'password'">Ver</button></div></label>
+            <label class="f"><span>Rango a escautear (modo propio)</span><div class="checks" id="tiers"></div></label>
+            <label class="f"><span>Carpeta del LoL (solo si no te detecta el juego)</span><input type="text" id="lolp" placeholder="C:\Riot Games\League of Legends"></label>
+            <div class="row"><button class="btn" onclick="saveCfg()">Guardar</button><button class="btn sec" id="updBtn" onclick="startUpdate()">Escanear con mi key</button></div>
+            <div class="log" id="updLog" style="margin-top:12px"></div>
+            <div class="note" id="dataDir"></div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pimg=(o,c='por')=>o&&o.img?`<img class="${c}" src="${o.img}" title="${esc(o.name)}" alt="">`:`<div class="empty-slot"></div>`;
+const iimg=(o,c='xs')=>o&&o.img?`<img class="${c}" src="${o.img}" title="${esc(o.name)}" alt="">`:'';
+const tier=t=>t?`<span class="tier t${t}">${t}</span>`:'';
+const mmss=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+const k=n=>(n/1000).toFixed(1)+'k';
+const api=(p,body)=>fetch(p,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}).then(r=>r.json());
+
+// ---------- navegación
+let view='vivo', lastInfo=null;
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  view=b.dataset.v;
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+view));
+  if(view==='stats' && !$('#statsFrame').src) reloadStats();
+  if(view==='cfg') loadCfg();
+  if(view==='vivo') render();
+});
+
+// ---------- en vivo
+function simBanner(s){return s.info&&s.info.simulated?`<div class="banner slim"><span>Estás viendo una <b>simulación</b> con datos inventados.</span><button class="btn sec" onclick="realMode()">Volver al juego real</button></div>`:''}
+
+function accountCard(a){
+  if(!a) return '';
+  const pool = a.pool&&a.pool.length?`<div class="small" style="margin-top:14px">Tus campeones de las últimas partidas</div><div class="pool">${a.pool.map(p=>`<div class="p">${pimg(p,'por sm')}<div><div class="name">${esc(p.name)}${tier(p.tier)}</div><div class="small">${p.games} p. · ${(p.wr*100).toFixed(0)}% · ${esc(p.role)}</div></div></div>`).join('')}</div>`:'';
+  return `<div class="me-card">${a.iconUrl?`<img class="ic" src="${a.iconUrl}" alt="">`:''}<div><div class="name" style="font:700 22px var(--title)">${esc(a.name)} <span class="small">#${esc(a.tag)}</span></div>
+    <div>${esc(a.rank)} · nivel ${a.level??'—'}</div><div class="small">Estadísticas de ${esc(a.bracketName)}</div></div></div>${pool}`;
+}
+function idle(s){
+  const last=s.lastGame?`<div class="row" style="justify-content:center;margin-top:10px"><button class="btn sec" onclick="postgameAction('open')">Ver tu última partida</button></div>`:'';
+  if(s.account) return `${simBanner(s)}<div class="idle">${accountCard(s.account)}<h1 style="margin-top:26px">${esc(s.message)}</h1><p>${esc(s.detail||'')}</p>${last}</div>`;
+  return `${simBanner(s)}<div class="idle"><div class="emblem"><span>LS</span></div>
+    <h1>${esc(s.message)}</h1><p>${esc(s.detail||'')}</p>
+    <div class="row" style="justify-content:center"><button class="btn sec" onclick="simulate('draft')">Ver simulación de selección</button><button class="btn sec" onclick="simulate('partida')">Ver simulación de partida</button><button class="btn sec" onclick="simulate('resumen')">Ver resumen de fin de partida</button></div>${last}</div>`;
+}
+
+function build(o){
+  if(!o||!o.build||!o.build.length) return '';
+  return `<div class="row" style="gap:3px;margin-top:6px">${o.keystone?iimg(o.keystone):''}${o.build.map(i=>iimg(i)).join('')}${o.boots?iimg(o.boots):''}</div>`;
+}
+
+function draft(s){
+  const team = s.team.map(p=>`<div class="slot ${p.isMe?'me':''} ${!p.locked&&p.id?'hover':''}">${pimg(p)}
+      <div class="who"><div class="name">${p.id?esc(p.name):'<span class="small">Eligiendo…</span>'}${p.isMe?' <span class="small">(vos)</span>':''}</div><div class="role">${esc(p.role)}</div></div></div>`).join('');
+  const enemies=[...s.enemies]; while(enemies.length<s.enemySlots) enemies.push(null);
+  const foes = enemies.map(e=>`<div class="slot">${pimg(e)}<div class="who">${e?`<div class="name">${esc(e.name)}</div><div class="role">${esc(e.role)} (probable)</div>`:'<span class="small">Eligiendo…</span>'}</div></div>`).join('');
+  const me = s.team.find(p=>p.isMe)||{};
+  const vs = `<div class="vs"><div class="side">${me.id?pimg(me,'por lg'):'<div class="empty-slot"></div>'}<div><div class="small">Vos · ${esc(s.myRoleEs)}</div><div class="name">${me.id?esc(me.name):'—'}</div></div></div>
+     <div class="x">VS</div>
+     <div class="side r">${s.laneOpponent?pimg(s.laneOpponent,'por lg'):'<div class="empty-slot"></div>'}<div><div class="small">Rival de línea</div><div class="name">${s.laneOpponent?esc(s.laneOpponent.name):'Todavía no se sabe'}</div></div></div></div>`;
+  const cur = s.current?`<div class="panel"><h2>Tu pick actual</h2><div class="card best">${pimg(s.current)}<div><div class="t">${esc(s.current.name)}${tier(s.current.tier)}</div><div class="why">${s.current.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div>${build(s.current)}</div></div></div>`:'';
+  const opts = s.options.map((o,i)=>`<div class="card ${i==0?'best':''}">${pimg(o)}<div style="min-width:0"><div class="t">${esc(o.name)}${tier(o.tier)}</div><div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div>${build(o)}</div></div>`).join('')
+     || '<div class="small">Sin estadísticas del meta todavía: cargá tu API key en Configuración y tocá «Actualizar ahora».</div>';
+  return `${simBanner(s)}<div class="board">
+    <div class="col-ally panel team ally"><h2 class="ally">Tu equipo</h2>${team}</div>
+    <div class="col-center">
+      <div class="panel">${vs}</div>${cur}
+      <div class="panel"><h2>Opciones para pickear</h2><div class="cards">${opts}</div>
+        <div class="note">Ordenadas por winrate en tu rango, ajustado por tu rival de línea y tu compañero. Vos elegís.</div></div>
+      <div class="panel"><h2>Baneados</h2><div class="row" style="gap:4px">${s.bans.map(b=>pimg(b,'por sm')).join('')||'<span class="small">—</span>'}</div></div>
+    </div>
+    <div class="col-enemy panel team enemy"><h2 class="enemy">Equipo rival</h2>${foes}</div>
+  </div>`;
+}
+
+function player(p,isMe,enemy){
+  const badge = p.dmg?`<span class="dmg d${p.dmg}">${p.dmg}</span>`:'';
+  const def = enemy&&p.armor!=null?`<div class="stat" title="Armadura y resistencia mágica estimadas">${p.armor} armadura · ${p.mr} res. mágica</div>`:'';
+  const flags = (p.flags||[]).map(f=>`<span class="flag f-${f.replace(/[^a-z]/g,'')}">${esc(f)}</span>`).join('');
+  return `<div class="slot ${isMe?'me':''} ${p.threat?'threat':''} ${p.dead?'dead':''}">${pimg(p,'por sm')}
+    <div class="who"><div class="name">${esc(p.name)} ${badge}${p.threat?'<span class="badge">más fuerte</span>':''}${p.dead?`<span class="deadb">muerto · ${p.respawn} s</span>`:''}</div>
+      <div class="stat">${esc(p.role)} · nv ${p.level} · ${p.k}/${p.d}/${p.a} · ${p.cs} cs · <span class="gold">${k(p.gold)}</span></div>${def}
+      ${flags?`<div class="flags">${flags}</div>`:''}
+      <div class="items">${p.items.map(i=>iimg(i)).join('')}</div></div></div>`;
+}
+const sign=n=>(n>0?'+':'')+n;
+function laneChips(c,lo){
+  if(!c||!lo) return '';
+  const cls=n=>n>0?'up':n<0?'down':'';
+  return `<div class="lanecmp"><span class="${cls(c.gold)}">${sign(c.gold)} oro en ítems</span><span class="${cls(c.level)}">${sign(c.level)} nivel</span><span class="${cls(c.cs)}">${sign(c.cs)} cs</span><span class="small">vs ${esc(lo.name)}</span></div>`;
+}
+const OBJ_ICON={drake:'🜂',elder:'✦',grubs:'◉',herald:'◈',baron:'♛'};
+function objectivesPanel(o){
+  const rows=o.rows.map(r=>`<div class="obj st-${r.state}"><span class="oi"><img src="${r.img}" alt=""></span>
+      <div class="ol"><b>${esc(r.label)}</b>${r.extra?`<span>${esc(r.extra)}</span>`:''}</div>
+      <div class="ot">${esc(r.text)}${r.at&&r.state!=='up'?`<small>a las ${r.at}</small>`:''}</div></div>`).join('');
+  const dk=(names,cols,imgs)=>names.map((n,i)=>`<span class="dk" style="border-color:${cols[i]};color:${cols[i]}"><img src="${imgs[i]}" alt="">${esc(n)}</span>`).join('')||'<span class="small">—</span>';
+  const buffs=o.buffs.map(b=>`<div class="buff ${b.mine?'mine':'theirs'}">${esc(b.text)} · <b>${b.left}</b></div>`).join('');
+  const inh=o.inhibs.map(x=>`<div class="small">${esc(x)}</div>`).join('');
+  return `<div class="objs">${rows}</div>${buffs}${inh}
+    <div class="drakes"><div><span class="small">Dragones de tu equipo</span><div>${dk(o.drakes.mine,o.drakes.mineColors,o.drakes.mineImgs)}</div></div>
+    <div style="text-align:right"><span class="small">Dragones del rival</span><div>${dk(o.drakes.theirs,o.drakes.theirsColors,o.drakes.theirsImgs)}</div></div></div>`;
+}
+function cmpBlock(c){
+  const pos=Math.round((c.score+1.5)/3*100);
+  return `<div class="fight ${c.tone}"><div class="flabel">${esc(c.label)}</div>
+    <div class="fmeter"><div class="fz bad"></div><div class="fz even"></div><div class="fz good"></div><div class="fmark" style="left:${pos}%"></div></div>
+    <div class="fscale"><span>Desventaja</span><span>Parejo</span><span>Ventaja</span></div>
+    <div class="factors">${c.factors.map(x=>`<div class="fx ${x.good===true?'g':x.good===false?'b':''}">${x.good===true?'▲':x.good===false?'▼':'•'} ${esc(x.text)}</div>`).join('')}</div></div>`;
+}
+function fightPanel(f){
+  if(f.mode==='objective'){
+    const o=f.objective;
+    return `<div class="objhead st-${o.state}" style="--bg:url('${o.img}')"><span class="oi big"><img src="${o.img}" alt=""></span><div><b>${esc(o.label)}</b><span>${esc(o.when)}</span></div></div>
+      ${f.stakes.map(x=>`<div class="stake">${esc(x)}</div>`).join('')}
+      <div class="reading ${f.tone}">${esc(f.reading)}</div>
+      ${cmpBlock(f.compare)}
+      <div class="alts"><div class="small">Opciones:</div>${f.alts.map(a=>`<div>◆ ${esc(a)}</div>`).join('')}</div>
+      <div class="note">Compara vivos, niveles, oro y mejoras. No sabe las definitivas ni los hechizos del rival: vos decidís.</div>`;
+  }
+  return `${cmpBlock(f.compare)}
+    <div class="macro">${f.options.map((o,i)=>`<div class="mo ${i==0?'best':''}"><div class="mt">${i==0?'<span class="tag">lo más razonable ahora</span>':''}<b>${esc(o.title)}</b></div>
+      <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div>`).join('')}</div>
+    <div class="note">No hay objetivos en juego. Son opciones según cómo viene la partida: vos decidís.</div>`;
+}
+// ---------- orden de los paneles (cada usuario lo acomoda como quiere; se guarda en ajustes.json)
+const COLS=['L','a','b','R'];
+const DEFAULT_LAYOUT={L:['novedades'],a:['compra','build','rival'],b:['pelea','obj'],R:['mision'],min:[]};
+let LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), lastState=null;
+function fixLayout(l){
+  const out={L:[],a:[],b:[],R:[],min:Array.isArray(l&&l.min)?l.min.filter(x=>typeof x==='string'):[]}, seen=new Set();
+  for(const c of COLS) for(const id of ((l&&l[c])||[])) if(DEFAULT_LAYOUT[c]!==undefined&&!seen.has(id)&&COLS.some(k=>DEFAULT_LAYOUT[k].includes(id))){out[c].push(id);seen.add(id);}
+  for(const c of COLS) for(const id of DEFAULT_LAYOUT[c]) if(!seen.has(id)){out[c].push(id);seen.add(id);}
+  return out;
+}
+function layoutCol(c,P){
+  return LAYOUT[c].filter(id=>P[id]).map((id,i,arr)=>{
+    const [title,body,cls]=P[id], min=LAYOUT.min.includes(id), ci=COLS.indexOf(c);
+    const b=(act,sym,tip,off)=>`<button class="pb" ${off?'disabled':''} title="${tip}" onclick="movePanel('${id}','${act}')">${sym}</button>`;
+    return `<div class="panel ${cls||''} ${min?'min':''}" data-p="${id}"><div class="ph"><h2>${esc(title)}</h2><span class="pctl">
+      ${b('up','▲','Subir',i===0)}${b('down','▼','Bajar',i===arr.length-1)}${b('left','◀','Pasar a la columna de la izquierda',ci===0)}${b('right','▶','Pasar a la columna de la derecha',ci===COLS.length-1)}${b('min',min?'+':'–',min?'Mostrar':'Achicar')}</span></div>${min?'':body}</div>`;
+  }).join('');
+}
+function movePanel(id,act){
+  const c=COLS.find(k=>LAYOUT[k].includes(id)); if(!c) return;
+  const col=LAYOUT[c], i=col.indexOf(id);
+  if(act==='up'&&i>0) [col[i-1],col[i]]=[col[i],col[i-1]];
+  else if(act==='down'&&i<col.length-1) [col[i+1],col[i]]=[col[i],col[i+1]];
+  else if(act==='left'||act==='right'){
+    const ci=COLS.indexOf(c)+(act==='left'?-1:1); if(ci<0||ci>=COLS.length) return;
+    col.splice(i,1); LAYOUT[COLS[ci]].splice(Math.min(i,LAYOUT[COLS[ci]].length),0,id);
+  } else if(act==='min') LAYOUT.min=LAYOUT.min.includes(id)?LAYOUT.min.filter(x=>x!==id):[...LAYOUT.min,id];
+  api('/api/layout',{layout:LAYOUT}); render();
+}
+function resetLayout(){ LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)); api('/api/layout',{layout:LAYOUT}); render(); }
+api('/api/settings').then(c=>{ if(c.LAYOUT&&Object.keys(c.LAYOUT).length){ LAYOUT=fixLayout(c.LAYOUT); render(); } }).catch(()=>{});
+
+function game(s){
+  if(s.error) return idle({message:s.error,info:s.info});
+  const [ga,ge]=s.teamGold, tot=(ga+ge)||1;
+  const me=s.me, lo=s.laneOpponent;
+  const vs=`<div class="vs"><div class="side">${pimg(me,'por lg')}<div><div class="small">Vos · ${esc(s.myRoleEs)}</div><div class="name">${esc(me.name)}</div><div class="small">${me.k}/${me.d}/${me.a} · ${k(me.gold)}</div></div></div>
+     <div class="x">VS</div>
+     <div class="side r">${lo?pimg(lo,'por lg'):'<div class="empty-slot"></div>'}<div><div class="small">Rival de línea</div><div class="name">${lo?esc(lo.name):'—'}</div>${lo?`<div class="small">${lo.k}/${lo.d}/${lo.a} · ${k(lo.gold)}</div>`:''}</div></div></div>${laneChips(s.laneCmp,lo)}`;
+  const apPct=Math.round(s.apShare*100);
+  const alerts=`<div class="dmgbar"><div class="ap" style="width:${apPct}%">AP ${apPct}%</div><div class="ad" style="width:${100-apPct}%">AD ${100-apPct}%</div></div>
+    <div class="mydef">Tus defensas: <b>${me.armor}</b> armadura · <b>${me.mr}</b> resistencia mágica · tu daño es ${esc(me.damage)}</div>
+    <div class="alerts">${s.alerts.map(a=>`<div class="al lv-${a.level}"><b>${esc(a.text)}</b>${a.detail?`<span>${esc(a.detail)}</span>`:''}</div>`).join('')}</div>`;
+  const opts=s.options.map((o,i)=>`<div class="card ${o.primary?'best':''}">${iimg(o,'it')}<div style="min-width:0">
+      <div class="t">${esc(o.name)}${o.situational?'<span class="tag">para esta partida</span>':''}</div>
+      <div><span class="cost">${o.gold}</span> ${o.affordable?'<span class="ok">te alcanza</span>':`<span class="no">te faltan ${o.missing}</span>`}</div>
+      <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div></div>`).join('');
+  const sh=s.shopping; let shop='';
+  if(sh){ shop = sh.complete?`<div class="shop ok2">Con tus <b>${me.gold_now}</b> de oro <b>te alcanza para completarlo</b> (te sobran ${sh.left}).</div>`
+      : sh.buy.length?`<div class="shop">Con tus <b>${me.gold_now}</b> de oro podés comprar: ${sh.buy.map(b=>`${iimg(b)} ${esc(b.name)}`).join(' + ')} <span class="small">(te sobran ${sh.left})</span></div>`
+      : `<div class="shop">Te faltan <b>${sh.cost-me.gold_now}</b> de oro para la próxima parte.</div>`; }
+  const slots=[...s.plan]; while(slots.length<(s.nItems||5)) slots.push(null);
+  const changed=new Set(s.changes.map(c=>c.add.id));
+  const plan=`<div class="plan">${slots.map((p,i)=>p?`<div class="ps ${p.owned?'own':''} ${changed.has(p.id)?'chg':''}" title="${esc(p.name)}${p.reasons&&p.reasons.length?' — '+esc(p.reasons.join(', ')):''}">${iimg(p,'it')}<span>${i+1}</span></div>`:'<div class="ps"><div class="empty-slot"></div></div>').join('')}
+     ${s.boots?`<div class="ps boots ${s.boots.owned?'own':''} ${changed.has(s.boots.id)?'chg':''}" title="${esc(s.boots.name)}">${iimg(s.boots,'it')}<span>B</span></div>`:''}</div>
+     <div class="changes">${s.changes.length?s.changes.map(c=>`<div class="chrow">${iimg(c.add)} <b>${esc(c.add.name)}</b>${c.remove?` <span class="small">en lugar de</span> ${iimg(c.remove)} <s>${esc(c.remove.name)}</s>`:''}<div class="why">${c.reasons.map(r=>`<div>${esc(r)}</div>`).join('')}</div></div>`).join(''):'<div class="small">Esta partida no pide cambios: la build de siempre ya cubre lo que hace falta.</div>'}</div>`;
+  const events=s.events.length?s.events.map(e=>`<div class="ev ev-${e.kind}"><span class="t">${e.t}</span>${esc(e.text)}</div>`).join(''):'<div class="small">Acá van apareciendo las compras importantes de los rivales y los cambios en la partida.</div>';
+  const lane = lo?`<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${me.k}/${me.d}/${me.a} · ${k(me.gold)}</span></div>
+      <div class="x">VS</div><div class="gvn r"><b>${esc(lo.name)}</b><span>${lo.k}/${lo.d}/${lo.a} · ${k(lo.gold)}</span></div>${pimg(lo,'por md')}</div>${laneChips(s.laneCmp,lo)}`
+    : `<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${esc(s.myRoleEs)}</span></div></div>`;
+  const P={
+    compra:['Próxima compra',`${s.noMeta?'<div class="small" style="margin-bottom:8px">Sin estadísticas del meta todavía: las opciones salen solo de tu campeón y del rival.</div>':''}<div class="cards">${opts}</div>${shop}`],
+    build:['Tu build para esta partida',`${s.nItems===6?'<div class="small" style="margin-bottom:8px">6 ítems + botas: con la misión de ADC completa las botas pasan a su propio espacio.</div>':''}${plan}`],
+    rival:['Cómo viene el equipo rival',alerts],
+    obj:['Objetivos',objectivesPanel(s.objectives)],
+    pelea:[s.fight.mode==='objective'?'¿Conviene pelear el objetivo?':'¿Qué conviene ahora?',fightPanel(s.fight)],
+    novedades:['Novedades',`<div class="events">${events}</div>`],
+    mision:s.quest?[s.quest.name,`<div>${esc(s.quest.reward)}</div><div class="small" style="margin-top:6px">Cómo se completa: ${esc(s.quest.how)}</div>`,'quest']:null,
+  };
+  return `${simBanner(s)}
+  <div class="panel gtop">
+    <div class="gk l"><div class="big">${s.teamKills[0]}</div><div class="small">Tu equipo · ${k(ga)} en ítems</div></div>
+    <div class="glane">${lane}</div>
+    <div class="clock">${mmss(s.time||0)}</div>
+    <div class="gk r"><div class="big">${s.teamKills[1]}</div><div class="small">${k(ge)} en ítems · Rival</div></div>
+    <div class="gbar"><div class="bar"><div class="a" style="width:${ga/tot*100}%"></div><div class="e" style="width:${ge/tot*100}%"></div></div></div>
+  </div>
+  <div class="gboard">
+    <div class="col-ally gside"><div class="panel team ally"><h2 class="ally">Tu equipo</h2>${s.allies.map(p=>player(p,p.id===me.id,false)).join('')}</div>${layoutCol('L',P)}</div>
+    <div class="gcol ga">${layoutCol('a',P)}</div>
+    <div class="gcol gb">${layoutCol('b',P)}</div>
+    <div class="col-enemy gside"><div class="panel team enemy"><h2 class="enemy">Rivales</h2>${s.enemies.map(p=>player(p,false,true)).join('')}</div>${layoutCol('R',P)}</div>
+  </div>
+  <div class="note">Solo usa lo que el juego muestra en el marcador (Tab). Todo son sugerencias: la decisión es tuya.
+    Podés acomodar los paneles con las flechas de cada título (se guarda solo) · <a href="#" onclick="resetLayout();return false">Volver al orden original</a></div>`;
+}
+
+async function refresh(){
+  try{
+    const s = await api('/api/state');
+    const inf=s.info||{}; lastInfo=inf; lastState=s;
+    let st=`<span class="pill meta">${inf.patch?`Parche <b>${esc(inf.patch)}</b> · `:''}${inf.matches?`<b>${inf.matches.toLocaleString('es-AR')}</b> partidas`:'sin estadísticas'}${inf.bracketName?` · ${esc(inf.bracketName)}`:''}</span>`;
+    const a=s.account; if(a) st=`<span class="acct">${a.iconUrl?`<img src="${a.iconUrl}" alt="">`:''}<b>${esc(a.name)}</b><span>${esc(a.rank)}</span></span>`+st;
+    if(s.phase==='draft') st+=`<span class="pill live">Selección de campeones</span>`;
+    if(s.phase==='game') st+=`<span class="pill live">En partida · <b>${mmss(s.time||0)}</b></span>${s.me?`<span class="pill">Oro <b>${s.me.gold_now}</b></span>`:''}`;
+    if(s.phase==='postgame') st+=`<span class="pill live">${esc(PHASE_ES[s.clientPhase]||'Partida terminada')}</span>`;
+    if(inf.simulated) st+=`<span class="pill sim">Simulación</span>`;
+    $('#status').innerHTML=st;
+    if(s.phase==='idle'&&s.hist) await loadHist(s);
+    render();
+  }catch(e){ console.error(e); $('#app').innerHTML=idle({message:'Se perdió la conexión con Lolcito Scout',detail:'Cerrá esta ventana y volvé a abrir la app.'}); }
+}
+const PHASE_ES={Lobby:'En el lobby',Matchmaking:'Buscando partida',ReadyCheck:'¡Partida encontrada!',EndOfGame:'Partida terminada',PreEndOfGame:'Partida terminada',WaitingForStats:'Partida terminada'};
+function render(){
+  const s=lastState; if(!s||view!=='vivo') return;
+  const y=window.scrollY;
+  if(s.phase!=='idle') H.detail=null;
+  $('#app').innerHTML = s.phase==='draft'?draft(s):s.phase==='game'?game(s):s.phase==='postgame'?postgame(s):H.detail?postgame(H.detail,true):home(s);
+  window.scrollTo(0,y);
+  layoutBanners();
+}
+// ---------- inicio: cuentas e historial de partidas
+const H={accounts:[],sel:null,data:null,ver:-1,cur:undefined,detail:null,importing:''};
+async function loadHist(s){
+  const h=s.hist; H.importing=h.importing;
+  if(h.version===H.ver && h.current===H.cur && H.accounts.length) return;
+  const c=await api('/api/cuentas'); H.accounts=c.accounts||[];
+  if(h.current!==H.cur && h.current) H.sel=h.current;          // entraste con otra cuenta: muestro esa
+  if(!H.accounts.some(a=>a.puuid===H.sel)) H.sel=(H.accounts[0]||{}).puuid||null;
+  H.ver=h.version; H.cur=h.current;
+  H.data=H.sel?await api('/api/historial?puuid='+encodeURIComponent(H.sel)):null;
+}
+async function selectAcct(p){ H.sel=p; H.detail=null; H.data=await api('/api/historial?puuid='+encodeURIComponent(p)); render(); }
+async function openGame(id){ const d=await api(`/api/partida?puuid=${encodeURIComponent(H.sel)}&id=${encodeURIComponent(id)}`); if(d.error) return; H.detail=d; render(); window.scrollTo(0,0); }
+// Ubica el arte de cada fila: la cara centrada de arriba a abajo y del tamaño justo.
+// Campeones grandes (Kog'Maw, Tahm Kench...) se achican para que entre la cabeza; el fade tapa el resto.
+function layoutBanners(){
+  document.querySelectorAll('.hrow .hbg').forEach(img=>{
+    const row=img.closest('.hrow'), rw=row.offsetWidth, rh=row.offsetHeight; if(!rw) return;
+    const fx=+img.dataset.fx, fy=+img.dataset.fy, t=+img.dataset.t||0.33;
+    let w=2.5*rh/(t*0.59);                       // la zona de la cara ocupa ~2,5 veces el alto de la fila
+    w=Math.max(0.30*rw, Math.min(0.62*rw, w, rw)); const h=w*0.59;
+    let left=0.25*rw-fx*w; left=Math.min(0,Math.max(-(w-0.3*rw),left));
+    let top=rh/2-fy*h; top=Math.min(0,Math.max(rh-h,top));
+    Object.assign(img.style,{width:w+'px',left:left+'px',top:top+'px',transform:'none'});
+  });
+}
+window.addEventListener('resize',layoutBanners);
+function closeDetail(){ H.detail=null; render(); }
+function fmtWhen(ms){
+  const d=new Date(ms), diff=(Date.now()-ms)/3600000;
+  if(diff<1) return `hace ${Math.max(1,Math.round(diff*60))} min`;
+  if(diff<24) return `hace ${Math.round(diff)} h`;
+  if(diff<48) return 'ayer '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
+  return d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+let CARAS={}; fetch('/static/caras.json').then(r=>r.json()).then(j=>{CARAS=j; render();}).catch(()=>{});
+const gsm=(g,sc)=>g?`<div class="gsm g-${g.replace('+','p')}" title="Nota ${g} (${sc}/100)"><span>${g}</span></div>`:'<div class="gsm none"><span>—</span></div>';
+function histRow(g){
+  const cls=g.remake?'remake':g.result==='win'?'win':g.result==='loss'?'loss':'';
+  const alias=((g.champ&&g.champ.img)||'').split('/').pop().replace('.png','');
+  let bg='';
+  if(alias){
+    // la cara del campeón queda centrada de arriba a abajo en la fila (punto calculado para cada splash)
+    const [fx,fy,t]=CARAS[alias]||[0.5,0.25,0.33];
+    const src=`https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${alias}_0.jpg`;
+    bg=`<div class="hbw"><img class="hbg" src="${src}" alt="" data-fx="${fx}" data-fy="${fy}" data-t="${t}"></div>`;
+  }
+  return `<div class="hrow ${cls} ${alias?'hsp':''}" onclick="openGame('${esc(g.gameId)}')">${bg}
+    <div class="hres"><b>${esc(g.remake?'Remake':g.result==='win'?'Victoria':g.result==='loss'?'Derrota':'—')}</b><span>${esc(g.queue||'')}</span><span>${esc(fmtWhen(g.created))} · ${esc(g.durationText)}</span></div>
+    <div class="hchamp">${pimg(g.champ,'por md')}<div><b>${esc(g.champ.name)}</b><span>${esc(g.role||'')}</span></div></div>
+    <div class="hkda"><b>${g.k} / <span class="dd">${g.d}</span> / ${g.a}</b><span>KDA ${g.kda??'—'} · ${g.kp??0}% part.</span></div>
+    <div class="hcs"><div class="hcsn"><img class="mn" src="/static/minions.png" alt=""><b>${g.cs}</b></div><span>súbditos · ${g.csMin}/min</span></div>
+    <div class="hitems">${(g.items||[]).map(i=>iimg(i)).join('')}</div>
+    <div class="hfb">${g.best?`<div class="up">▲ ${esc(g.best)}</div>`:''}${g.tip?`<div class="down">▼ ${esc(g.tip)}</div>`:''}</div>
+    ${gsm(g.grade,g.score)}
+    <div class="hgo">›</div></div>`;
+}
+function home(s){
+  if(!H.accounts.length) return idle(s);
+  const acc=H.accounts.find(a=>a.puuid===H.sel)||H.accounts[0], d=H.data||{games:[]};
+  const tabs=H.accounts.map(a=>`<button class="atab ${a.puuid===acc.puuid?'on':''}" onclick="selectAcct('${esc(a.puuid)}')">${a.iconUrl?`<img src="${a.iconUrl}" alt="">`:''}<span><b>${esc(a.name)}</b><small>#${esc(a.tag||'')}</small></span>${a.current?'<i class="live">conectada</i>':''}</button>`).join('');
+  const tot=d.wins+d.losses, wr=tot?Math.round(d.wins/tot*100):0;
+  const champs=(d.champs||[]).map(c=>`<div class="hch">${pimg(c,'por sm')}<div><b>${esc(c.name)}</b><span>${c.games} partida${c.games>1?'s':''} · ${Math.round(c.wins/c.games*100)}% de victorias</span></div></div>`).join('')||'<div class="small">—</div>';
+  const rows=d.games.length?d.games.map(histRow).join(''):`<div class="small" style="padding:20px 4px">Todavía no hay partidas guardadas de esta cuenta. Se traen solas del cliente de LoL cada vez que entrás con ella, y cada partida que juegues con Lolcito Scout abierto queda guardada con sus devoluciones.${acc.current&&!H.importing?`<div style="margin-top:12px"><button class="btn sec" onclick="api('/api/importar',{}).then(refresh)">Buscar mis partidas ahora</button></div>`:''}</div>`;
+  return `${simBanner(s)}
+  <div class="panel hbar"><div class="hmsg"><b>${esc(s.message)}</b>${s.detail?`<span>${esc(s.detail)}</span>`:''}</div>
+    ${H.importing?`<span class="pill live">${esc(H.importing)}</span>`:''}
+    ${s.lastGame?`<button class="btn sec" onclick="postgameAction('open')">Resumen de la última partida</button>`:''}</div>
+  <div class="atabs">${tabs}</div>
+  <div class="homegrid">
+    <div class="hside">
+      <div class="panel hacc">${acc.iconUrl?`<img class="ic" src="${acc.iconUrl}" alt="">`:''}<div><div class="name">${esc(acc.name)} <span class="small">#${esc(acc.tag||'')}</span></div>
+        <div>${esc(acc.rank||'')}${acc.level?` · nivel ${acc.level}`:''}</div><div class="small">${acc.current?'Conectada ahora en el LoL':'Última vez: '+esc(fmtWhen((acc.lastSeen||0)*1000))}</div></div></div>
+      <div class="panel"><h2>Resumen</h2>
+        <div class="hsum"><div><b>${tot?`${d.wins}V ${d.losses}D`:'—'}</b><span>${tot?wr+'% de victorias':'sin partidas'}</span></div>${d.avgGrade?`<div class="hsg">${gsm(d.avgGrade,d.avgScore)}<span>nota promedio</span></div>`:''}</div>
+        <div class="wrbar"><i style="width:${wr}%"></i></div></div>
+      <div class="panel"><h2>Tus campeones</h2>${champs}</div>
+    </div>
+    <div class="panel hist"><h2>Historial de partidas <span class="small">${d.games.length} guardadas · tocá una para ver el detalle</span></h2>${rows}</div>
+  </div>`;
+}
+async function postgameAction(action){ await api('/api/postgame',{action}); refresh(); }
+
+// ---------- resumen al terminar la partida
+const PG_OBJ=[['drakes','Dragones','sru_dragon'],['grubs','Larvas','sru_horde'],['heralds','Heraldo','sru_riftherald'],['barons','Barón','sru_baron'],['towers','Torres',''],['inhibs','Inhibidores','']];
+const n=v=>v==null?'—':Number(v).toLocaleString('es-AR');
+function pgRow(p){
+  return `<tr class="${p.isMe?'me':''}"><td><div class="pc">${pimg(p,'por sm')}<div><b>${esc(p.name)}</b>${p.mvp?'<span class="mvp">MVP</span>':''}<span class="small">${esc(p.player||'')}${p.role?` · ${esc(p.role)}`:''}</span></div></div></td>
+    <td class="num">${p.level}</td><td class="num kda">${p.k}/<span class="dd">${p.d}</span>/${p.a}</td><td class="num">${p.cs}<small>${p.csMin}/min</small></td>
+    <td class="dmgc">${p.dmg!=null?`<div class="dbar"><i style="width:${p.dmgPct}%"></i></div><small>${n(p.dmg)}</small>`:'<small>—</small>'}</td>
+    <td class="num gold">${k(p.gold)}</td><td class="num">${p.vision!=null?Math.round(p.vision):'—'}</td>
+    <td><div class="items">${p.items.map(i=>iimg(i)).join('')}</div></td></tr>`;
+}
+function pgTeam(rows,label,cls,kills,gold){
+  return `<div class="panel pgteam ${cls}"><h2 class="${cls}">${label} <span class="small">${kills} kills · ${k(gold)} de oro</span></h2>
+    <table class="pgt"><colgroup><col style="width:21%"><col style="width:6%"><col style="width:10%"><col style="width:9%"><col style="width:19%"><col style="width:8%"><col style="width:7%"><col style="width:20%"></colgroup><thead><tr><th>Campeón</th><th class="c">Nivel</th><th class="c">K/D/A</th><th class="c">Súbditos</th><th class="c">Daño a campeones</th><th class="c">Oro</th><th class="c">Visión</th><th>Ítems</th></tr></thead>
+    <tbody>${rows.map(pgRow).join('')}</tbody></table></div>`;
+}
+function postgame(s,fromHist){
+  const m=s.me, win=s.result==='win', loss=s.result==='loss';
+  const grade=s.grade?`<div class="grade g-${s.grade.replace('+','p')}">${m.splash?`<div class="gbg" style="background-image:radial-gradient(circle,rgba(1,10,19,.55) 0,rgba(1,10,19,.1) 70%),url('${m.splash}')"></div>`:''}<span>${esc(s.grade)}</span><small>${s.score}/100</small></div>`:'';
+  const fb=s.feedback.map(f=>`<div class="fbk ${f.tone}"><div class="fi">${f.tone==='good'?'▲':f.tone==='bad'?'▼':'◆'}</div><div><b>${esc(f.title)}</b><div>${esc(f.text)}</div></div></div>`).join('')
+    ||'<div class="small">Partida muy corta: no hay nada para evaluar.</div>';
+  const mets=s.metrics.map(x=>`<div class="met ${x.tone}"><span>${esc(x.label)}</span><b>${esc(x.value)}</b><small>${esc(x.ref)}</small></div>`).join('');
+  const lane=s.lane&&s.lane.opp?`<div class="pglane">${pimg(m,'por sm')}<span class="x">VS</span>${pimg(s.lane.opp,'por sm')}<div>${[10,15].map(t=>{const a=s.lane['at'+t];return a?`<div><span class="small">A los ${t} min:</span> <b class="${a.gold>0?'up':a.gold<0?'down':''}">${a.gold>0?'+':''}${n(a.gold)} ${esc(a.kind)}</b> · <b class="${a.cs>0?'up':a.cs<0?'down':''}">${a.cs>0?'+':''}${a.cs} súbditos</b></div>`:''}).join('')}</div></div>`:'';
+  const o=s.objectives;
+  const objs=`<div class="pgobj"><span class="a h">Tu equipo</span><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><span class="e h">Rival</span>${PG_OBJ.map(([key,label,img])=>`<b class="a">${o.mine[key]}</b><i></i><i class="poi">${img?`<img src="/static/obj/${img}.png" alt="">`:`<span class="pod">${key==='towers'?'♜':'◆'}</span>`}</i><span class="pol">${label}</span><i></i><i></i><b class="e">${o.theirs[key]}</b>`).join('')}</div>`;
+  return `${fromHist?'':simBanner(s)}
+  <div class="panel pghead ${win?'win':loss?'loss':''}">
+    <div class="pgres"><div class="rt">${esc(s.resultText)}</div><div class="small">${esc(s.queue||'Partida')} · ${esc(s.durationText)} · ${s.created?esc(fmtWhen(s.created)):'terminó '+esc(s.finishedAt||'')}</div></div>
+    <div class="pgme">${pimg(m,'por lg')}<div><div class="name">${esc(m.name)} <span class="small">${esc(m.roleEs)}</span></div>
+      <div class="kdabig">${m.k} / <span class="dd">${m.d}</span> / ${m.a}</div>
+      <div class="kdacap">Asesinatos / Muertes / Asistencias · <b>KDA de esta partida: ${Number(m.kda).toFixed(2)}</b></div>
+      <div class="small">${m.kp}% de participación · <img class="mn" src="/static/minions.png" alt=""> ${m.cs} súbditos · ${k(m.gold)} de oro</div>
+      <div class="items" style="margin-top:6px">${m.items.map(i=>iimg(i,'it')).join('')}</div></div></div>
+    ${grade}
+    <div class="pgact">${fromHist?'<button class="btn sec" onclick="closeDetail()">← Volver al historial</button>':`<button class="btn sec" onclick="postgameAction('close')">Cerrar resumen</button>`}</div>
+  </div>
+  ${s.headline?`<div class="headline">${esc(s.headline)}</div>`:''}
+  ${s.loadingMore?'<div class="small" style="margin:-4px 0 10px">Buscando el daño, la visión y la línea de tiempo en el historial del cliente…</div>':''}
+  <div class="pgmain">
+    <div class="panel"><h2>Devoluciones de tu partida</h2><div class="fbks">${fb}</div></div>
+    <div><div class="panel"><h2>Tus números</h2><div class="mets">${mets}</div>${lane}</div>
+      <div class="panel"><h2>Objetivos</h2>${objs}</div></div>
+  </div>
+  <div class="pgteams">${pgTeam(s.teams.mine,'Tu equipo','ally',s.teamKills[0],s.teamGold[0])}${pgTeam(s.teams.theirs,'Equipo rival','enemy',s.teamKills[1],s.teamGold[1])}</div>
+  <div class="note">Las referencias son aproximadas para Platino–Esmeralda en tu rol. ${s.complete?'Datos del historial del cliente de LoL.':'Daño y visión aparecen cuando el cliente de LoL guarda la partida en tu historial.'}</div>`;
+}
+
+function resetHist(){ Object.assign(H,{accounts:[],sel:null,data:null,ver:-1,cur:undefined,detail:null}); }
+async function simulate(mode){ resetHist(); await api('/api/simulate',{mode}); document.querySelector('nav button[data-v=vivo]').click(); refresh(); }
+async function realMode(){ resetHist(); await api('/api/real',{}); refresh(); }
+
+// ---------- estadísticas
+function reloadStats(){ $('#statsFrame').src='/reporte?t='+Date.now(); api('/api/settings').then(c=>$('#statsInfo').innerHTML=statsText(c.info)); }
+
+// ---------- configuración
+const TIERS=[['IRON','Hierro'],['BRONZE','Bronce'],['SILVER','Plata'],['GOLD','Oro'],['PLATINUM','Platino'],['EMERALD','Esmeralda'],['DIAMOND','Diamante'],['MASTER','Maestro']];
+const ROLES=[['TOP','Top'],['JUNGLE','Jungla'],['MIDDLE','Mid'],['BOTTOM','ADC'],['UTILITY','Support']];
+const checks=(el,list,sel)=>{ $(el).innerHTML=list.map(([v,t])=>`<label><input type="checkbox" value="${v}" ${sel.includes(v)?'checked':''}>${t}</label>`).join(''); };
+const picked=el=>[...document.querySelectorAll(el+' input:checked')].map(i=>i.value).join(',');
+function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso.replace('Z',':00Z')); return isNaN(d)?iso:d.toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+function statsText(inf){
+  if(!inf) return '';
+  const src = inf.source==='online'?'Servidor online':'Calculadas con tu key';
+  let t = `${src} · ${inf.bracketName||''}<br>${inf.matches?`<b style="color:var(--gold-hi)">${inf.matches.toLocaleString('es-AR')}</b> partidas · parche ${esc(inf.patch)}`:'Sin estadísticas todavía'}${inf.generated?` · actualizadas ${fmtDate(inf.generated)}`:''}`;
+  if(inf.error) t+=`<div class="err">${esc(inf.error)}</div>`;
+  return t;
+}
+async function loadCfg(){
+  const c=await api('/api/settings');
+  $('#k').value=c.RIOT_API_KEY||''; $('#lolp').value=c.LOL_PATH||''; $('#repo').value=c.STATS_REPO||'';
+  $('#source').value=c.STATS_SOURCE||'online'; $('#bracket').value=c.BRACKET||'auto';
+  checks('#tiers',TIERS,c.TIERS.split(',')); checks('#roles',ROLES,c.ROLES.split(','));
+  $('#dataDir').textContent='Tus datos se guardan en: '+c.dataDir;
+  const a=c.account;
+  $('#acctBox').innerHTML = a?accountCard(a):'Abrí el LoL e iniciá sesión: la cuenta se detecta sola, no hace falta cargar nada.';
+  $('#statsBox').innerHTML = statsText(c.info);
+  updStatus();
+}
+async function saveCfg(){
+  const body={RIOT_API_KEY:$('#k').value,LOL_PATH:$('#lolp').value,STATS_REPO:$('#repo').value,STATS_SOURCE:$('#source').value,
+              BRACKET:$('#bracket').value,TIERS:picked('#tiers')||'PLATINUM,EMERALD',ROLES:picked('#roles')||'BOTTOM,UTILITY'};
+  await api('/api/settings',body); $('#saved').textContent='Guardado ✓'; setTimeout(()=>$('#saved').textContent='',2500); loadCfg();
+}
+async function refreshOnline(){ $('#statsBox').innerHTML='Descargando…'; const inf=await api('/api/stats',{}); $('#statsBox').innerHTML=statsText(inf); if($('#statsFrame').src) reloadStats(); }
+let updTimer=null;
+async function updStatus(){
+  const u=await api('/api/update');
+  $('#updBtn').disabled=u.running||!u.hasKey;
+  $('#updLog').textContent=u.log.join('\n')||'—';
+  clearTimeout(updTimer);
+  if(u.running) updTimer=setTimeout(updStatus,2000);
+  else if(updTimer!==null && u.log.length && view==='stats') reloadStats();
+}
+async function startUpdate(){
+  const u=await api('/api/update');
+  if(!u.hasKey) return;
+  await api('/api/update',{}); updTimer=0; updStatus();
+}
+
+refresh(); setInterval(refresh,2000);
+api('/api/ping'); setInterval(()=>api('/api/ping').catch(()=>{}),5000);
+</script>
+</body>
+</html>
