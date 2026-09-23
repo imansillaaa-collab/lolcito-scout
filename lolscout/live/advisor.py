@@ -83,6 +83,77 @@ def _ap_ratio(dd, cid):
     return m / (a + m) if a + m else 0.5
 
 
+# ---------------------------------------------------------------- cómo viene el equipo rival en el draft
+def enemy_shape(dd, enemy_cids):
+    """Qué tiene enfrente el equipo rival, con lo poco que se sabe en la selección: los campeones."""
+    shape = {"tanks": [], "cc": [], "burst": [], "heal": [], "ranged": 0, "ap": 0.0, "n": 0}
+    for cid in enemy_cids:
+        ch = dd.champions.get(cid, {})
+        tags, alias, kit = ch.get("tags", []), ch.get("alias", ""), ch.get("kit", {})
+        name = ch.get("name", "?")
+        shape["n"] += 1
+        shape["ap"] += _ap_ratio(dd, cid)
+        if "Tank" in tags:
+            shape["tanks"].append(name)
+        if alias in HARD_CC or kit.get("cc", 0) >= 2:
+            shape["cc"].append(name)
+        if "Assassin" in tags or ("Mage" in tags and _ap_ratio(dd, cid) > 0.6):
+            shape["burst"].append(name)
+        if alias in HEALERS or kit.get("heal"):
+            shape["heal"].append(name)
+        if ch.get("ranged"):
+            shape["ranged"] += 1
+    shape["apShare"] = shape["ap"] / shape["n"] if shape["n"] else 0.5
+    return shape
+
+
+def team_fit(dd, cid, shape, my_team_cids):
+    """Cuánto le sirve este campeón a ESTA partida, mirando lo que ya pickeó el rival (y tu equipo).
+
+    En puntos de winrate (0.01 = 1%), para que se pueda sumar al winrate del meta.
+    """
+    if not shape["n"]:
+        return 0.0, []
+    ch = dd.champions.get(cid, {})
+    tags, kit = ch.get("tags", []), ch.get("kit", {})
+    tanky = "Tank" in tags or "Fighter" in tags
+    escapes = kit.get("dash") or kit.get("invis") or kit.get("untargetable")
+    pts, why = 0.0, []
+    if len(shape["tanks"]) >= 2 and (kit.get("maxhp") or kit.get("true")):
+        pts += 0.012
+        why.append(f"le pega bien a los tanques del rival ({', '.join(shape['tanks'])})")
+    elif len(shape["tanks"]) >= 2 and "Assassin" in tags:
+        pts -= 0.010
+        why.append(f"cuesta matar tanques ({', '.join(shape['tanks'])}) con un asesino")
+    if len(shape["cc"]) >= 3:
+        if tanky or escapes:
+            pts += 0.007
+            why.append(f"aguanta el control del rival ({len(shape['cc'])} campeones con control)")
+        elif ch.get("ranged"):
+            pts -= 0.010
+            why.append(f"el rival tiene mucho control ({len(shape['cc'])} campeones) y no tenés escape")
+    if len(shape["burst"]) >= 2:
+        if tanky:
+            pts += 0.008
+            why.append(f"resiste el burst de {', '.join(shape['burst'][:2])}")
+        elif not escapes and ch.get("ranged"):
+            pts -= 0.008
+            why.append(f"te revientan rápido {', '.join(shape['burst'][:2])}")
+    if len(shape["heal"]) >= 2 and not ch.get("ranged"):
+        why.append("el rival cura mucho: acordate de un ítem de Heridas Graves")
+    # lo que le falta a tu equipo
+    mine = [c for c in my_team_cids if c]
+    if len(mine) >= 2:
+        if not any("Tank" in dd.champions.get(c, {}).get("tags", []) for c in mine) and "Tank" in tags:
+            pts += 0.008
+            why.append("tu equipo todavía no tiene un tanque")
+        ap_mine = [_ap_ratio(dd, c) for c in mine]
+        if len(ap_mine) >= 2 and sum(ap_mine) / len(ap_mine) < 0.35 and _ap_ratio(dd, cid) > 0.6:
+            pts += 0.008
+            why.append("tu equipo necesita daño mágico")
+    return pts, why
+
+
 # ---------------------------------------------------------------- selección de campeones
 def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="BOTTOM", pool=None) -> dict:
     pool = pool or {}
@@ -117,37 +188,49 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     ally_partner = next((a["cid"] for a in allies if a["role"] == BOT_PARTNER.get(my_role) and a["cid"]), None)
 
     duo_idx = {(d["adc"], d["sup"]): d for d in duos}
-    ally_ap = [_ap_ratio(dd, a["cid"]) for a in allies if a["cid"]]
-    team_ap = sum(ally_ap) / len(ally_ap) if ally_ap else 0.5
+    shape = enemy_shape(dd, enemies)
+    my_cids = [a["cid"] for a in allies if a["cid"]]
 
     def evaluate(c):
-        score, why = c["adj"], [f"Meta: {c['wr']*100:.1f}% en {c['games']} partidas"]
+        # 1) el meta del parche, pero creyéndole menos a los campeones con pocas partidas
+        conf = min(c["games"] / 60, 1.0)
+        score = 0.5 + (c["adj"] - 0.5) * conf
+        score += 0.012 * min(c.get("pick", 0) / 0.05, 1.0)  # lo que de verdad se juega en tu rango
+        why = [f"Meta: {c['wr']*100:.1f}% en {c['games']} partidas" + ("" if conf >= 1 else " (pocas partidas todavía)")]
+        # 2) contra el campeón que te tocó en tu línea
         if lane_opp and str(lane_opp) in c["vs_all"]:
             g, w = c["vs_all"][str(lane_opp)]
-            a = adj_wr(w * g, g, 10)
-            score += (a - 0.5) * 1.2
-            why.append(f"vs {dd.champ_name(lane_opp)}: {w*100:.0f}% ({g} p.)")
+            # con 6 partidas de un cruce no se puede decir "le gana": el dato pesa según cuántas hay
+            a = adj_wr(w * g, g, 20)
+            score += (a - 0.5) * 1.2 * min(g / 25, 1.0)
+            why.append(f"vs {dd.champ_name(lane_opp)}: {w*100:.0f}% en {g} partida{'s' if g != 1 else ''}"
+                       + (" (pocas)" if g < 15 else ""))
+        # 3) contra el resto de lo que ya pickeó el rival
+        fit, fit_why = team_fit(dd, c["id"], shape, my_cids)
+        score += fit
+        why += fit_why
+        # 4) con tu compañero de línea
         if ally_partner:
             key = (c["id"], ally_partner) if my_role == "BOTTOM" else (ally_partner, c["id"])
             d = duo_idx.get(key)
             if d:
-                score += (d["adj"] - 0.5) * 0.8
-                why.append(f"con {dd.champ_name(ally_partner)}: {d['wr']*100:.0f}% ({d['games']} p.)")
-        if pool.get(c["id"], [0])[0] >= 3:
-            g, w = pool[c["id"]]
-            score += 0.012 * min(g, 10) / 10 + (w / g - 0.5) * 0.02
-            why.append(f"Lo jugaste {g} veces ({w / g * 100:.0f}% de victorias)")
-        if len(ally_ap) >= 3 and team_ap < 0.35 and _ap_ratio(dd, c["id"]) > 0.6:
-            score += 0.01
-            why.append("tu equipo necesita daño mágico")
-        return score, why
+                score += (d["adj"] - 0.5) * 0.8 * min(d["games"] / 25, 1.0)
+                why.append(f"con {dd.champ_name(ally_partner)}: {d['wr']*100:.0f}% en {d['games']} partidas")
+        # 5) tus campeones: los que jugás seguido y te salen bien
+        mine = pool.get(c["id"], [0, 0])
+        if mine[0] >= 3:
+            g, w = mine
+            score += 0.02 * min(g, 8) / 8 + (w / g - 0.5) * 0.03
+            why.append(f"lo jugaste {g} veces ({w / g * 100:.0f}% de victorias)")
+        return score, why, bool(fit_why), mine[0] >= 3
 
     options = []
     for c in meta.get(my_role, []):
         if c["id"] in unavailable:
             continue
-        score, why = evaluate(c)
+        score, why, counters, mine = evaluate(c)
         options.append({**_champ_card(dd, c["id"]), "tier": c["tier"], "score": score, "why": why,
+                        "games": c["games"], "thin": c["games"] < 40, "counters": counters, "mine": mine,
                         "build": [_item_card(dd, i["id"]) for i in c["items"][:3]],
                         "boots": _item_card(dd, c["boots"][0]["id"]) if c["boots"] else None,
                         "keystone": {"name": dd.rune_name(c["keystones"][0]["id"]),
@@ -161,9 +244,23 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             current = {**_champ_card(dd, my_champ), "tier": "?", "why": ["Pocas partidas en el meta de tu rango"],
                        "build": [], "boots": None, "keystone": None}
 
+    if lane_opp:
+        situation = (f"Enfrente tenés a {dd.champ_name(lane_opp)}: primero miro a quién le va bien contra ese campeón, "
+                     "después cómo le va contra el resto del equipo rival y qué anda en el parche.")
+    elif enemies:
+        situation = (f"El rival ya pickeó {len(enemies)} campeón{'es' if len(enemies) > 1 else ''}: te muestro lo que "
+                     "mejor funciona contra lo que armaron, más lo que anda en el parche.")
+    else:
+        situation = ("Todavía no pickeó nadie del rival, así que te muestro lo mejor del parche en tu rango "
+                     "y los campeones que más jugás.")
+    my_champs = [{**_champ_card(dd, cid), "games": g, "wr": w / g}
+                 for cid, (g, w) in sorted(pool.items(), key=lambda kv: -kv[1][0])[:5]
+                 if cid not in unavailable and g >= 3]
+
     return {
         "phase": "draft",
         "myRole": my_role, "myRoleEs": ROLE_ES.get(my_role, my_role),
+        "situation": situation, "myChamps": my_champs,
         "current": current,
         "laneOpponent": _champ_card(dd, lane_opp) if lane_opp else None,
         "enemyPartner": _champ_card(dd, enemy_partner) if enemy_partner else None,
@@ -196,7 +293,49 @@ def _player(dd, p):
     }
 
 
-def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=None) -> dict:
+PANTS_TIPS = {
+    "TOP": "Presioná un carril lateral: si te mandan dos, tu equipo hace el objetivo del otro lado.",
+    "JUNGLE": "Armá vos las peleas: invadí la jungla rival y hacé los objetivos con tu equipo.",
+    "MIDDLE": "Limpiá rápido tu línea y aparecé en todos lados: con esta ventaja las rotaciones las ganás vos.",
+    "BOTTOM": "No pelees solo, pero tampoco esperes: con esta ventaja peleás para adelante con tu support al lado.",
+    "UTILITY": "Sos el que más ventaja tiene: enganchá vos las peleas y no esperes a que las empiece otro.",
+}
+
+
+def pants(me, allies, enemies, lane_cmp, team_kills, t, role):
+    """El clásico «ponete el pantalón»: cuando estás claramente por encima del resto de la partida."""
+    if t < 8 * 60:
+        return None
+    pts, why = 0, []
+    kd = me["k"] - me["d"]
+    if kd >= 5:
+        pts += 1
+        why.append(f"vas {me['k']}/{me['d']}/{me['a']}")
+    if me["d"] <= 1 and t >= 15 * 60:
+        pts += 1
+        why.append("casi no moriste" if me["d"] else "todavía no moriste")
+    avg_enemy = sum(p["gold"] for p in enemies) / max(len(enemies), 1)
+    if me["gold"] - avg_enemy >= 2500:
+        pts += 1
+        why.append(f"tenés {int((me['gold'] - avg_enemy) / 100) * 100} de oro en ítems más que el rival promedio")
+    if me["gold"] >= max(p["gold"] for p in allies + enemies):
+        pts += 1
+        why.append("sos el que más ítems tiene de los 10")
+    kp = (me["k"] + me["a"]) / max(team_kills[0], 1)
+    if kp >= 0.6 and team_kills[0] >= 8:
+        pts += 1
+        why.append(f"estuviste en el {kp*100:.0f}% de las kills de tu equipo")
+    if lane_cmp and lane_cmp["gold"] >= 2000:
+        pts += 1
+        why.append("le sacaste la línea a tu rival")
+    if pts < 3:
+        return None
+    return {"level": 2 if pts >= 5 else 1,
+            "title": "Ponete el pantalón largo" if pts >= 5 else "Ponete el pantalón",
+            "why": why[:3], "tip": PANTS_TIPS.get(role, "Hacete cargo de la partida: llevala vos.")}
+
+
+def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=None, champs=None) -> dict:
     from . import gameplan as gp
     from . import objectives as ob
     act = game.get("activePlayer", {})
@@ -217,6 +356,8 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
         enemy_roles = guess_roles([p["cid"] for p in enemies], dist, dd)
 
     champ_meta = next((c for c in meta.get(my_role, []) if c["id"] == me["cid"]), None)
+    if not champ_meta:  # sin partidas suficientes en tu rol, valen las de ese campeón en cualquier rol
+        champ_meta = (champs or {}).get(me["cid"])
     prof = gp.champion_profile(dd, me["cid"], champ_meta)
     my_stats = act.get("championStats") or {}
     report = gp.enemy_report(enemies, dd, me, my_stats, prof["_damage"])
@@ -277,6 +418,7 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
     lane_cmp = None
     if lane:
         lane_cmp = {"gold": me["gold"] - lane["gold"], "level": me["level"] - lane["level"], "cs": me["cs"] - lane["cs"]}
+    team_kills = [sum(p["k"] for p in allies), sum(p["k"] for p in enemies)]
 
     return {
         "phase": "game",
@@ -304,6 +446,7 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
         "enemies": enemy_rows,
         "allies": sorted((row(p) for p in allies), key=by_role),
         "teamGold": [sum(p["gold"] for p in allies), sum(p["gold"] for p in enemies)],
-        "teamKills": [sum(p["k"] for p in allies), sum(p["k"] for p in enemies)],
-        "noMeta": not meta.get(my_role),
+        "teamKills": team_kills,
+        "pants": pants(me, allies, enemies, lane_cmp, team_kills, t, my_role),
+        "noMeta": not champ_meta,
     }
