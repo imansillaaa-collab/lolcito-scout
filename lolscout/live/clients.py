@@ -112,13 +112,30 @@ class LCU:
     # --- Selección de campeones: marcar y bloquear ---
     def draft_action(self, action_id, champion_id, lock=False):
         """Marca el campeón en tu casillero (reversible) y, si lock, lo confirma."""
-        ok, res = self._send("PATCH", f"/lol-champ-select/v1/session/actions/{int(action_id)}",
-                             {"championId": int(champion_id)})
-        if not ok:
-            return False, res
-        if lock:
-            return self._send("POST", f"/lol-champ-select/v1/session/actions/{int(action_id)}/complete", {})
-        return True, res
+        path = f"/lol-champ-select/v1/session/actions/{int(action_id)}"
+        ok, res = self._send("PATCH", path, {"championId": int(champion_id)})
+        if not ok or not lock:
+            return ok, res
+        ok, res = self._send("POST", path + "/complete", {})
+        if ok or self.action_done(action_id):
+            return True, res
+        # algunos clientes no aceptan /complete: el mismo PATCH con "completed" también bloquea
+        ok2, res2 = self._send("PATCH", path, {"championId": int(champion_id), "completed": True})
+        return (True, res2) if ok2 else (False, res)
+
+    def action_done(self, action_id, wait: float = 1.5) -> bool:
+        """¿El cliente ya tiene esa acción como completada? (espera un poco a que se actualice)"""
+        fin = time.time() + wait
+        while True:
+            ses = self.get("/lol-champ-select/v1/session") or {}
+            for group in ses.get("actions", []):
+                for a in group:
+                    if a.get("id") == int(action_id):
+                        if a.get("completed"):
+                            return True
+            if time.time() >= fin:
+                return False
+            time.sleep(0.25)
 
     # --- Páginas de runas ---
     PAGE_PREFIX = "Lolcito runas para "

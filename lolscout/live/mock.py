@@ -70,7 +70,9 @@ class MockLCU:
         for i, (pos, alias) in enumerate(self.DRAFT_MINE):
             picked = (not fase_ban) and (step - 3) > i and (i != self.MY_SLOT or step >= 9)
             my_team.append({"cellId": i, "assignedPosition": pos,
-                            "championId": cid(alias.lower()) if picked else 0})
+                            "championId": cid(alias.lower()) if picked else 0,
+                            # tu support ya marcó a su campeón aunque todavía no lo bloqueó
+                            "championPickIntent": cid(alias.lower()) if pos == "UTILITY" and not picked else 0})
         revelados = 0 if fase_ban else max(0, step - 4)
         for i, alias in enumerate(self.DRAFT_THEIRS[:revelados]):
             their_team.append({"cellId": 5 + i, "championId": cid(alias.lower())})

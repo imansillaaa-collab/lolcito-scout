@@ -279,28 +279,52 @@ class Assistant:
 
     # ---------- banear / pickear desde Lolcito
     def draft_action(self, body):
-        """Marca (o bloquea) un campeón en la selección. El bloqueo solo pasa si lo pedís explícito."""
-        st = self.get_state()
-        if st.get("phase") != "draft":
-            return {"ok": False, "error": "Ya no estás en la selección de campeones."}
+        """Marca (o bloquea) un campeón en la selección. El bloqueo solo pasa si lo pedís explícito.
+
+        El turno se lee del cliente en el momento del clic (no del estado de la pantalla, que puede
+        tener un par de segundos): así no se pierde el turno por un dato viejo.
+        """
+        from .advisor import my_action, my_pending_pick
         cid = int(body.get("championId") or 0)
         lock = bool(body.get("lock"))
-        action_id = st.get("actionId")
         if not cid:
             return {"ok": False, "error": "Falta el campeón."}
-        if not action_id:
-            return {"ok": False, "error": "No es tu turno todavía: esperá a que te toque."}
         nombre = self.dd.champ_name(cid)
-        verbo = "banear" if st.get("step") == "ban" else "pickear"
         if self.simulated:
+            st = self.get_state()
+            if st.get("phase") != "draft":
+                return {"ok": False, "error": "Ya no estás en la selección de campeones."}
+            if not st.get("myTurn") and (lock or not st.get("canPrepick")):
+                return {"ok": False, "error": "No es tu turno todavía: esperá a que te toque."}
+            verbo = "banear" if st.get("step") == "ban" else "pickear"
             return {"ok": True, "simulated": True,
                     "msg": f"{'Bloqueado' if lock else 'Marcado'}: {nombre} ({verbo})"}
         if not hasattr(self.lcu, "draft_action"):
             return {"ok": False, "error": "No encuentro el cliente de League of Legends."}
-        ok, res = self.lcu.draft_action(action_id, cid, lock)
+        session = self.lcu.champ_select()
+        if not session:
+            return {"ok": False, "error": "Ya no estás en la selección de campeones."}
+        local = session.get("localPlayerCellId")
+        accion = my_action(session, local)
+        if not accion:
+            pre = my_pending_pick(session, local)
+            if lock or not pre:
+                return {"ok": False, "error": "No es tu turno todavía: esperá a que te toque."}
+            ok, res = self.lcu.draft_action(pre["id"], cid, False)
+            print(f"[draft] pre-pick {nombre} (acción {pre['id']}): {'ok' if ok else res}", flush=True)
+            return ({"ok": True, "msg": f"{nombre} pre-pickeado: tus aliados ya lo ven"} if ok
+                    else {"ok": False, "error": str(res)})
+        ok, res = self.lcu.draft_action(accion["id"], cid, lock)
+        print(f"[draft] {'bloquear' if lock else 'marcar'} {nombre} ({accion['type']}, acción {accion['id']}): "
+              f"{'ok' if ok else res}", flush=True)
         if not ok:
             return {"ok": False, "error": str(res)}
-        return {"ok": True, "msg": (f"{nombre} bloqueado" if lock else f"{nombre} marcado en el cliente")}
+        if lock and hasattr(self.lcu, "action_done") and not self.lcu.action_done(accion["id"]):
+            return {"ok": False, "error": "El cliente no confirmó el bloqueo: bloquealo a mano en el LoL."}
+        es_ban = accion["type"] == "ban"
+        if lock:
+            return {"ok": True, "msg": f"{nombre} {'baneado' if es_ban else 'bloqueado'}"}
+        return {"ok": True, "msg": f"{nombre} marcado en el cliente"}
 
     # ---------- runas al cliente de LoL
     def apply_runes(self, body):
@@ -351,7 +375,8 @@ class Assistant:
                 with self.lock:
                     self.state = {"phase": "idle", "message": "Error leyendo el juego", "detail": str(e),
                                   "info": self.info, "account": None}
-            time.sleep(2)
+            # en la selección de campeones los turnos duran 30 segundos: miro el cliente más seguido
+            time.sleep(0.7 if self.state.get("phase") == "draft" else 2)
 
     def get_state(self):
         with self.lock:

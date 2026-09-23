@@ -9,8 +9,10 @@ from collections import defaultdict
 from itertools import permutations
 
 from ..analyze import adj_wr
+from .duos import partner_picks, synergy as duo_synergy
 
 POSITIONS = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
+
 LCU_POS = {"top": "TOP", "jungle": "JUNGLE", "middle": "MIDDLE", "mid": "MIDDLE",
            "bottom": "BOTTOM", "utility": "UTILITY", "support": "UTILITY"}
 BOT_PARTNER = {"BOTTOM": "UTILITY", "UTILITY": "BOTTOM"}
@@ -173,6 +175,15 @@ def my_action(session, local):
     return None
 
 
+def my_pending_pick(session, local):
+    """Tu pick que todavía no llegó: sirve para pre-pickear (marcar la intención) antes de tu turno."""
+    for group in session.get("actions", []):
+        for a in group:
+            if a.get("actorCellId") == local and a.get("type") == "pick" and not a.get("completed"):
+                return {"id": a.get("id"), "type": "pick", "championId": a.get("championId") or 0}
+    return None
+
+
 def ban_options(meta, my_role, pool, unavailable, dd, limit=4):
     """Qué conviene banear: lo que está fuerte en tu línea y lo que le gana a tus campeones.
 
@@ -260,7 +271,8 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     enemy_roles = guess_roles(enemies, dist, dd)
     lane_opp = next((c for c, r in enemy_roles.items() if r == my_role), None)
     enemy_partner = next((c for c, r in enemy_roles.items() if r == BOT_PARTNER.get(my_role)), None)
-    ally_partner = next((a["cid"] for a in allies if a["role"] == BOT_PARTNER.get(my_role) and a["cid"]), None)
+    partner = next((a for a in allies if a["role"] == BOT_PARTNER.get(my_role) and a["cid"]), None)
+    ally_partner = partner["cid"] if partner else None
 
     duo_idx = {(d["adc"], d["sup"]): d for d in duos}
     shape = enemy_shape(dd, enemies)
@@ -284,13 +296,13 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         fit, fit_why = team_fit(dd, c["id"], shape, my_cids)
         score += fit
         why += fit_why
-        # 4) con tu compañero de línea
+        # 4) con tu compañero de línea (el que ya bloqueó o el que tiene marcado)
         if ally_partner:
-            key = (c["id"], ally_partner) if my_role == "BOTTOM" else (ally_partner, c["id"])
-            d = duo_idx.get(key)
-            if d:
-                score += (d["adj"] - 0.5) * 0.8 * min(d["games"] / 25, 1.0)
-                why.append(f"con {dd.champ_name(ally_partner)}: {d['wr']*100:.0f}% en {d['games']} partidas")
+            adc, sup = (c["id"], ally_partner) if my_role == "BOTTOM" else (ally_partner, c["id"])
+            s_duo, why_duo, _ = duo_synergy(dd, adc, sup, duo_idx)
+            score += s_duo
+            why += [f"Con {dd.champ_name(ally_partner)}: {w[len('Juntos: '):]}" if w.startswith("Juntos: ") else w
+                    for w in why_duo]
         # 5) tus campeones: los que jugás seguido y te salen bien
         mine = pool.get(c["id"], [0, 0])
         if mine[0] >= 3:
@@ -335,6 +347,14 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     # ¿te toca a vos ahora? ¿banear o pickear?
     accion = my_action(session, local)
     paso = accion["type"] if accion else ("ban" if _ban_phase(session) else "pick")
+    # pre-pick: todavía no es tu turno pero ya podés marcar a quién querés (tus aliados lo ven)
+    prepick = None if accion or me.get("championId") else my_pending_pick(session, local)
+
+    duo_list = []
+    if ally_partner and my_role in BOT_PARTNER:
+        duo_list = partner_picks(dd, my_role, ally_partner, meta.get(my_role, []), duo_idx, unavailable)
+        for o in duo_list:
+            o["counters"] = any(x["id"] == o["id"] and x["counters"] for x in options)
     bans_sug = ban_options(meta, my_role, pool, unavailable, dd) if paso == "ban" else []
 
     # Runas y hechizos: para el campeón que ya elegiste, o para la primera opción mientras no elijas
@@ -354,6 +374,8 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         "myRole": my_role, "myRoleEs": ROLE_ES.get(my_role, my_role),
         "situation": situation, "myChamps": my_champs,
         "step": paso, "myTurn": bool(accion), "actionId": (accion or {}).get("id"),
+        "canPrepick": bool(prepick), "partnerPicks": duo_list,
+        "partnerLocked": bool(partner and partner["locked"]),
         "hovering": (accion or {}).get("championId") or 0,
         "banOptions": bans_sug,
         "runes": rune_opts, "spells": spell_info,

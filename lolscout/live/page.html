@@ -683,30 +683,47 @@ function runesPanel(s){
     </div>${sp}`;
 }
 // --- acciones sobre la selección de campeones (marcar / bloquear)
-async function draftDo(cid, lock, btn){
-  const antes = btn.textContent, clase = btn.className;
-  btn.disabled = true; btn.textContent = lock ? 'Bloqueando…' : 'Marcando…';
-  try{
-    const r = await api('/api/draft', {championId: cid, lock});
-    btn.className = clase + (r.ok ? ' ok' : ' err');
-    btn.textContent = r.ok ? (r.msg || 'Listo') : (r.error || 'No pude');
-  }catch(e){ btn.className = clase + ' err'; btn.textContent = 'Sin conexión'; }
-  setTimeout(()=>{ btn.disabled=false; btn.className=clase; btn.textContent=antes; }, 5000);
+// La pantalla se redibuja cada segundo, así que el estado de los botones («tocá otra vez», «bloqueando…»,
+// el resultado) se guarda acá y no en el botón: si no, el redibujado lo borraba y el bloqueo nunca salía.
+const DA={armed:null, armedT:0, fb:{}};
+const dKey=(cid,que,lock)=>que+':'+cid+':'+(lock?'L':'M');
+async function draftDo(cid, lock, que){
+  const k=dKey(cid,que,lock);
+  DA.fb[k]={txt:lock?(que==='ban'?'Baneando…':'Bloqueando…'):'Marcando…', cls:'', busy:true, until:Date.now()+15000};
+  render();
+  let r;
+  try{ r=await api('/api/draft',{championId:cid, lock}); }catch(e){ r={ok:false, error:'Sin conexión con Lolcito'}; }
+  DA.fb[k]={txt:r.ok?(r.msg||'Listo'):(r.error||'No pude'), cls:r.ok?'ok':'err', until:Date.now()+(r.ok?4000:8000)};
+  refresh();
 }
-// el bloqueo es irreversible: pide un segundo clic
-let armado = null;
-function draftLock(cid, btn){
-  if(armado === btn){ clearTimeout(btn._t); armado = null; draftDo(cid, true, btn); return; }
-  if(armado){ armado.classList.remove('arm'); armado.textContent = armado.dataset.antes; clearTimeout(armado._t); }
-  armado = btn; btn.dataset.antes = btn.textContent;
-  btn.classList.add('arm'); btn.textContent = 'Tocá otra vez para confirmar';
-  btn._t = setTimeout(()=>{ btn.classList.remove('arm'); btn.textContent = btn.dataset.antes; armado = null; }, 4000);
+// el bloqueo es irreversible: pide un segundo clic (dentro de 4 segundos)
+function draftLock(cid, que){
+  const k=dKey(cid,que,true);
+  if(DA.armed===k && Date.now()<DA.armedT){ DA.armed=null; draftDo(cid,true,que); return; }
+  DA.armed=k; DA.armedT=Date.now()+4000; render();
+  setTimeout(()=>{ if(DA.armed===k && Date.now()>=DA.armedT){ DA.armed=null; render(); } }, 4100);
 }
 function draftBtns(cid, s, que){
-  const mio = s.myTurn ? '' : 'disabled title="Todavía no te toca"';
+  const now=Date.now(), km=dKey(cid,que,false), kl=dKey(cid,que,true);
+  const fm=DA.fb[km]&&DA.fb[km].until>now?DA.fb[km]:null, fl=DA.fb[kl]&&DA.fb[kl].until>now?DA.fb[kl]:null;
+  const armado=DA.armed===kl && now<DA.armedT;
+  const marcar=s.myTurn || (que==='pick' && s.canPrepick);
+  const txtM=fm?fm.txt:(que==='ban'?'Marcar para banear':(s.myTurn?'Marcar en el cliente':'Pre-pickear'));
+  const txtL=fl?fl.txt:(armado?'Tocá otra vez para confirmar':(que==='ban'?'Banear ya':'Bloquear'));
+  const off=t=>`disabled title="${t}"`;
+  const disM=fm&&fm.busy?off('Esperando al cliente'):(marcar?'':off('Todavía no te toca'));
+  const disL=fl&&fl.busy?off('Esperando al cliente'):(s.myTurn?'':off('Todavía no te toca'));
   return `<div class="dact">
-      <button class="rbtn" ${mio} onclick="draftDo(${cid},false,this)">${que==='ban'?'Marcar para banear':'Marcar en el cliente'}</button>
-      <button class="rbtn lock" ${mio} onclick="draftLock(${cid},this)">${que==='ban'?'Banear ya':'Bloquear'}</button>
+      <button class="rbtn ${fm?fm.cls:''}" ${disM} onclick="draftDo(${cid},false,'${que}')">${esc(txtM)}</button>
+      <button class="rbtn lock ${armado?'arm':''} ${fl?fl.cls:''}" ${disL} onclick="draftLock(${cid},'${que}')">${esc(txtL)}</button>
+    </div>`;
+}
+function partnerPanel(s){
+  const p=s.allyPartner, l=s.partnerPicks||[];
+  if(!p||!l.length) return '';
+  return `<div class="panel tight"><h2>Combina con ${esc(p.name)}<span class="turno ${s.partnerLocked?'':'no'}">${s.partnerLocked?'ya lo bloqueó':'lo tiene marcado'}</span></h2>
+      <div class="chgrid">${l.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>
+      <div class="note">Mezcla cómo le va a cada dupla en tu rango (cuando hay partidas suficientes) con cómo encajan los estilos: un ADC de pelea corta con un support que engancha, uno que escala con uno que lo proteja, uno de rango con uno que pegue de lejos.</div>
     </div>`;
 }
 function chAlias(o){ return ((o&&o.img)||'').split('/').pop().replace('.png',''); }
@@ -732,7 +749,7 @@ function layoutSplashes(){
 window.addEventListener('resize',layoutSplashes);
 
 function champCard(o, kind, s, best){
-  const tags=`${tier(o.tier)}${o.counters?`<span class="tag">${kind==='ban'?'te contra a vos':'contra este rival'}</span>`:''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}`;
+  const tags=`${tier(o.tier)}${o.counters?`<span class="tag">${kind==='ban'?'te contra a vos':'contra este rival'}</span>`:''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}${o.combo?'<span class="tag mio">combo conocido</span>':''}`;
   const why=o.why.slice(0,3), resto=o.why.length-why.length;
   return `<div class="ch ${kind} ${best?'best':''}" title="${esc(o.why.join(' · '))}">${chSplash(o,'r')}
     <div class="cht"><span class="chn">${esc(o.name)}</span>${tags}</div>
@@ -779,7 +796,7 @@ function draft(s){
       ? `<div class="chgrid">${s.options.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>`
       : '<div class="small">Sin estadísticas del meta todavía: cargá tu API key en Configuración y tocá «Actualizar ahora».</div>';
     centro = `<div class="dsplit">
-      <div><div class="panel tight"><h2>Qué pickear</h2>
+      <div>${partnerPanel(s)}<div class="panel tight"><h2>Qué pickear</h2>
         ${s.situation?`<div class="situ">${esc(s.situation)}</div>`:''}${opts}${mios}
         <div class="note">Ordenadas por lo que le va bien a tu rival de línea y al resto del equipo rival, más el winrate en tu rango. Vos elegís.</div></div></div>
       <div>${runesPanel(s)}</div>
@@ -790,6 +807,148 @@ function draft(s){
     <div class="col-center">${centro}</div>
     <div class="col-enemy panel team enemy"><h2 class="enemy">Equipo rival</h2>${foes}</div>
   </div>`;
+}
+
+// ---------- partida en curso (recuperado: se había perdido en la versión de la tarde del 23/9)
+function player(p,isMe,enemy){
+  const badge = p.dmg?`<span class="dmg d${p.dmg}">${p.dmg}</span>`:'';
+  const def = enemy&&p.armor!=null?`<div class="stat" title="Armadura y resistencia mágica estimadas">${p.armor} armadura · ${p.mr} res. mágica</div>`:'';
+  const flags = (p.flags||[]).map(f=>`<span class="flag f-${f.replace(/[^a-z]/g,'')}">${esc(f)}</span>`).join('');
+  return `<div class="slot ${isMe?'me':''} ${p.threat?'threat':''} ${p.dead?'dead':''}">${pimg(p,'por sm')}
+    <div class="who"><div class="name">${esc(p.name)} ${badge}${p.threat?'<span class="badge">más fuerte</span>':''}${p.dead?`<span class="deadb">muerto · ${p.respawn} s</span>`:''}</div>
+      <div class="stat">${esc(p.role)} · nv ${p.level} · ${p.k}/${p.d}/${p.a} · ${p.cs} cs · <span class="gold">${k(p.gold)}</span></div>${def}
+      ${flags?`<div class="flags">${flags}</div>`:''}
+      <div class="items">${p.items.map(i=>iimg(i)).join('')}</div></div></div>`;
+}
+const sign=n=>(n>0?'+':'')+n;
+function laneChips(c,lo){
+  if(!c||!lo) return '';
+  const cls=n=>n>0?'up':n<0?'down':'';
+  return `<div class="lanecmp"><span class="${cls(c.gold)}">${sign(c.gold)} oro en ítems</span><span class="${cls(c.level)}">${sign(c.level)} nivel</span><span class="${cls(c.cs)}">${sign(c.cs)} cs</span><span class="small">vs ${esc(lo.name)}</span></div>`;
+}
+const OBJ_ICON={drake:'🜂',elder:'✦',grubs:'◉',herald:'◈',baron:'♛'};
+function objectivesPanel(o){
+  const rows=o.rows.map(r=>`<div class="obj st-${r.state}"><span class="oi"><img src="${r.img}" alt=""></span>
+      <div class="ol"><b>${esc(r.label)}</b>${r.extra?`<span>${esc(r.extra)}</span>`:''}</div>
+      <div class="ot">${esc(r.text)}${r.at&&r.state!=='up'?`<small>a las ${r.at}</small>`:''}</div></div>`).join('');
+  const dk=(names,cols,imgs)=>names.map((n,i)=>`<span class="dk" style="border-color:${cols[i]};color:${cols[i]}"><img src="${imgs[i]}" alt="">${esc(n)}</span>`).join('')||'<span class="small">—</span>';
+  const buffs=o.buffs.map(b=>`<div class="buff ${b.mine?'mine':'theirs'}">${esc(b.text)} · <b>${b.left}</b></div>`).join('');
+  const inh=o.inhibs.map(x=>`<div class="small">${esc(x)}</div>`).join('');
+  return `<div class="objs">${rows}</div>${buffs}${inh}
+    <div class="drakes"><div><span class="small">Dragones de tu equipo</span><div>${dk(o.drakes.mine,o.drakes.mineColors,o.drakes.mineImgs)}</div></div>
+    <div style="text-align:right"><span class="small">Dragones del rival</span><div>${dk(o.drakes.theirs,o.drakes.theirsColors,o.drakes.theirsImgs)}</div></div></div>`;
+}
+function cmpBlock(c){
+  const pos=Math.round((c.score+1.5)/3*100);
+  return `<div class="fight ${c.tone}"><div class="flabel">${esc(c.label)}</div>
+    <div class="fmeter"><div class="fz bad"></div><div class="fz even"></div><div class="fz good"></div><div class="fmark" style="left:${pos}%"></div></div>
+    <div class="fscale"><span>Desventaja</span><span>Parejo</span><span>Ventaja</span></div>
+    <div class="factors">${c.factors.map(x=>`<div class="fx ${x.good===true?'g':x.good===false?'b':''}">${x.good===true?'▲':x.good===false?'▼':'•'} ${esc(x.text)}</div>`).join('')}</div></div>`;
+}
+function fightPanel(f){
+  if(f.mode==='objective'){
+    const o=f.objective;
+    return `<div class="objhead st-${o.state}" style="--bg:url('${o.img}')"><span class="oi big"><img src="${o.img}" alt=""></span><div><b>${esc(o.label)}</b><span>${esc(o.when)}</span></div></div>
+      ${f.stakes.map(x=>`<div class="stake">${esc(x)}</div>`).join('')}
+      <div class="reading ${f.tone}">${esc(f.reading)}</div>
+      ${cmpBlock(f.compare)}
+      <div class="alts"><div class="small">Opciones:</div>${f.alts.map(a=>`<div>◆ ${esc(a)}</div>`).join('')}</div>
+      <div class="note">Compara vivos, niveles, oro y mejoras. No sabe las definitivas ni los hechizos del rival: vos decidís.</div>`;
+  }
+  return `${cmpBlock(f.compare)}
+    <div class="macro">${f.options.map((o,i)=>`<div class="mo ${i==0?'best':''}"><div class="mt">${i==0?'<span class="tag">lo más razonable ahora</span>':''}<b>${esc(o.title)}</b></div>
+      <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div>`).join('')}</div>
+    <div class="note">No hay objetivos en juego. Son opciones según cómo viene la partida: vos decidís.</div>`;
+}
+// ---------- orden de los paneles (cada usuario lo acomoda como quiere; se guarda en ajustes.json)
+const COLS=['L','a','b','R'];
+const DEFAULT_LAYOUT={L:['novedades'],a:['compra','build','rival'],b:['pelea','obj'],R:['mision'],min:[]};
+let LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), lastState=null;
+function fixLayout(l){
+  const out={L:[],a:[],b:[],R:[],min:Array.isArray(l&&l.min)?l.min.filter(x=>typeof x==='string'):[]}, seen=new Set();
+  for(const c of COLS) for(const id of ((l&&l[c])||[])) if(DEFAULT_LAYOUT[c]!==undefined&&!seen.has(id)&&COLS.some(k=>DEFAULT_LAYOUT[k].includes(id))){out[c].push(id);seen.add(id);}
+  for(const c of COLS) for(const id of DEFAULT_LAYOUT[c]) if(!seen.has(id)){out[c].push(id);seen.add(id);}
+  return out;
+}
+function layoutCol(c,P){
+  return LAYOUT[c].filter(id=>P[id]).map((id,i,arr)=>{
+    const [title,body,cls]=P[id], min=LAYOUT.min.includes(id), ci=COLS.indexOf(c);
+    const b=(act,sym,tip,off)=>`<button class="pb" ${off?'disabled':''} title="${tip}" onclick="movePanel('${id}','${act}')">${sym}</button>`;
+    return `<div class="panel ${cls||''} ${min?'min':''}" data-p="${id}"><div class="ph"><h2>${esc(title)}</h2><span class="pctl">
+      ${b('up','▲','Subir',i===0)}${b('down','▼','Bajar',i===arr.length-1)}${b('left','◀','Pasar a la columna de la izquierda',ci===0)}${b('right','▶','Pasar a la columna de la derecha',ci===COLS.length-1)}${b('min',min?'+':'–',min?'Mostrar':'Achicar')}</span></div>${min?'':body}</div>`;
+  }).join('');
+}
+function movePanel(id,act){
+  const c=COLS.find(k=>LAYOUT[k].includes(id)); if(!c) return;
+  const col=LAYOUT[c], i=col.indexOf(id);
+  if(act==='up'&&i>0) [col[i-1],col[i]]=[col[i],col[i-1]];
+  else if(act==='down'&&i<col.length-1) [col[i+1],col[i]]=[col[i],col[i+1]];
+  else if(act==='left'||act==='right'){
+    const ci=COLS.indexOf(c)+(act==='left'?-1:1); if(ci<0||ci>=COLS.length) return;
+    col.splice(i,1); LAYOUT[COLS[ci]].splice(Math.min(i,LAYOUT[COLS[ci]].length),0,id);
+  } else if(act==='min') LAYOUT.min=LAYOUT.min.includes(id)?LAYOUT.min.filter(x=>x!==id):[...LAYOUT.min,id];
+  api('/api/layout',{layout:LAYOUT}); render();
+}
+function resetLayout(){ LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)); api('/api/layout',{layout:LAYOUT}); render(); }
+api('/api/settings').then(c=>{ if(c.LAYOUT&&Object.keys(c.LAYOUT).length){ LAYOUT=fixLayout(c.LAYOUT); render(); } }).catch(()=>{});
+
+function game(s){
+  if(s.error) return idle({message:s.error,info:s.info});
+  const [ga,ge]=s.teamGold, tot=(ga+ge)||1;
+  const me=s.me, lo=s.laneOpponent;
+  const vs=`<div class="vs"><div class="side">${pimg(me,'por lg')}<div><div class="small">Vos · ${esc(s.myRoleEs)}</div><div class="name">${esc(me.name)}</div><div class="small">${me.k}/${me.d}/${me.a} · ${k(me.gold)}</div></div></div>
+     <div class="x">VS</div>
+     <div class="side r">${lo?pimg(lo,'por lg'):'<div class="empty-slot"></div>'}<div><div class="small">Rival de línea</div><div class="name">${lo?esc(lo.name):'—'}</div>${lo?`<div class="small">${lo.k}/${lo.d}/${lo.a} · ${k(lo.gold)}</div>`:''}</div></div></div>${laneChips(s.laneCmp,lo)}`;
+  const apPct=Math.round(s.apShare*100);
+  const alerts=`<div class="dmgbar"><div class="ap" style="width:${apPct}%">AP ${apPct}%</div><div class="ad" style="width:${100-apPct}%">AD ${100-apPct}%</div></div>
+    <div class="mydef">Tus defensas: <b>${me.armor}</b> armadura · <b>${me.mr}</b> resistencia mágica · tu daño es ${esc(me.damage)}</div>
+    <div class="alerts">${s.alerts.map(a=>`<div class="al lv-${a.level}"><b>${esc(a.text)}</b>${a.detail?`<span>${esc(a.detail)}</span>`:''}</div>`).join('')}</div>`;
+  const opts=s.options.map((o,i)=>`<div class="card ${o.primary?'best':''}">${iimg(o,'it')}<div style="min-width:0">
+      <div class="t">${esc(o.name)}${o.situational?'<span class="tag">para esta partida</span>':''}</div>
+      <div><span class="cost">${o.gold}</span> ${o.affordable?'<span class="ok">te alcanza</span>':`<span class="no">te faltan ${o.missing}</span>`}</div>
+      <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div></div>`).join('');
+  const sh=s.shopping; let shop='';
+  if(sh){ shop = sh.complete?`<div class="shop ok2">Con tus <b>${me.gold_now}</b> de oro <b>te alcanza para completarlo</b> (te sobran ${sh.left}).</div>`
+      : sh.buy.length?`<div class="shop">Con tus <b>${me.gold_now}</b> de oro podés comprar: ${sh.buy.map(b=>`${iimg(b)} ${esc(b.name)}`).join(' + ')} <span class="small">(te sobran ${sh.left})</span></div>`
+      : `<div class="shop">Te faltan <b>${sh.cost-me.gold_now}</b> de oro para la próxima parte.</div>`; }
+  const slots=[...s.plan]; while(slots.length<(s.nItems||5)) slots.push(null);
+  const changed=new Set(s.changes.map(c=>c.add.id));
+  const plan=`<div class="plan">${slots.map((p,i)=>p?`<div class="ps ${p.owned?'own':''} ${changed.has(p.id)?'chg':''}" title="${esc(p.name)}${p.reasons&&p.reasons.length?' — '+esc(p.reasons.join(', ')):''}">${iimg(p,'it')}<span>${i+1}</span></div>`:'<div class="ps"><div class="empty-slot"></div></div>').join('')}
+     ${s.boots?`<div class="ps boots ${s.boots.owned?'own':''} ${changed.has(s.boots.id)?'chg':''}" title="${esc(s.boots.name)}">${iimg(s.boots,'it')}<span>B</span></div>`:''}</div>
+     <div class="changes">${s.changes.length?s.changes.map(c=>`<div class="chrow">${iimg(c.add)} <b>${esc(c.add.name)}</b>${c.remove?` <span class="small">en lugar de</span> ${iimg(c.remove)} <s>${esc(c.remove.name)}</s>`:''}<div class="why">${c.reasons.map(r=>`<div>${esc(r)}</div>`).join('')}</div></div>`).join(''):'<div class="small">Esta partida no pide cambios: la build de siempre ya cubre lo que hace falta.</div>'}</div>`;
+  const events=s.events.length?s.events.map(e=>`<div class="ev ev-${e.kind}"><span class="t">${e.t}</span>${esc(e.text)}</div>`).join(''):'<div class="small">Acá van apareciendo las compras importantes de los rivales y los cambios en la partida.</div>';
+  const lane = lo?`<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${me.k}/${me.d}/${me.a} · ${k(me.gold)}</span></div>
+      <div class="x">VS</div><div class="gvn r"><b>${esc(lo.name)}</b><span>${lo.k}/${lo.d}/${lo.a} · ${k(lo.gold)}</span></div>${pimg(lo,'por md')}</div>${laneChips(s.laneCmp,lo)}`
+    : `<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${esc(s.myRoleEs)}</span></div></div>`;
+  const P={
+    compra:['Próxima compra',`${s.noMeta?'<div class="small" style="margin-bottom:8px">Sin estadísticas del meta todavía: las opciones salen solo de tu campeón y del rival.</div>':''}<div class="cards">${opts}</div>${shop}`],
+    build:['Tu build para esta partida',`${s.nItems===6?'<div class="small" style="margin-bottom:8px">6 ítems + botas: con la misión de ADC completa las botas pasan a su propio espacio.</div>':''}${plan}`],
+    rival:['Cómo viene el equipo rival',alerts],
+    obj:['Objetivos',objectivesPanel(s.objectives)],
+    pelea:[s.fight.mode==='objective'?'¿Conviene pelear el objetivo?':'¿Qué conviene ahora?',fightPanel(s.fight)],
+    novedades:['Novedades',`<div class="events">${events}</div>`],
+    mision:s.quest?[s.quest.name,`<div>${esc(s.quest.reward)}</div><div class="small" style="margin-top:6px">Cómo se completa: ${esc(s.quest.how)}</div>`,'quest']:null,
+  };
+  const pants = s.pants?`<div class="pants lv${s.pants.level}">
+      <div class="pt"><span class="picon">\u{1F456}</span>${esc(s.pants.title)}</div>
+      <div class="pw">${s.pants.why.map(w=>`<span>${esc(w)}</span>`).join('')}</div>
+      <div class="ptip">${esc(s.pants.tip)}</div></div>`:'';
+  return `${simBanner(s)}${pants}
+  <div class="panel gtop">
+    <div class="gk l"><div class="big">${s.teamKills[0]}</div><div class="small">Tu equipo · ${k(ga)} en ítems</div></div>
+    <div class="glane">${lane}</div>
+    <div class="clock">${mmss(s.time||0)}</div>
+    <div class="gk r"><div class="big">${s.teamKills[1]}</div><div class="small">${k(ge)} en ítems · Rival</div></div>
+    <div class="gbar"><div class="bar"><div class="a" style="width:${ga/tot*100}%"></div><div class="e" style="width:${ge/tot*100}%"></div></div></div>
+  </div>
+  <div class="gboard">
+    <div class="col-ally gside"><div class="panel team ally"><h2 class="ally">Tu equipo</h2>${s.allies.map(p=>player(p,p.id===me.id,false)).join('')}</div>${layoutCol('L',P)}</div>
+    <div class="gcol ga">${layoutCol('a',P)}</div>
+    <div class="gcol gb">${layoutCol('b',P)}</div>
+    <div class="col-enemy gside"><div class="panel team enemy"><h2 class="enemy">Rivales</h2>${s.enemies.map(p=>player(p,false,true)).join('')}</div>${layoutCol('R',P)}</div>
+  </div>
+  <div class="note">Solo usa lo que el juego muestra en el marcador (Tab). Todo son sugerencias: la decisión es tuya.
+    Podés acomodar los paneles con las flechas de cada título (se guarda solo) · <a href="#" onclick="resetLayout();return false">Volver al orden original</a></div>`;
 }
 
 async function refresh(){
@@ -805,14 +964,21 @@ async function refresh(){
     $('#status').innerHTML=st;
     if(s.phase==='idle'&&s.hist) await loadHist(s);
     render();
-  }catch(e){ console.error(e); $('#app').innerHTML=idle({message:'Se perdió la conexión con Lolcito Scout',detail:'Cerrá esta ventana y volvé a abrir la app.'}); }
+  }catch(e){ console.error(e); ultimoHtml=''; $('#app').innerHTML=idle({message:'Se perdió la conexión con Lolcito Scout',detail:'Cerrá esta ventana y volvé a abrir la app.'}); }
 }
 const PHASE_ES={Lobby:'En el lobby',Matchmaking:'Buscando partida',ReadyCheck:'¡Partida encontrada!',EndOfGame:'Partida terminada',PreEndOfGame:'Partida terminada',WaitingForStats:'Partida terminada'};
+let apretado=false, ultimoHtml='';
+document.addEventListener('pointerdown',()=>{ apretado=true; });
+document.addEventListener('pointerup',()=>{ apretado=false; setTimeout(render,60); });
 function render(){
   const s=lastState; if(!s||view!=='vivo') return;
-  const y=window.scrollY;
   if(s.phase!=='idle') H.detail=null;
-  $('#app').innerHTML = s.phase==='draft'?draft(s):s.phase==='game'?game(s):s.phase==='postgame'?postgame(s):H.detail?postgame(H.detail,true):home(s);
+  if(apretado && s.phase==='draft') return;   // si redibujo entre que apretás y soltás, el clic se pierde
+  const html = s.phase==='draft'?draft(s):s.phase==='game'?game(s):s.phase==='postgame'?postgame(s):H.detail?postgame(H.detail,true):home(s);
+  if(html===ultimoHtml && $('#app').innerHTML) return;
+  ultimoHtml=html;
+  const y=window.scrollY;
+  $('#app').innerHTML = html;
   window.scrollTo(0,y);
   layoutBanners();
   layoutSplashes();
@@ -998,7 +1164,9 @@ async function startUpdate(){
   await api('/api/update',{}); updTimer=0; updStatus();
 }
 
-refresh(); setInterval(refresh,2000);
+// en la selección de campeones pregunto más seguido: los turnos duran 30 segundos
+async function ciclo(){ await refresh(); setTimeout(ciclo, lastState&&lastState.phase==='draft'?800:2000); }
+ciclo();
 api('/api/ping'); setInterval(()=>api('/api/ping').catch(()=>{}),5000);
 </script>
 </body>
