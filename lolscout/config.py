@@ -61,9 +61,9 @@ LOL_PATH = os.environ.get("LOL_PATH", "")
 STATS_SOURCE = os.environ.get("STATS_SOURCE", "online")
 BRACKET = os.environ.get("BRACKET", "auto")               # auto = según el rango de tu cuenta
 
-PLAYERS_PER_RUN = _int("PLAYERS_PER_RUN", 80)
-MATCHES_PER_PLAYER = _int("MATCHES_PER_PLAYER", 10)
-MAX_NEW_MATCHES = _int("MAX_NEW_MATCHES", 500)
+PLAYERS_PER_RUN = _int("PLAYERS_PER_RUN", 250)
+MATCHES_PER_PLAYER = _int("MATCHES_PER_PLAYER", 12)
+MAX_NEW_MATCHES = _int("MAX_NEW_MATCHES", 1500)
 DAYS_BACK = _int("DAYS_BACK", 3)
 MIN_GAMES = _int("MIN_GAMES", 20)
 LANGUAGE = os.environ.get("LANGUAGE", "es_AR")
@@ -112,6 +112,8 @@ def apply_settings(data: dict) -> None:
             v = bool(v)
         if k in ("RIOT_API_KEY", "MY_RIOT_ID", "LOL_PATH", "STATS_REPO", "STATS_SOURCE", "BRACKET") and isinstance(v, str):
             v = v.strip()
+        if k == "STATS_REPO" and not v and _bundled_repo():
+            continue  # sin repo guardado, vale el que trae el programa
         g[k] = v
 
 
