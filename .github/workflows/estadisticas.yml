@@ -1,10 +1,10 @@
-# Cada 6 horas escanea partidas rankeds de LAS con TU API key (guardada como secreto del repo),
+# Cada 2 horas escanea partidas rankeds de LAS con TU API key (guardada como secreto del repo),
 # calcula las estadísticas y las publica en la rama "datos". La app de cada usuario las descarga de ahí.
 name: Estadísticas
 
 on:
   schedule:
-    - cron: "0 */6 * * *"     # cada 6 horas (00, 06, 12 y 18 de Argentina + 3)
+    - cron: "0 */2 * * *"     # cada 2 horas (GitHub a veces las atrasa; si se pisan, la segunda espera)
   workflow_dispatch:          # botón "Run workflow" para correrlo a mano
 
 permissions:
