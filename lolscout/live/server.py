@@ -184,7 +184,8 @@ class Assistant:
             if phase == "ChampSelect":
                 self.postgame_hidden = bool(self.postgame)
                 st = draft_advice(self.lcu.champ_select() or {}, self.meta, self.duos, self.dist, self.dd,
-                                  default_role=config.ROLES[0] if config.ROLES else "BOTTOM", pool=self.pool)
+                                  default_role=config.ROLES[0] if config.ROLES else "BOTTOM", pool=self.pool,
+                                  champs=self.champs)
                 self.role_memory = st["myRole"]
             elif self.postgame and not self.postgame_hidden and phase not in ("InProgress", "GameStart", "Reconnect"):
                 st = self.show_postgame(phase)
@@ -275,6 +276,51 @@ class Assistant:
             if not self.simulated:
                 pg.save({k: v for k, v in summary.items() if not k.startswith("_")})
         self._pg_fetch = None
+
+    # ---------- banear / pickear desde Lolcito
+    def draft_action(self, body):
+        """Marca (o bloquea) un campeón en la selección. El bloqueo solo pasa si lo pedís explícito."""
+        st = self.get_state()
+        if st.get("phase") != "draft":
+            return {"ok": False, "error": "Ya no estás en la selección de campeones."}
+        cid = int(body.get("championId") or 0)
+        lock = bool(body.get("lock"))
+        action_id = st.get("actionId")
+        if not cid:
+            return {"ok": False, "error": "Falta el campeón."}
+        if not action_id:
+            return {"ok": False, "error": "No es tu turno todavía: esperá a que te toque."}
+        nombre = self.dd.champ_name(cid)
+        verbo = "banear" if st.get("step") == "ban" else "pickear"
+        if self.simulated:
+            return {"ok": True, "simulated": True,
+                    "msg": f"{'Bloqueado' if lock else 'Marcado'}: {nombre} ({verbo})"}
+        if not hasattr(self.lcu, "draft_action"):
+            return {"ok": False, "error": "No encuentro el cliente de League of Legends."}
+        ok, res = self.lcu.draft_action(action_id, cid, lock)
+        if not ok:
+            return {"ok": False, "error": str(res)}
+        return {"ok": True, "msg": (f"{nombre} bloqueado" if lock else f"{nombre} marcado en el cliente")}
+
+    # ---------- runas al cliente de LoL
+    def apply_runes(self, body):
+        """Manda al LoL la página de runas que elegiste en Lolcito."""
+        st = self.get_state()
+        opciones = st.get("runes") or []
+        elegida = next((o for o in opciones if o.get("id") == body.get("id")), None)
+        if not elegida:
+            return {"ok": False, "error": "Esa página ya no está disponible; volvé a la selección de campeones."}
+        champ = (st.get("runeChamp") or {}).get("name") or "tu campeón"
+        nombre = f"{self.lcu.PAGE_PREFIX}{champ}" if hasattr(self.lcu, "PAGE_PREFIX") else f"Lolcito runas para {champ}"
+        if self.simulated:
+            return {"ok": True, "name": nombre, "simulated": True}
+        if not hasattr(self.lcu, "apply_runes"):
+            return {"ok": False, "error": "No encuentro el cliente de League of Legends."}
+        ok, res = self.lcu.apply_runes(nombre, elegida["primary"], elegida["sub"],
+                                       elegida["perks"], elegida["shards"])
+        if not ok:
+            return {"ok": False, "error": str(res)}
+        return {"ok": True, "name": nombre}
 
     def open_last_game(self):
         """Botón «Ver tu última partida»: la guardada, o la última del historial del cliente."""
@@ -452,6 +498,10 @@ class App:
                 self.assistant.postgame_hidden = True
                 return {"ok": True}
             return {"ok": self.assistant.open_last_game()}
+        if path == "/api/draft" and method == "POST":
+            return self.assistant.draft_action(body)
+        if path == "/api/runas" and method == "POST":
+            return self.assistant.apply_runes(body)
         if path == "/api/layout" and method == "POST":
             config.save_settings({"LAYOUT": body.get("layout") or {}})
             return {"ok": True}
