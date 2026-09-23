@@ -88,7 +88,9 @@ class DDragon:
                 "tags": self._situational_tags(en_items.get(iid, it)),
                 "full": self._parse_stats(en_items.get(iid, it)),
                 "from": [int(x) for x in it.get("from", [])],
-                "sr": it.get("maps", {}).get("11", True) and gold.get("purchasable", True),
+                # los ítems con número de 6 cifras son copias para otros modos (Arena, etc.): en la
+                # Grieta no se pueden comprar aunque el archivo diga que sí
+                "sr": int(iid) < 10000 and it.get("maps", {}).get("11", True) and gold.get("purchasable", True),
                 "depth": it.get("depth", 1),
             }
 
@@ -110,6 +112,10 @@ class DDragon:
         parts += [clean(sp.get("description", "")) + " " + clean(sp.get("tooltip", "")) for sp in c.get("spells", [])]
         text = " ".join(parts)
         low = text.lower()
+        # de qué tipo es el daño del campeón, según cómo lo describe el juego
+        mag = len(re.findall(r"magic damage", low))
+        phy = len(re.findall(r"physical damage", low))
+        dmgtype = "magic" if mag > phy * 1.4 else "physical" if phy > mag * 1.4 else None
         cc_words = ("stun", "knock", "pull", "root", "immobiliz", "charm", "fear", "taunt", "suppress", "sleep",
                     "airborne", "polymorph", "imprison", "knocks up", "grounded")
         cc = sum(1 for p in parts[1:] if any(w in p.lower() for w in cc_words))
@@ -126,6 +132,7 @@ class DDragon:
             "dash": bool(re.search(r"\bdash|leaps?\b|blink|tumble|teleports? to", low)),
             "as_scaling": "attack speed" in low,
             "hp_scaling": bool(re.search(r"bonus health", low)),
+            "dmgtype": dmgtype,
         }
 
     STAT_NAMES = {
