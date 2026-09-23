@@ -5,6 +5,7 @@
 Ambas son APIs locales oficiales de Riot; solo leen, no tocan el juego.
 """
 import base64
+import time
 from pathlib import Path
 
 import requests
@@ -26,6 +27,8 @@ class LCU:
     def __init__(self):
         self.base = None
         self.headers = {}
+        self.cred = None      # (puerto, clave, protocolo) con los que me conecté
+        self._cred_t = 0.0
 
     def _credentials(self):
         for folder in filter(None, [config.LOL_PATH] + LOCKFILE_PATHS):
@@ -49,9 +52,12 @@ class LCU:
 
     def connect(self) -> bool:
         cred = self._credentials()
+        self._cred_t = time.time()
         if not cred:
             self.base = None
+            self.cred = None
             return False
+        self.cred = cred
         port, password, proto = cred
         self.base = f"{proto}://127.0.0.1:{port}"
         token = base64.b64encode(f"riot:{password}".encode()).decode()
@@ -59,16 +65,89 @@ class LCU:
         return True
 
     def get(self, path: str, timeout: float = 2):
+        # si cerraste el LoL y entraste con otra cuenta, el cliente arranca con otra clave: la releo
+        if self.base and time.time() - self._cred_t > 15:
+            self._cred_t = time.time()
+            cred = self._credentials()
+            if cred and cred != self.cred:
+                self.base = None
         if not self.base and not self.connect():
             return None
         try:
             r = requests.get(self.base + path, headers=self.headers, verify=False, timeout=timeout)
+            if r.status_code in (401, 403):   # clave vieja: me reconecto en la próxima llamada
+                self.base = None
+                return None
             return r.json() if r.status_code == 200 else None
         except requests.Timeout:
             return None  # el cliente tardó (el historial lo pide a los servidores de Riot): se reintenta después
         except requests.RequestException:
             self.base = None  # el cliente se cerró o cambió de puerto
             return None
+
+    def _send(self, method: str, path: str, body=None, timeout: float = 5):
+        """POST/DELETE al cliente. Devuelve (ok, respuesta o mensaje de error)."""
+        if not self.base and not self.connect():
+            return False, "No encuentro el cliente de League of Legends."
+        try:
+            r = requests.request(method, self.base + path, headers=self.headers, json=body,
+                                 verify=False, timeout=timeout)
+            if r.status_code in (401, 403):
+                self.base = None
+                return False, "El cliente rechazó la conexión; probá de nuevo."
+            if r.status_code >= 400:
+                try:
+                    msg = (r.json() or {}).get("message") or r.text[:200]
+                except ValueError:
+                    msg = r.text[:200]
+                return False, f"El cliente respondió {r.status_code}: {msg}"
+            try:
+                return True, r.json()
+            except ValueError:
+                return True, None
+        except requests.RequestException as e:
+            self.base = None
+            return False, f"No pude hablar con el cliente ({e.__class__.__name__})."
+
+    # --- Selección de campeones: marcar y bloquear ---
+    def draft_action(self, action_id, champion_id, lock=False):
+        """Marca el campeón en tu casillero (reversible) y, si lock, lo confirma."""
+        ok, res = self._send("PATCH", f"/lol-champ-select/v1/session/actions/{int(action_id)}",
+                             {"championId": int(champion_id)})
+        if not ok:
+            return False, res
+        if lock:
+            return self._send("POST", f"/lol-champ-select/v1/session/actions/{int(action_id)}/complete", {})
+        return True, res
+
+    # --- Páginas de runas ---
+    PAGE_PREFIX = "Lolcito runas para "
+
+    def rune_pages(self):
+        return self.get("/lol-perks/v1/pages") or []
+
+    def rune_slots_free(self):
+        """(páginas propias que se pueden borrar, cuántas entran en total)."""
+        inv = self.get("/lol-perks/v1/inventory") or {}
+        return inv.get("ownedPageCount")
+
+    def apply_runes(self, name, primary, sub, perks, shards):
+        """Crea (o reemplaza) la página de Lolcito en el cliente y la deja seleccionada."""
+        pages = self.rune_pages()
+        if not isinstance(pages, list):
+            return False, "No pude leer tus páginas de runas."
+        mias = [p for p in pages if str(p.get("name", "")).startswith(self.PAGE_PREFIX)]
+        for p in mias:  # solo borro las que creó Lolcito, nunca las tuyas
+            if p.get("isDeletable", True):
+                self._send("DELETE", f"/lol-perks/v1/pages/{p['id']}")
+        body = {"name": name, "primaryStyleId": int(primary), "subStyleId": int(sub),
+                "selectedPerkIds": [int(x) for x in list(perks) + list(shards)], "current": True}
+        ok, res = self._send("POST", "/lol-perks/v1/pages", body)
+        if not ok and "max" in str(res).lower():
+            editables = [p for p in pages if p.get("isDeletable", True) and p.get("isEditable", True)]
+            return False, ("No te queda lugar para otra página de runas. Borrá una en el cliente "
+                           f"(tenés {len(editables)} que se pueden borrar) y probá de nuevo.")
+        return ok, res
 
     def match_list(self, count: int = 20, puuid: str = None):
         """Últimas partidas de la cuenta logueada (el cliente las pide a Riot, puede tardar unos segundos)."""
