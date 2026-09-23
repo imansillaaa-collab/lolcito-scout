@@ -60,20 +60,39 @@ class MockLCU:
     MY_SLOT = 3  # jugás de ADC
 
     def champ_select(self):
+        """Primero 12 segundos de baneos (te toca a vos), después los picks."""
         step = int((time.time() - START) / 4)
         cid = self.dd.champ_by_alias.get
+        fase_ban = step < 3
+        baneados = [cid("yuumi"), cid("zed"), cid("kassadin")]
+
         my_team, their_team = [], []
         for i, (pos, alias) in enumerate(self.DRAFT_MINE):
-            picked = i < step and i != self.MY_SLOT
+            picked = (not fase_ban) and (step - 3) > i and (i != self.MY_SLOT or step >= 9)
             my_team.append({"cellId": i, "assignedPosition": pos,
                             "championId": cid(alias.lower()) if picked else 0})
-        for i, alias in enumerate(self.DRAFT_THEIRS[:max(0, step - 1)]):
+        revelados = 0 if fase_ban else max(0, step - 4)
+        for i, alias in enumerate(self.DRAFT_THEIRS[:revelados]):
             their_team.append({"cellId": 5 + i, "championId": cid(alias.lower())})
         while len(their_team) < 5:
             their_team.append({"cellId": 5 + len(their_team), "championId": 0})
-        bans = [cid("yuumi"), cid("zed"), cid("kassadin")][:max(0, step - 2)]
+
+        if fase_ban:
+            acciones = [[{"id": 10 + i, "actorCellId": i, "type": "ban", "completed": False,
+                          "isInProgress": step >= 1 and i == self.MY_SLOT, "championId": 0}
+                         for i in range(5)]]
+            bans = {"myTeamBans": [], "theirTeamBans": []}
+        else:
+            acciones = [[{"id": 10 + i, "actorCellId": i, "type": "ban", "completed": True,
+                          "isInProgress": False, "championId": baneados[i] if i < len(baneados) else 0}
+                         for i in range(5)],
+                        [{"id": 20 + i, "actorCellId": i, "type": "pick",
+                          "completed": bool(my_team[i]["championId"]),
+                          "isInProgress": i == self.MY_SLOT and step >= 8 and not my_team[i]["championId"],
+                          "championId": my_team[i]["championId"]} for i in range(5)]]
+            bans = {"myTeamBans": baneados, "theirTeamBans": []}
         return {"localPlayerCellId": self.MY_SLOT, "myTeam": my_team, "theirTeam": their_team,
-                "bans": {"myTeamBans": bans, "theirTeamBans": []}, "actions": []}
+                "bans": bans, "actions": acciones}
 
     def get(self, path):
         """Lo que devolvería el cliente de LoL: historial de partidas y, al terminar, la partida simulada."""
