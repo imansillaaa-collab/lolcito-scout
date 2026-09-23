@@ -9,6 +9,8 @@
 """
 from collections import Counter
 
+from . import builds
+
 # Valor aproximado en oro de cada estadística (para comparar ítems de forma pareja)
 GOLD_VALUE = {"ad": 35, "ap": 20, "as": 25, "crit": 40, "leth": 30, "arpen": 45, "mpen": 45, "hp": 2.67,
               "armor": 20, "mr": 18, "ah": 26.7, "ms": 39, "ls": 37.5, "ov": 40, "hsp": 45, "mana": 1.4,
@@ -42,9 +44,10 @@ TAG_TEXT = {
     "anticrit": "reduce el daño crítico",
     "antias": "baja la velocidad de ataque rival",
 }
-# Cuánto suma cada necesidad (0..1) a un ítem que la cubre
-TAG_WEIGHT = {"antiheal": 0.75, "armorpen": 0.45, "magicpen": 0.45, "vs_tank": 0.35, "antishield": 0.35,
-              "vs_ap": 0.45, "vs_ad": 0.45, "antiburst": 0.4, "anticc": 0.3, "anticrit": 0.3, "antias": 0.25}
+# Cuánto suma cada necesidad (0..1) a un ítem que la cubre. Pesan fuerte a propósito: la build tiene
+# que responder a lo que arma el equipo rival, no ser siempre la misma.
+TAG_WEIGHT = {"antiheal": 1.1, "armorpen": 0.7, "magicpen": 0.7, "vs_tank": 0.55, "antishield": 0.5,
+              "vs_ap": 0.7, "vs_ad": 0.7, "antiburst": 0.55, "anticc": 0.45, "anticrit": 0.45, "antias": 0.35}
 EXCLUSIVE = ("lifeline", "qss", "lastwhisper", "antiheal")  # a lo sumo uno de cada grupo
 
 
@@ -57,34 +60,35 @@ def gold_vector(dd, iid):
 
 
 # ---------------------------------------------------------------- perfil de tu campeón
+META_FULL = 80  # partidas a partir de las cuales las estadísticas mandan casi solas
+
+
 def champion_profile(dd, cid, champ_meta):
-    """Qué estadísticas aprovecha tu campeón, según lo que arma en tu rango (0..1 por estadística)."""
+    """Qué estadísticas aprovecha tu campeón (0..1 por estadística).
+
+    Parte del tipo de build que arma de verdad ese campeón (builds.py) y, si las estadísticas tienen
+    suficientes partidas suyas, se va acercando a lo que arma la gente en tu rango. Con pocas partidas
+    casi no pesan: antes, un campeón sin datos se armaba según las etiquetas de Riot y salían disparates
+    (Malphite está etiquetado "Tanque + Mago" y terminaba con build de mago).
+    """
+    base = builds.base_profile(dd, cid)
     w = Counter()
-    if champ_meta and champ_meta.get("items"):
-        for it in champ_meta["items"][:8]:
-            for k, v in gold_vector(dd, it["id"]).items():
-                w[k] += v * it["share"]
+    for it in (champ_meta or {}).get("items", [])[:8]:
+        for k, v in gold_vector(dd, it["id"]).items():
+            w[k] += v * it["share"]
+    if w:
+        top = max(w.values())
+        meta_prof = {k: v / top for k, v in w.items()}
+        conf = min((champ_meta or {}).get("games", 0) / META_FULL, 1.0) * 0.8
+        prof = {k: conf * meta_prof.get(k, 0) + (1 - conf) * base.get(k, 0)
+                for k in set(meta_prof) | set(base)}
     else:
-        tags = dd.champions.get(cid, {}).get("tags", [])
-        base = {"Marksman": {"ad": 1, "as": .8, "crit": .9, "arpen": .5},
-                "Mage": {"ap": 1, "mpen": .6, "ah": .6, "mana": .3},
-                "Assassin": {"ad": 1, "leth": .8, "ah": .5},
-                "Fighter": {"ad": 1, "hp": .7, "ah": .6, "armor": .3, "mr": .3},
-                "Tank": {"hp": 1, "armor": .8, "mr": .8, "ah": .5},
-                "Support": {"ap": .5, "hsp": .9, "ah": .7, "mregen": .6, "hp": .4}}
-        for t in tags[:2]:
-            for k, v in base.get(t, {}).items():
-                w[k] = max(w[k], v)
-    top = max(w.values()) if w else 1
-    prof = {k: v / top for k, v in w.items()}
-    kit = dd.champions.get(cid, {}).get("kit", {})
-    if kit.get("as_scaling") and "as" in prof:  # su kit escala con velocidad de ataque
-        prof["as"] = min(1.0, prof["as"] + 0.15)
-    if kit.get("hp_scaling"):  # su kit escala con vida extra (Vladimir, Cho'Gath, etc.)
-        prof["hp"] = min(1.0, prof.get("hp", 0) + 0.3)
+        prof = dict(base)
+    top = max(prof.values()) if prof else 1
+    prof = {k: v / top for k, v in prof.items() if v > 0}
     phys = sum(prof.get(k, 0) for k in PHYSICAL)
     mag = sum(prof.get(k, 0) for k in MAGIC)
-    prof["_damage"] = "magic" if mag > phys else "physical"
+    prof["_damage"] = builds.damage_type(dd, cid, prof, phys, mag)
     return prof
 
 
@@ -107,7 +111,7 @@ def eligible(dd, iid, prof, popular):
     of = offense_fit(dd, iid, prof)
     if of is None:  # ítem 100% defensivo: solo para campeones que ya arman vida/resistencias
         return f >= 0.5 and max(prof.get("hp", 0), prof.get("armor", 0), prof.get("mr", 0)) >= 0.5
-    return of >= 0.85 and f >= 0.58
+    return of >= 0.55 and f >= 0.58
 
 
 def fit(dd, iid, prof):
@@ -262,11 +266,12 @@ def _reasons(dd, iid, needs, prof):
     return out
 
 
-def _score(dd, iid, prof, pop, needs, first=False):
+def _score(dd, iid, prof, pop, needs, first=False, core=(), core_w=0.0, pop_w=1.0):
     info = dd.items.get(iid, {})
     f = fit(dd, iid, prof)
     p = pop.get(iid, {})
-    share, wr = p.get("share", 0), p.get("wr", 0.5)
+    share, wr = p.get("share", 0) * pop_w, p.get("wr", 0.5)  # con pocas partidas, lo popular pesa menos
+    is_core = core_w * (iid in core)
     need = 0.0
     for t in info.get("tags", ()):
         if t == "armorpen" and prof["_damage"] != "physical":
@@ -277,10 +282,10 @@ def _score(dd, iid, prof, pop, needs, first=False):
     if needs.get("avoid_hp"):  # rivales que pegan por % de vida: la vida extra rinde menos
         gv = gold_vector(dd, iid)
         need -= needs["avoid_hp"] * 0.3 * gv.get("hp", 0) / (sum(gv.values()) or 1)
-    if first:  # el primer ítem es el que define al campeón: manda lo que funciona con él
-        return 1.6 * min(share, 0.8) + 0.5 * f
+    if first:  # el primer ítem: manda lo que funciona con tu campeón, pero el rival ya pesa
+        return 1.6 * min(share, 0.8) + 0.5 * f + 0.9 * is_core + 0.3 * need
     wr_bonus = (wr - 0.5) * 0.6 if share >= 0.05 else 0
-    return 0.55 * f + 0.45 * min(share, 0.6) + need + wr_bonus
+    return 0.55 * f + 0.45 * min(share, 0.6) + need + wr_bonus + 0.35 * is_core
 
 
 def plan_build(dd, me, prof, champ_meta, needs, gold_now, n_items=5):
@@ -291,15 +296,20 @@ def plan_build(dd, me, prof, champ_meta, needs, gold_now, n_items=5):
     for key in ("items", "boots"):
         for it in (champ_meta or {}).get(key, []):
             pop[it["id"]] = it
+    # mientras las estadísticas de este campeón tengan pocas partidas, pesan sus ítems típicos
+    core = builds.core_items(dd, me.get("cid"))
+    core_w = 1 - min((champ_meta or {}).get("games", 0) / META_FULL, 1.0) * 0.8
+    pop_w = min((champ_meta or {}).get("games", 0) / 40, 1.0) if champ_meta else 0.0
 
     # candidatos: lo que arma tu campeón + cualquier ítem que aproveche sus estadísticas
     names_seen, cands, boots_c = set(), [], []
     for iid, info in dd.items.items():
         if not info.get("completed") or not info.get("sr") or info["name"] in names_seen:
             continue
-        if not eligible(dd, iid, prof, pop):
-            continue
-        if info["boots"] and info.get("depth", 2) != 2:  # botas nivel 3: son una mejora aparte
+        if info["boots"]:
+            if info.get("depth", 2) != 2:  # botas nivel 3: son una mejora aparte
+                continue
+        elif not eligible(dd, iid, prof, pop):
             continue
         names_seen.add(info["name"])
         (boots_c if info["boots"] else cands).append(iid)
@@ -319,7 +329,7 @@ def plan_build(dd, me, prof, champ_meta, needs, gold_now, n_items=5):
         for iid in cands:
             if any(p["id"] == iid for p in plan) or _groups(dd, iid) & used_groups:
                 continue
-            s = _score(dd, iid, prof, pop, needs_left, first)
+            s = _score(dd, iid, prof, pop, needs_left, first, core, core_w, pop_w)
             if s > best_s:
                 best, best_s = iid, s
         if best is None:
@@ -336,7 +346,7 @@ def plan_build(dd, me, prof, champ_meta, needs, gold_now, n_items=5):
     else:
         def bscore(b):
             info = dd.items[b]
-            s = 0.8 * pop.get(b, {}).get("share", 0) + 0.3 * fit(dd, b, prof)
+            s = 0.8 * pop.get(b, {}).get("share", 0) * pop_w + 0.3 * fit(dd, b, prof)
             for t in info.get("tags", ()):
                 s += needs.get(t, 0) * TAG_WEIGHT.get(t, 0) * 1.3
             return s
@@ -364,7 +374,7 @@ def plan_build(dd, me, prof, champ_meta, needs, gold_now, n_items=5):
     if primary:
         scored = sorted((c for c in cands if c != primary["id"] and c not in owned
                          and not (_groups(dd, c) & (used_groups - _groups(dd, primary["id"])))),
-                        key=lambda c: -_score(dd, c, prof, pop, needs))
+                        key=lambda c: -_score(dd, c, prof, pop, needs, False, core, core_w, pop_w))
         for c in scored[:2]:
             alts.append({"id": c, "owned": False, "reasons": _reasons(dd, c, needs, prof)})
     return {"plan": plan, "boots": boots, "standard": standard, "std_boot": std_boot, "changes": changes,
