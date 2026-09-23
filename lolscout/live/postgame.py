@@ -27,15 +27,17 @@ REF = {
     "BOTTOM":  (7.4,   0.55, 0.28,  0.65),
     "UTILITY": (0.0,   0.62, 0.10,  2.00),
 }
+# Cuánto pesa cada cosa en la nota, según el rol. La visión solo cuenta para el support: a un top
+# o a un ADC no se le baja la nota por no poner guardianes, eso es tarea del support.
 WEIGHTS = {  # cs, daño, kp, muertes, visión, línea
-    "TOP":     (0.22, 0.18, 0.12, 0.20, 0.07, 0.21),
-    "JUNGLE":  (0.15, 0.15, 0.25, 0.20, 0.12, 0.13),
-    "MIDDLE":  (0.20, 0.22, 0.18, 0.20, 0.07, 0.13),
-    "BOTTOM":  (0.22, 0.22, 0.14, 0.22, 0.06, 0.14),
-    "UTILITY": (0.00, 0.12, 0.25, 0.20, 0.30, 0.13),
+    "TOP":     (0.24, 0.20, 0.10, 0.20, 0.00, 0.26),
+    "JUNGLE":  (0.14, 0.18, 0.32, 0.20, 0.00, 0.16),
+    "MIDDLE":  (0.22, 0.24, 0.18, 0.20, 0.00, 0.16),
+    "BOTTOM":  (0.24, 0.26, 0.14, 0.20, 0.00, 0.16),
+    "UTILITY": (0.00, 0.12, 0.30, 0.20, 0.25, 0.13),
 }
-VERSION = 2  # sube cuando cambia cómo se evalúa una partida (las guardadas se vuelven a calcular)
-GRADES = [(0.88, "S+"), (0.78, "S"), (0.66, "A"), (0.52, "B"), (0.38, "C"), (0.0, "D")]
+VERSION = 3  # sube cuando cambia cómo se evalúa una partida (las guardadas se vuelven a calcular)
+GRADES = [(0.90, "S+"), (0.72, "S"), (0.54, "A"), (0.38, "B"), (0.24, "C"), (0.0, "D")]
 
 
 def _clamp(x, lo=0.0, hi=1.0):
@@ -308,7 +310,7 @@ def summarize(dd, rec=None, mh=None, timeline=None, puuid=None):
     score, grade = None, None
     if not remake:
         score = _score(role, m, lane)
-        score = _clamp(score + (0.03 if win else 0))
+        score = _clamp(score + (0.05 if win else 0))
         grade = next(g for th, g in GRADES if score >= th)
 
     fb = [] if remake else _feedback(dd, role, m, lane, first_item, deaths_before, needs, me, mins, win, opp)
@@ -515,20 +517,24 @@ def _objectives(game, my_team, mh, me):
 
 
 def _score(role, m, lane):
+    """Nota de 0 a 1. La referencia es lo que hace un jugador que sube de rango: llegar a la
+    referencia ya es una buena partida (nota A), no el mínimo para aprobar."""
     ref_cs, ref_kp, ref_dmg, ref_vis = REF[role]
     w = WEIGHTS[role]
     parts = []
-    if ref_cs:
-        parts.append((w[0], _clamp((m["csMin"] / ref_cs - 0.6) / 0.6)))
-    if m["dmgShare"] is not None:
-        parts.append((w[1], _clamp((m["dmgShare"] / ref_dmg - 0.55) / 0.7)))
-    parts.append((w[2], _clamp((m["kp"] / ref_kp - 0.55) / 0.65)))
-    parts.append((w[3], _clamp((3.3 - m["deaths10"]) / 2.6)))
-    if m["visionMin"] is not None:
-        parts.append((w[4], _clamp((m["visionMin"] / ref_vis - 0.5) / 0.7)))
+    if ref_cs and w[0]:
+        parts.append((w[0], _clamp((m["csMin"] / ref_cs - 0.55) / 0.75)))
+    if m["dmgShare"] is not None and w[1]:
+        parts.append((w[1], _clamp((m["dmgShare"] / ref_dmg - 0.5) / 0.8)))
+    if w[2]:
+        parts.append((w[2], _clamp((m["kp"] / ref_kp - 0.5) / 0.8)))
+    if w[3]:
+        parts.append((w[3], _clamp((3.8 - m["deaths10"]) / 3.4)))
+    if m["visionMin"] is not None and w[4]:  # solo el support
+        parts.append((w[4], _clamp((m["visionMin"] / ref_vis - 0.45) / 0.8)))
     at = lane and (lane.get("at15") or lane.get("at10"))
-    if at:
-        parts.append((w[5], _clamp(0.5 + at["gold"] / 2000 + at["cs"] / 60)))
+    if at and w[5]:
+        parts.append((w[5], _clamp(0.5 + at["gold"] / 2600 + at["cs"] / 70)))
     tot = sum(x for x, _ in parts) or 1
     return sum(x * v for x, v in parts) / tot
 
@@ -540,7 +546,7 @@ def _metrics(role, m, lane, first_item):
         if v is None:
             return ""
         r = v / ref if higher else ref / max(v, 0.01)
-        return "good" if r >= 1.0 else "bad" if r < 0.8 else "even"
+        return "good" if r >= 0.95 else "bad" if r < 0.75 else "even"
     out = []
     if ref_cs:
         out.append({"label": "Súbditos por minuto", "value": f"{m['csMin']:.1f}", "ref": f"ref. {ref_cs:.1f}", "tone": tone(m["csMin"], ref_cs)})
@@ -549,7 +555,12 @@ def _metrics(role, m, lane, first_item):
         out.append({"label": "Daño de tu equipo", "value": f"{m['dmgShare']*100:.0f}%", "ref": f"ref. {ref_dmg*100:.0f}%", "tone": tone(m["dmgShare"], ref_dmg)})
     out.append({"label": "Muertes cada 10 min", "value": f"{m['deaths10']:.1f}", "ref": "ref. 2.0", "tone": tone(m["deaths10"], 2.0, higher=False)})
     if m["visionMin"] is not None:
-        out.append({"label": "Visión por minuto", "value": f"{m['visionMin']:.2f}", "ref": f"ref. {ref_vis:.2f}", "tone": tone(m["visionMin"], ref_vis)})
+        if role == "UTILITY":
+            out.append({"label": "Visión por minuto", "value": f"{m['visionMin']:.2f}", "ref": f"ref. {ref_vis:.2f}",
+                        "tone": tone(m["visionMin"], ref_vis)})
+        else:  # en el resto de los roles la visión no baja la nota: va solo como dato
+            out.append({"label": "Visión por minuto", "value": f"{m['visionMin']:.2f}", "ref": "no cuenta para la nota",
+                        "tone": ""})
     at = lane and lane.get("at15") or (lane or {}).get("at10")
     if at:
         minute = 15 if lane.get("at15") else 10
@@ -570,9 +581,9 @@ def _feedback(dd, role, m, lane, first_item, deaths_before, needs, me, mins, win
     # Farmeo
     if ref_cs:
         r = m["csMin"] / ref_cs
-        if r >= 1.0:
+        if r >= 0.92:
             add(good, "Buen farmeo", f"{m['csMin']:.1f} súbditos por minuto ({m['cs']} en total). En tu rango un {role_es} que sube ronda {ref_cs:.1f}.", r)
-        elif r < 0.85:
+        elif r < 0.78:
             lost = int((ref_cs - m["csMin"]) * mins)
             add(bad, "Te faltó farmeo",
                 f"{m['csMin']:.1f} súbditos por minuto: unos {lost} menos que la referencia (≈{lost * 20:,} de oro).".replace(",", ".")
@@ -581,11 +592,11 @@ def _feedback(dd, role, m, lane, first_item, deaths_before, needs, me, mins, win
 
     # Muertes
     d10 = m["deaths10"]
-    if me["d"] <= 2 and mins >= 15:
+    if me["d"] <= 3 and mins >= 15:
         add(good, "Moriste poco", f"Solo {me['d']} muerte{'s' if me['d'] != 1 else ''} en {int(mins)} minutos: tu equipo pudo contar con vos casi siempre.", 1.2)
-    elif d10 <= 1.5 and mins >= 15:
+    elif d10 <= 1.9 and mins >= 15:
         add(good, "Pocas muertes", f"{me['d']} muertes en {int(mins)} minutos (una cada {mins / max(me['d'], 1):.0f} min).", 1.0)
-    elif d10 >= 2.8:
+    elif d10 >= 3.2:
         extra = {"BOTTOM": " Como ADC tu daño depende de estar vivo en las peleas: pegá desde atrás y no entres primero sin visión.",
                  "UTILITY": " Si vas a poner visión en zonas peligrosas, hacelo con tu equipo cerca o antes de que el rival llegue.",
                  "MIDDLE": " Antes de ir a un costado mirá dónde está el jungla rival en el mapa."}.get(role, " Revisá el mapa antes de avanzar sin visión.")
@@ -597,18 +608,18 @@ def _feedback(dd, role, m, lane, first_item, deaths_before, needs, me, mins, win
 
     # Participación
     rk = m["kp"] / ref_kp
-    if rk >= 1.05:
+    if rk >= 0.95:
         add(good, "Estuviste en las peleas", f"Participaste en el {m['kp']*100:.0f}% de las kills de tu equipo.", rk)
-    elif rk < 0.75 and mins > 15:
+    elif rk < 0.68 and mins > 15:
         add(bad, "Poca participación", f"Estuviste en el {m['kp']*100:.0f}% de las kills de tu equipo (ref. {ref_kp*100:.0f}%). "
             "Cuando tu equipo pelea un objetivo, llegá antes: las peleas de dragón y Barón deciden la partida.", 1.3 - rk)
 
     # Daño
     if m["dmgShare"] is not None:
         rd = m["dmgShare"] / ref_dmg
-        if rd >= 1.1:
+        if rd >= 0.98:
             add(good, "Mucho daño", f"Hiciste el {m['dmgShare']*100:.0f}% del daño a campeones de tu equipo ({me['dmg']:,} de daño).".replace(",", "."), rd)
-        elif rd < 0.75 and role != "UTILITY":
+        elif rd < 0.65 and role != "UTILITY":
             add(bad, "Poco daño en las peleas", f"El {m['dmgShare']*100:.0f}% del daño de tu equipo (ref. {ref_dmg*100:.0f}%). "
                 + ("Buscá pegarle al que tengas más cerca sin exponerte: un ADC que pega todo el tiempo gana más que uno que busca al carry." if role == "BOTTOM"
                    else "Intentá estar en rango de pegar durante toda la pelea, no solo al principio."), 1.3 - rd)
@@ -634,9 +645,9 @@ def _feedback(dd, role, m, lane, first_item, deaths_before, needs, me, mins, win
             if not at:
                 continue
             who = dd.champ_name(opp["cid"]) if opp else "tu rival"
-            if at["gold"] >= 500 or at["cs"] >= 15:
+            if at["gold"] >= 400 or at["cs"] >= 12:
                 add(good, "Ganaste la línea", f"A los {minute} min le sacabas {at['gold']:+d} de {at['kind']} y {at['cs']:+d} súbditos a {who}.", 1.1)
-            elif at["gold"] <= -500 or at["cs"] <= -15:
+            elif at["gold"] <= -700 or at["cs"] <= -20:
                 add(bad, "Perdiste la línea", f"A los {minute} min ibas {at['gold']:+d} de {at['kind']} y {at['cs']:+d} súbditos contra {who}. "
                     "Si la línea viene difícil, jugá para no perder súbditos bajo tu torre y pedí ayuda a tu jungla.", 1.1)
             break
@@ -645,9 +656,9 @@ def _feedback(dd, role, m, lane, first_item, deaths_before, needs, me, mins, win
     if first_item and role != "UTILITY":
         t = first_item["t"]
         name = dd.item_name(first_item["id"])
-        if t <= 11.5 * 60:
+        if t <= 12.5 * 60:
             add(good, "Primer ítem a tiempo", f"{name} a los {mmss(t)}.", 0.9)
-        elif t > 15 * 60:
+        elif t > 16 * 60:
             add(bad, "Primer ítem tarde", f"{name} recién a los {mmss(t)} (lo ideal es cerca de las 12:00). "
                 "Volvé a base cuando te alcance para una parte importante, no con oro de más.", 0.9)
 
