@@ -18,6 +18,8 @@ class DDragon:
         self.champions = {}   # id numérico -> {name, key(img)}
         self.items = {}       # id -> {name, completed}
         self.runes = {}       # id -> name
+        self.rune_slots = {}  # id de árbol -> [conjunto de runas de cada ranura]
+        self.rune_style = {}  # id de runa -> id de su árbol
         self.spells = {}      # id -> {name, image}
         self.champ_by_alias = {}  # "Kaisa" / "kaisa" -> id numérico (para la API en vivo)
         self._load()
@@ -95,9 +97,12 @@ class DDragon:
             }
 
         for style in self._fetch("runesReforged.json"):
+            self.rune_slots[style["id"]] = []
             for slot in style["slots"]:
+                self.rune_slots[style["id"]].append({r["id"] for r in slot["runes"]})
                 for rune in slot["runes"]:
                     self.runes[rune["id"]] = {"name": rune["name"], "icon": rune["icon"]}
+                    self.rune_style[rune["id"]] = style["id"]
             self.runes[style["id"]] = {"name": style["name"], "icon": style["icon"]}
 
         for s in self._fetch("summoner.json")["data"].values():
