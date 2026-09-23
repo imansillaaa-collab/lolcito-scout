@@ -154,8 +154,83 @@ def team_fit(dd, cid, shape, my_team_cids):
     return pts, why
 
 
+# ---------------------------------------------------------------- fase de baneos
+def _ban_phase(session):
+    """Todavía se están baneando (hay baneos sin completar)."""
+    for group in session.get("actions", []):
+        for a in group:
+            if a.get("type") == "ban" and not a.get("completed"):
+                return True
+    return False
+
+
+def my_action(session, local):
+    """La acción que te toca a vos ahora mismo (banear o pickear), si es tu turno."""
+    for group in session.get("actions", []):
+        for a in group:
+            if a.get("actorCellId") == local and a.get("isInProgress") and not a.get("completed"):
+                return {"id": a.get("id"), "type": a.get("type"), "championId": a.get("championId") or 0}
+    return None
+
+
+def ban_options(meta, my_role, pool, unavailable, dd, limit=4):
+    """Qué conviene banear: lo que está fuerte en tu línea y lo que le gana a tus campeones.
+
+    Se mira el rol que vas a jugar, porque el baneo que más te cambia la partida es el del
+    campeón que te toca enfrente.
+    """
+    # tus campeones: los que más jugás, con cuánto peso tiene cada uno en tu pool
+    mios = sorted(((cid, g, w) for cid, (g, w) in pool.items() if g >= 3), key=lambda x: -x[1])[:4]
+    total_mias = sum(g for _, g, _ in mios) or 1
+    # nunca proponer banear un campeón que jugás vos: te quedarías sin él
+    propios = {cid for cid, _, _ in mios}
+    rivales = [c for c in meta.get(my_role, []) if c["id"] not in unavailable and c["id"] not in propios]
+    if not rivales:
+        return []
+
+    opciones = []
+    for c in rivales:
+        conf = min(c["games"] / 60, 1.0)
+        fuerza = (c["adj"] - 0.5) * conf            # qué tan fuerte está en el parche
+        pick = min(c.get("pick", 0) / 0.06, 1.0)    # y qué tan seguido te lo vas a cruzar
+        peligro = fuerza * 4 + pick * 0.012
+        why, contra = [], []
+        for cid, g, w in mios:
+            m = c["vs_all"].get(str(cid))
+            if not m:
+                continue
+            mg, mw = m
+            if mg >= 6 and mw >= 0.55:
+                peso = g / total_mias
+                peligro += (mw - 0.5) * 1.6 * peso * min(mg / 20, 1.0)
+                contra.append((mw, mg, cid))
+        if fuerza > 0:
+            why.append(f"Está fuerte en {ROLE_ES.get(my_role, my_role)}: {c['wr']*100:.1f}% en {c['games']} partidas"
+                       + ("" if conf >= 1 else " (pocas todavía)"))
+        if pick >= 0.5:
+            why.append(f"Lo vas a cruzar seguido: lo juega el {c.get('pick', 0)*100:.1f}% de las partidas de tu rango.")
+        contra.sort(reverse=True)
+        for mw, mg, cid in contra[:2]:
+            why.append(f"Le gana a tu {dd.champ_name(cid)}: {mw*100:.0f}% en {mg} partidas"
+                       + (" (pocas)" if mg < 15 else ""))
+        if c.get("ban", 0) >= 0.05:
+            why.append(f"En tu rango ya lo banea el {c['ban']*100:.0f}% de las partidas.")
+        if why:
+            opciones.append({**_champ_card(dd, c["id"]), "tier": c["tier"], "danger": peligro, "why": why,
+                             "counters": bool(contra)})
+    opciones.sort(key=lambda o: -o["danger"])
+    # que al menos uno de los primeros sea "te contra a vos" si existe
+    contras = [o for o in opciones if o["counters"]]
+    elegidas = opciones[:limit]
+    if contras and not any(o["counters"] for o in elegidas):
+        elegidas = elegidas[:limit - 1] + [contras[0]]
+    for o in elegidas:
+        o.pop("danger", None)
+    return elegidas
+
+
 # ---------------------------------------------------------------- selección de campeones
-def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="BOTTOM", pool=None) -> dict:
+def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="BOTTOM", pool=None, champs=None) -> dict:
     pool = pool or {}
     local = session.get("localPlayerCellId")
     my_team = session.get("myTeam", [])
@@ -257,10 +332,33 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
                  for cid, (g, w) in sorted(pool.items(), key=lambda kv: -kv[1][0])[:5]
                  if cid not in unavailable and g >= 3]
 
+    # ¿te toca a vos ahora? ¿banear o pickear?
+    accion = my_action(session, local)
+    paso = accion["type"] if accion else ("ban" if _ban_phase(session) else "pick")
+    bans_sug = ban_options(meta, my_role, pool, unavailable, dd) if paso == "ban" else []
+
+    # Runas y hechizos: para el campeón que ya elegiste, o para la primera opción mientras no elijas
+    from . import runes as ru
+    rune_cid = my_champ or (options[0]["id"] if options else 0)
+    rune_meta = next((c for c in meta.get(my_role, []) if c["id"] == rune_cid), None) or (champs or {}).get(rune_cid)
+    rune_opts = ru.options(dd, rune_cid, my_role, shape, rune_meta, lane_opp) if rune_cid else []
+    spell_info = ru.spells(my_role, shape, dd, rune_cid) if rune_cid else None
+    if spell_info:
+        spell_info["par"] = [{"id": i, "name": ru.SPELL_ES.get(i, dd.spell_name(i)), "img": dd.spell_img(i)}
+                             for i in spell_info["par"]]
+        for alt in spell_info["alts"]:
+            alt["img"] = dd.spell_img(alt["id"])
+
     return {
         "phase": "draft",
         "myRole": my_role, "myRoleEs": ROLE_ES.get(my_role, my_role),
         "situation": situation, "myChamps": my_champs,
+        "step": paso, "myTurn": bool(accion), "actionId": (accion or {}).get("id"),
+        "hovering": (accion or {}).get("championId") or 0,
+        "banOptions": bans_sug,
+        "runes": rune_opts, "spells": spell_info,
+        "runeChamp": _champ_card(dd, rune_cid) if rune_cid else None,
+        "runeChampLocked": bool(my_champ),
         "current": current,
         "laneOpponent": _champ_card(dd, lane_opp) if lane_opp else None,
         "enemyPartner": _champ_card(dd, enemy_partner) if enemy_partner else None,
