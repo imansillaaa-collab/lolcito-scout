@@ -28,6 +28,7 @@ class Assistant:
     def __init__(self, dd, lcu, live):
         self.dd, self.lcu, self.live = dd, lcu, live
         self.meta, self.duos, self.dist, self.info = {}, [], {}, {}
+        self.champs = {}
         self.result = None
         self.simulated = False
         self.db_path = None
@@ -68,6 +69,8 @@ class Assistant:
             conn.close()
         self.result = result
         self.meta, self.duos, self.dist = result.get("roles", {}), result.get("duos", []), dist
+        # ítems por campeón juntando todos los roles (para la build en partida)
+        self.champs = {int(k): v for k, v in (result.get("champs") or {}).items()}
         pg.ROLE_DIST.clear()
         for cid, d in (dist or {}).items():
             tot = sum(d.values()) or 1
@@ -165,7 +168,8 @@ class Assistant:
                 st = self.show_postgame() if not self.postgame_hidden else {
                     "phase": "idle", "message": "Partida terminada", "detail": "GG."}
             else:
-                st = game_advice(game, self.meta, self.dist, self.dd, self.role_memory, self.tracker)
+                st = game_advice(game, self.meta, self.dist, self.dd, self.role_memory, self.tracker,
+                                 champs=self.champs)
                 self.recorder.update(game, st, self.lcu)
                 if ended:  # pantalla de victoria/derrota: ya muestro el resumen
                     self.finish_game()
@@ -486,10 +490,10 @@ class App:
             h.save("demo2", s)
 
     def watchdog(self):
-        """Cierra el programa cuando se cierra la ventana (la página deja de dar señales)."""
+        """Cierra el programa cuando se cierra la ventana (la página deja de dar señales por 90 segundos)."""
         while True:
             time.sleep(5)
-            if self.last_ping and time.time() - self.last_ping > 25:
+            if self.last_ping and time.time() - self.last_ping > 90:
                 print("Ventana cerrada: salgo.")
                 import os
                 os._exit(0)
@@ -499,13 +503,17 @@ class App:
 
         class Handler(BaseHTTPRequestHandler):
             def _send(self, code, body, ctype):
-                self.send_response(code)
-                self.send_header("Content-Type", ctype)
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                self.wfile.write(body)
+                try:
+                    self.send_response(code)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                except OSError:
+                    pass  # la ventana canceló la carga (por ejemplo al recargar): no es un error
 
             def _route(self, method):
+                app.last_ping = time.time()   # cualquier pedido significa que la ventana sigue abierta
                 path, _, query = self.path.partition("?")
                 from urllib.parse import parse_qs
                 body = {k: v[-1] for k, v in parse_qs(query).items()}
