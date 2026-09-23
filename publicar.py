@@ -7,8 +7,10 @@ Uso local:  RIOT_API_KEY=RGAPI-... python publicar.py [--solo medio] [--demo]
 """
 import argparse
 import json
+import os
 import sys
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,20 +22,44 @@ from lolscout.online import BRACKETS
 
 OUT = Path(__file__).parent / "publicado"
 ALL_ROLES = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
+HISTORY_KEEP = 120  # ~30 días de corridas cada 6 h
+
+
+def previous_history():
+    """Historial de corridas anteriores: sale del indice.json ya publicado en la rama "datos"."""
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    if repo:
+        try:
+            url = f"https://raw.githubusercontent.com/{repo}/datos/indice.json"
+            with urllib.request.urlopen(url, timeout=20) as r:
+                return json.loads(r.read()).get("historial", [])
+        except Exception as e:
+            print(f"No pude leer el historial anterior ({e}); empiezo uno nuevo.", flush=True)
+            return []
+    try:  # uso local
+        return json.loads((OUT / "indice.json").read_text(encoding="utf-8")).get("historial", [])
+    except Exception:
+        return []
 
 
 def publish_bracket(name, tiers, dd, client, demo=False):
     config.TIERS = tiers
     config.ROLES = ALL_ROLES
     conn = db.connect(config.DATA_DIR / f"stats_{name}.db")
+    t0 = time.time()
+    before = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
+    req0 = client.requests_made if client else 0
+    new = 0
     if demo:
         from lolscout.demo import generate
         if not conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]:
             generate(conn, dd, n=1500, seed=hash(name) % 1000)
     else:
         from lolscout.collect import collect
-        collect(client, conn, log=lambda m: print(f"[{name}] {m}", flush=True))
+        new = collect(client, conn, log=lambda m: print(f"[{name}] {m}", flush=True))
+    before_prune = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
     db.prune(conn, keep_patches=2)
+    after_prune = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
     result = analyze(conn, dd)
     dist = {str(c): dict(v) for c, v in role_distribution(conn).items()}
     conn.close()
@@ -49,6 +75,9 @@ def publish_bracket(name, tiers, dd, client, demo=False):
     (OUT / f"stats_{name}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
                                            encoding="utf-8")
     print(f"[{name}] publicado: {payload['matches']} partidas, parche {', '.join(payload['patches'])}", flush=True)
+    payload["_corrida"] = {"antes": before, "nuevas": new, "borradas": before_prune - after_prune,
+                           "base": after_prune, "pedidos": (client.requests_made - req0) if client else 0,
+                           "segundos": int(time.time() - t0)}
     return payload
 
 
@@ -65,6 +94,7 @@ def main():
         client = RiotClient()
     config.PLAYERS_PER_RUN = int(config.PLAYERS_PER_RUN)
     index = {"generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), "brackets": {}}
+    run = {"inicio": index["generated"], "evento": os.environ.get("GITHUB_EVENT_NAME", "local"), "niveles": {}}
     t0 = time.time()
     for name, tiers in BRACKETS.items():
         if args.solo and name != args.solo:
@@ -72,8 +102,12 @@ def main():
         try:
             p = publish_bracket(name, tiers, dd, client, args.demo)
             index["brackets"][name] = {"matches": p["matches"], "patches": p["patches"]}
+            run["niveles"][name] = {"partidas": p["matches"], "parches": p["patches"], **p["_corrida"]}
         except Exception as e:  # un nivel que falla no frena a los demás
             print(f"[{name}] ERROR: {e}", file=sys.stderr, flush=True)
+            run["niveles"][name] = {"error": str(e)[:200]}
+    run["minutos"] = round((time.time() - t0) / 60, 1)
+    index["historial"] = (previous_history() + [run])[-HISTORY_KEEP:]
     (OUT / "indice.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"Listo en {int(time.time() - t0)} s")
 
