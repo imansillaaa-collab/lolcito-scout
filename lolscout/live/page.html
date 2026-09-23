@@ -83,7 +83,8 @@ h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
 /* Tres columnas: mi equipo | centro | rival */
 .board{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"ally center enemy";gap:16px;align-items:start}
 .col-ally{grid-area:ally}.col-center{grid-area:center}.col-enemy{grid-area:enemy}
-@media (max-width:1050px){.board{grid-template-columns:1fr;grid-template-areas:"center" "ally" "enemy"}}
+@media (max-width:1350px){.board{grid-template-columns:230px minmax(0,1fr) 230px}}
+@media (max-width:1050px){.board{grid-template-columns:1fr 1fr;grid-template-areas:"center center" "ally enemy"}}
 .team{padding:12px}
 .team.ally{border-left:3px solid var(--ally)}
 .team.enemy{border-right:3px solid var(--enemy)}
@@ -146,6 +147,118 @@ input:focus{outline:1px solid var(--gold)}
 .log{background:#010a13;border:1px solid var(--line);padding:10px;font:12px/1.5 Consolas,monospace;color:var(--body);min-height:120px;max-height:260px;overflow:auto;white-space:pre-wrap}
 iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);background:var(--bg)}
 .note{font-size:12px;color:var(--muted);margin-top:8px}
+.runas{display:flex;flex-direction:column;gap:7px}
+.rfold{border:1px solid var(--line);background:var(--panel2)}
+.rfold[open]{border-color:var(--gold-lo)}
+.rfold summary{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;list-style:none;user-select:none}
+.rfold summary::-webkit-details-marker{display:none}
+.rfold summary:hover{background:rgba(200,170,110,.07)}
+.rfold summary img{width:26px;height:26px;border:1px solid var(--gold-lo);flex:none}
+.rfold summary b{font:700 12px var(--title);color:var(--gold-hi);letter-spacing:.5px;text-transform:uppercase}
+.rfold summary span{font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.rfold .rp{border:0;background:transparent;padding:0 10px 10px}
+
+/* ============ Selección de campeones: cabecera, baneos y picks ============ */
+.dhead{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px;
+  border:1px solid var(--gold-lo);background:var(--panel);position:relative;overflow:hidden;min-height:104px}
+.dh{display:flex;align-items:center;gap:14px;padding:12px 18px;position:relative;z-index:1;min-width:0}
+.dh.r{flex-direction:row-reverse;text-align:right}
+.dh .lbl{font:700 10px var(--title);letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.dh .nm{font:700 24px var(--display);color:var(--gold-hi);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh .nm.na{color:var(--muted);font-size:17px}
+.dhx{font:700 26px var(--display);color:var(--gold);z-index:1;padding:0 4px}
+.dhead .spw{position:absolute;top:0;bottom:0;width:52%;z-index:0;overflow:hidden;pointer-events:none}
+.dhead .spw.l{left:0;-webkit-mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.75) 45%,transparent 100%);mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.75) 45%,transparent 100%)}
+.dhead .spw.r{right:0;-webkit-mask-image:linear-gradient(270deg,#000 0%,rgba(0,0,0,.75) 45%,transparent 100%);mask-image:linear-gradient(270deg,#000 0%,rgba(0,0,0,.75) 45%,transparent 100%)}
+.dhead .spg{position:absolute;height:auto;max-width:none}
+.dhead::after{content:"";position:absolute;inset:0;z-index:0;
+  background:linear-gradient(90deg,rgba(1,10,19,.25),rgba(1,10,19,.78) 40%,rgba(1,10,19,.78) 60%,rgba(1,10,19,.25))}
+.dmid{display:flex;flex-direction:column;align-items:center;gap:5px;z-index:1;padding:8px 6px}
+.dstate{font:700 11px var(--title);letter-spacing:1.2px;text-transform:uppercase;padding:3px 10px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.dstate.on{border-color:var(--gold);color:var(--gold-hi);background:rgba(200,170,110,.12);animation:pulso 1.6s ease-in-out infinite}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 rgba(200,170,110,0)}50%{box-shadow:0 0 14px rgba(200,170,110,.45)}}
+.dbans{display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:270px}
+.dbans .bx{position:relative;line-height:0}
+.dbans img{width:26px;height:26px;border:1px solid var(--line);filter:grayscale(1) brightness(.55)}
+.dbans .bx::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(45deg,transparent 45%,var(--enemy) 45%,var(--enemy) 55%,transparent 55%)}
+.dbans .none{font-size:11px;color:var(--muted)}
+
+/* Tarjetas grandes con el arte del campeón */
+.ch{position:relative;overflow:hidden;isolation:isolate;border:1px solid var(--line);background:rgba(1,10,19,.6);
+  display:flex;flex-direction:column;gap:4px;padding:8px 11px;min-height:104px;transition:border-color .15s}
+.ch:hover{border-color:var(--gold-lo)}
+.ch .spw{position:absolute;right:0;top:0;bottom:0;width:60%;z-index:-1;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:linear-gradient(270deg,#000 0%,rgba(0,0,0,.9) 40%,rgba(0,0,0,.3) 78%,transparent 100%);mask-image:linear-gradient(270deg,#000 0%,rgba(0,0,0,.9) 40%,rgba(0,0,0,.3) 78%,transparent 100%)}
+.ch .spg{position:absolute;height:auto;max-width:none;transition:scale .35s}
+.ch:hover .spg{scale:1.04}
+.ch::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(1,10,19,.94) 0,rgba(1,10,19,.9) 46%,rgba(1,10,19,.35) 80%,rgba(1,10,19,.15) 100%)}
+.ch .cht{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:72%}
+.ch .why{max-width:74%}
+.ch .chn{font:700 17px var(--display);color:var(--gold-hi);text-shadow:0 1px 4px #000}
+.ch .why{font-size:11.5px;color:var(--body);line-height:1.4;text-shadow:0 1px 3px #000}
+.ch .why div{margin-top:2px}
+.ch .why .mas{color:var(--muted);font-size:11px}
+.ch.pick{border-left:3px solid var(--gold-lo)}
+.ch.pick.best{border-color:var(--gold);box-shadow:inset 0 0 26px rgba(200,170,110,.14)}
+.ch.ban{border-left:3px solid rgba(224,72,75,.6)}
+.ch.ban.best{border-color:var(--enemy);box-shadow:inset 0 0 26px rgba(224,72,75,.14)}
+.ch.ban::after{background:linear-gradient(90deg,rgba(28,6,8,.95) 0,rgba(20,6,9,.9) 46%,rgba(30,8,10,.4) 80%,rgba(40,10,12,.18) 100%)}
+.chgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:9px}
+.chgrid.dos{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.ch .core{margin-top:2px}
+.ch .chpie{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:5px;max-width:88%}
+.ch .chpie .dact{margin-top:0;padding-top:0}
+/* dos columnas dentro del centro: picks a la izquierda, runas a la derecha */
+.dsplit{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;align-items:start}
+.dsplit>div{min-width:0;display:flex;flex-direction:column;gap:12px}
+@media (max-width:900px){.dsplit{grid-template-columns:1fr}}
+.panel.tight{padding:10px 12px}
+.panel.tight h2{margin-bottom:8px}
+
+/* Fase de baneos y acciones sobre el cliente */
+.turno{display:inline-block;font:700 11px var(--title);letter-spacing:1px;text-transform:uppercase;
+  border:1px solid var(--gold);color:var(--gold-hi);padding:2px 8px;margin-left:10px;vertical-align:2px}
+.turno.no{border-color:var(--line);color:var(--muted)}
+.bans2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.bo{display:flex;gap:10px;border:1px solid var(--line);background:var(--panel2);padding:9px 10px}
+.bo.best{border-color:var(--enemy)}
+.bo .bod{min-width:0;display:flex;flex-direction:column;gap:5px;flex:1}
+.bo .bt{font:600 14px var(--sans);color:var(--gold-hi)}
+.bo .why{font-size:12px;color:var(--body);line-height:1.45}
+.bo .why div{margin-top:2px}
+.dact{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.dact .rbtn{margin:0;padding:5px 10px;font-size:11px}
+.dact .rbtn.lock{border-color:var(--enemy);color:var(--enemy)}
+.dact .rbtn.lock:hover{background:rgba(224,72,75,.12)}
+.dact .rbtn.lock.arm{background:rgba(224,72,75,.22);border-color:var(--bad)}
+
+/* Runas y hechizos en la selección */
+.rp{border:1px solid var(--line);background:var(--panel2);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.rp.best{border-color:var(--gold)}
+.rp h3{margin:0;font:700 13px var(--title);color:var(--gold-hi);letter-spacing:.5px;text-transform:uppercase}
+.rtrees{display:flex;gap:14px;align-items:flex-start}
+.rtree{display:flex;flex-direction:column;gap:4px;align-items:center}
+.rtree .tn{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.rrow{display:flex;gap:4px}
+.rrow img{width:28px;height:28px;border:1px solid var(--line);background:#050d16}
+.rrow img.key{width:40px;height:40px;border-color:var(--gold-lo)}
+.rshards{display:flex;gap:3px;font-size:10px;color:var(--body);flex-wrap:nowrap}
+.rshards span{border:1px solid var(--line);padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp .why{font-size:12px;color:var(--body);line-height:1.45}
+.rp .why div{margin-top:3px}
+.rbtn{align-self:flex-start;margin-top:auto;background:transparent;border:1px solid var(--gold);color:var(--gold-hi);
+  font:600 12px var(--sans);padding:6px 12px;cursor:pointer;letter-spacing:.4px}
+.rbtn:hover{background:rgba(200,170,110,.12)}
+.rbtn:disabled{opacity:.45;cursor:default;border-color:var(--line);color:var(--muted)}
+.rbtn.ok{border-color:var(--ok);color:var(--ok)}
+.rbtn.err{border-color:var(--bad);color:var(--bad)}
+.spells{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.sp1{display:flex;align-items:center;gap:6px}
+.sp1 img{width:34px;height:34px;border:1px solid var(--gold-lo)}
+.spalt{font-size:11.5px;color:var(--body);display:flex;gap:6px;align-items:flex-start;margin-top:5px;line-height:1.4}
+.spalt img{width:24px;height:24px;border:1px solid var(--line);flex:none}
+
 /* «Ponete el pantalón»: cuando vas muy por encima del resto de la partida */
 .pants{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:0 0 12px;padding:12px 18px;
   border:1px solid var(--gold);background:linear-gradient(90deg,rgba(200,170,110,.16),rgba(200,170,110,.03));}
@@ -274,7 +387,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .quest span{color:var(--text)}
 @media (max-width:1400px){.gboard{grid-template-columns:262px minmax(0,1fr) 262px;grid-template-areas:"ally a enemy" "ally b enemy"}
   .gboard .slot .stat{white-space:normal}}
-@media (max-width:1050px){.gboard{grid-template-columns:1fr;grid-template-areas:"a" "b" "ally" "enemy"}.gtop{grid-template-columns:1fr auto 1fr;grid-template-areas:"kl clock kr" "lane lane lane" "bar bar bar"}.gboard .alerts{grid-template-columns:1fr}}
+@media (max-width:1050px){.gboard{grid-template-columns:1fr 1fr;grid-template-areas:"a a" "b b" "ally enemy"}.gtop{grid-template-columns:1fr auto 1fr;grid-template-areas:"kl clock kr" "lane lane lane" "bar bar bar"}.gboard .alerts{grid-template-columns:1fr}}
 .appicon{height:38px;width:38px;margin-right:-12px}
 .banner.slim{padding:4px 10px;margin-bottom:10px;font-size:13px}.banner.slim .btn{padding:4px 12px;font-size:11px}
 .gside .panel{margin-bottom:12px}
@@ -417,8 +530,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dmgc small{color:var(--muted);font-size:11px}
 .pgt .items,.pgme .items{display:flex;gap:2px;flex-wrap:wrap}
 .pgt .items img{width:22px;height:22px}
-@media (max-width:1500px){.pgteams{grid-template-columns:1fr}}
-@media (max-width:1100px){.pgmain{grid-template-columns:1fr}.pghead{grid-template-columns:1fr auto}.pgme{grid-column:1/-1;order:3}}
+@media (max-width:1150px){.pgteams{grid-template-columns:1fr}}
+@media (max-width:900px){.pgmain{grid-template-columns:1fr}}
+@media (max-width:1100px){.pghead{grid-template-columns:1fr auto}.pgme{grid-column:1/-1;order:3}}
 </style>
 </head>
 <body>
@@ -530,171 +644,152 @@ function build(o){
   return `<div class="row" style="gap:3px;margin-top:6px">${o.keystone?iimg(o.keystone):''}${o.build.map(i=>iimg(i)).join('')}${o.boots?iimg(o.boots):''}</div>`;
 }
 
+function runeCard(o,i,champ,locked){
+  const tree=(nombre,img,runas,key)=>`<div class="rtree"><div class="tn">${esc(nombre)}</div>
+      <div class="rrow">${runas.map((r,j)=>`<img src="${r.img}" title="${esc(r.name)}" class="${key&&j===0?'key':''}" alt="">`).join('')}</div></div>`;
+  return `<div class="rp ${i===0?'best':''}">
+    <div class="rtrees">${tree(o.primaryName,o.primaryImg,o.primaryRunes,true)}${tree(o.subName,o.subImg,o.subRunes,false)}</div>
+    <div class="rshards">${o.shardNames.map(x=>`<span>${esc(x)}</span>`).join('')}</div>
+    <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div>
+    <button class="rbtn" id="rb-${o.id}" onclick="ponerRunas('${o.id}')" ${locked?'':'disabled title="Elegí tu campeón primero"'}>Ponerlas en el LoL</button>
+  </div>`;
+}
+async function ponerRunas(id){
+  const b=document.getElementById('rb-'+id); if(!b) return;
+  const antes=b.textContent; b.disabled=true; b.textContent='Mandando…'; b.className='rbtn';
+  try{
+    const r=await api('/api/runas',{id});
+    if(r.ok){ b.className='rbtn ok'; b.textContent='Listo: '+(r.name||'runas puestas'); }
+    else { b.className='rbtn err'; b.textContent=r.error||'No pude'; b.title=r.error||''; }
+  }catch(e){ b.className='rbtn err'; b.textContent='No pude conectarme'; }
+  setTimeout(()=>{ b.disabled=false; b.className='rbtn'; b.textContent=antes; b.title=''; }, 6000);
+}
+function runeFold(o,i,locked){
+  return `<details class="rfold" ${i===0?'open':''}><summary><img src="${o.keystone.img}" alt=""><b>${esc(o.title)}</b>
+      <span>${esc(o.primaryName)} + ${esc(o.subName)}</span></summary>${runeCard(o,i,null,locked)}</details>`;
+}
+function runesPanel(s){
+  if(!s.runes||!s.runes.length) return '';
+  const c=s.runeChamp||{}; const locked=s.runeChampLocked;
+  const sp=s.spells?`<div class="panel tight"><h2>Hechizos de invocador</h2>
+      <div class="spells">${s.spells.par.map(x=>`<span class="sp1"><img src="${x.img}" alt=""><b>${esc(x.name)}</b></span>`).join('')}
+        <span class="small">${esc(s.spells.why)}</span></div>
+      ${s.spells.alts.map(a=>`<div class="spalt"><img src="${a.img}" alt=""><span><b>${esc(a.name)}</b> — ${esc(a.why)}</span></div>`).join('')}
+    </div>`:'';
+  return `<div class="panel tight"><h2>Runas${c.name?' para '+esc(c.name):''}</h2>
+      ${locked?'':'<div class="situ">Todavía no elegiste campeón: te muestro las runas de la primera opción. En cuanto elijas, se actualizan y se pueden mandar al juego.</div>'}
+      <div class="runas">${s.runes.map((o,i)=>runeFold(o,i,locked)).join('')}</div>
+      <div class="note">El botón crea en tu cliente una página llamada «Lolcito runas para ${esc(c.name||'tu campeón')}» y la deja seleccionada. Reemplaza la anterior de Lolcito; tus páginas propias no se tocan.</div>
+    </div>${sp}`;
+}
+// --- acciones sobre la selección de campeones (marcar / bloquear)
+async function draftDo(cid, lock, btn){
+  const antes = btn.textContent, clase = btn.className;
+  btn.disabled = true; btn.textContent = lock ? 'Bloqueando…' : 'Marcando…';
+  try{
+    const r = await api('/api/draft', {championId: cid, lock});
+    btn.className = clase + (r.ok ? ' ok' : ' err');
+    btn.textContent = r.ok ? (r.msg || 'Listo') : (r.error || 'No pude');
+  }catch(e){ btn.className = clase + ' err'; btn.textContent = 'Sin conexión'; }
+  setTimeout(()=>{ btn.disabled=false; btn.className=clase; btn.textContent=antes; }, 5000);
+}
+// el bloqueo es irreversible: pide un segundo clic
+let armado = null;
+function draftLock(cid, btn){
+  if(armado === btn){ clearTimeout(btn._t); armado = null; draftDo(cid, true, btn); return; }
+  if(armado){ armado.classList.remove('arm'); armado.textContent = armado.dataset.antes; clearTimeout(armado._t); }
+  armado = btn; btn.dataset.antes = btn.textContent;
+  btn.classList.add('arm'); btn.textContent = 'Tocá otra vez para confirmar';
+  btn._t = setTimeout(()=>{ btn.classList.remove('arm'); btn.textContent = btn.dataset.antes; armado = null; }, 4000);
+}
+function draftBtns(cid, s, que){
+  const mio = s.myTurn ? '' : 'disabled title="Todavía no te toca"';
+  return `<div class="dact">
+      <button class="rbtn" ${mio} onclick="draftDo(${cid},false,this)">${que==='ban'?'Marcar para banear':'Marcar en el cliente'}</button>
+      <button class="rbtn lock" ${mio} onclick="draftLock(${cid},this)">${que==='ban'?'Banear ya':'Bloquear'}</button>
+    </div>`;
+}
+function chAlias(o){ return ((o&&o.img)||'').split('/').pop().replace('.png',''); }
+function chSplash(o, cls){
+  const a=chAlias(o); if(!a) return '';
+  const [fx,fy,t]=CARAS[a]||[0.5,0.25,0.33];
+  return `<div class="spw ${cls||''}"><img class="spg" src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${a}_0.jpg" alt="" data-fx="${fx}" data-fy="${fy}" data-t="${t}"></div>`;
+}
+// coloca los splash de las tarjetas (la cara, centrada verticalmente y hacia la izquierda)
+function layoutSplashes(){
+  document.querySelectorAll('.spw .spg').forEach(img=>{
+    const box=img.parentElement, bw=box.offsetWidth, bh=box.offsetHeight; if(!bw||!bh) return;
+    const fx=+img.dataset.fx, fy=+img.dataset.fy, t=+img.dataset.t||0.33;
+    const derecha=box.classList.contains('r');
+    let w=2.1*bh/(t*0.59);
+    w=Math.max(bw*0.85, Math.min(bw*2.4, w)); const h=w*0.59;
+    const ancla=derecha?0.72:0.28;
+    let left=ancla*bw-fx*w; left=Math.min(0,Math.max(bw-w,left));
+    let top=bh/2-fy*h; top=Math.min(0,Math.max(bh-h,top));
+    Object.assign(img.style,{width:w+'px',left:left+'px',top:top+'px'});
+  });
+}
+window.addEventListener('resize',layoutSplashes);
+
+function champCard(o, kind, s, best){
+  const tags=`${tier(o.tier)}${o.counters?`<span class="tag">${kind==='ban'?'te contra a vos':'contra este rival'}</span>`:''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}`;
+  const why=o.why.slice(0,3), resto=o.why.length-why.length;
+  return `<div class="ch ${kind} ${best?'best':''}" title="${esc(o.why.join(' · '))}">${chSplash(o,'r')}
+    <div class="cht"><span class="chn">${esc(o.name)}</span>${tags}</div>
+    <div class="why">${why.map(w=>`<div>${esc(w)}</div>`).join('')}${resto>0?`<div class="mas">+${resto} motivo${resto>1?'s':''} más</div>`:''}</div>
+    <div class="chpie">${kind==='pick'?build(o):''}${draftBtns(o.id,s,kind)}</div></div>`;
+}
+function bansPanel(s){
+  if(!s.banOptions || !s.banOptions.length) return '';
+  return `<div class="panel"><h2>Qué banear${s.myTurn?'<span class="turno">Te toca</span>':'<span class="turno no">Todavía no te toca</span>'}</h2>
+    <div class="chgrid dos">${s.banOptions.map((o,i)=>champCard(o,'ban',s,i===0)).join('')}</div>
+    <div class="note">Se mira el rol que vas a jugar: el baneo que más te cambia la partida es el del campeón que te toca enfrente. Nunca te propone banear un campeón que jugás vos. «Banear ya» pide un segundo toque porque no se puede deshacer.</div>
+  </div>`;
+}
+function draftHead(s){
+  const me=s.team.find(p=>p.isMe)||{}, lo=s.laneOpponent;
+  const estado = s.step==='ban'
+      ? (s.myTurn?'<span class="dstate on">Te toca banear</span>':'<span class="dstate">Fase de baneos</span>')
+      : (s.myTurn?'<span class="dstate on">Te toca pickear</span>':'<span class="dstate">Selección de campeones</span>');
+  const bans = s.bans.length
+      ? s.bans.map(b=>`<span class="bx"><img src="${b.img}" title="${esc(b.name)}" alt=""></span>`).join('')
+      : '<span class="none">Sin baneos todavía</span>';
+  return `<div class="dhead">
+    ${me.id?chSplash(me,'l'):'<div class="spw l"></div>'}
+    ${lo?chSplash(lo,'r'):'<div class="spw r"></div>'}
+    <div class="dh"><div><div class="lbl">Vos · ${esc(s.myRoleEs)}</div>
+      <div class="nm ${me.id?'':'na'}">${me.id?esc(me.name):'Todavía no elegiste'}</div></div></div>
+    <div class="dmid">${estado}<div class="dbans">${bans}</div></div>
+    <div class="dh r"><div><div class="lbl">Rival de línea</div>
+      <div class="nm ${lo?'':'na'}">${lo?esc(lo.name):'Todavía no se sabe'}</div></div></div>
+  </div>`;
+}
 function draft(s){
   const team = s.team.map(p=>`<div class="slot ${p.isMe?'me':''} ${!p.locked&&p.id?'hover':''}">${pimg(p)}
       <div class="who"><div class="name">${p.id?esc(p.name):'<span class="small">Eligiendo…</span>'}${p.isMe?' <span class="small">(vos)</span>':''}</div><div class="role">${esc(p.role)}</div></div></div>`).join('');
   const enemies=[...s.enemies]; while(enemies.length<s.enemySlots) enemies.push(null);
   const foes = enemies.map(e=>`<div class="slot">${pimg(e)}<div class="who">${e?`<div class="name">${esc(e.name)}</div><div class="role">${esc(e.role)} (probable)</div>`:'<span class="small">Eligiendo…</span>'}</div></div>`).join('');
-  const me = s.team.find(p=>p.isMe)||{};
   const mios = (s.myChamps&&s.myChamps.length)?`<div class="mios"><b>Tus campeones</b>${s.myChamps.map(c=>`<span class="mio1">${pimg(c,'por sm')}${esc(c.name)} <i>${Math.round(c.wr*100)}% en ${c.games}</i></span>`).join('')}</div>`:'';
-  const vs = `<div class="vs"><div class="side">${me.id?pimg(me,'por lg'):'<div class="empty-slot"></div>'}<div><div class="small">Vos · ${esc(s.myRoleEs)}</div><div class="name">${me.id?esc(me.name):'—'}</div></div></div>
-     <div class="x">VS</div>
-     <div class="side r">${s.laneOpponent?pimg(s.laneOpponent,'por lg'):'<div class="empty-slot"></div>'}<div><div class="small">Rival de línea</div><div class="name">${s.laneOpponent?esc(s.laneOpponent.name):'Todavía no se sabe'}</div></div></div></div>`;
-  const cur = s.current?`<div class="panel"><h2>Tu pick actual</h2><div class="card best">${pimg(s.current)}<div><div class="t">${esc(s.current.name)}${tier(s.current.tier)}</div><div class="why">${s.current.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div>${build(s.current)}</div></div></div>`:'';
-  const opts = s.options.map((o,i)=>`<div class="card ${i==0?'best':''}">${pimg(o)}<div style="min-width:0"><div class="t">${esc(o.name)}${tier(o.tier)}${o.counters?'<span class="tag">contra este rival</span>':''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}</div><div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div>${build(o)}</div></div>`).join('')
-     || '<div class="small">Sin estadísticas del meta todavía: cargá tu API key en Configuración y tocá «Actualizar ahora».</div>';
-  return `${simBanner(s)}<div class="board">
+  let centro;
+  if(s.step==='ban' && s.banOptions && s.banOptions.length){
+    // en la fase de baneos se muestra solo eso: entra todo sin scrollear
+    centro = bansPanel(s);
+  }else{
+    const opts = s.options.length
+      ? `<div class="chgrid">${s.options.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>`
+      : '<div class="small">Sin estadísticas del meta todavía: cargá tu API key en Configuración y tocá «Actualizar ahora».</div>';
+    centro = `<div class="dsplit">
+      <div><div class="panel tight"><h2>Qué pickear</h2>
+        ${s.situation?`<div class="situ">${esc(s.situation)}</div>`:''}${opts}${mios}
+        <div class="note">Ordenadas por lo que le va bien a tu rival de línea y al resto del equipo rival, más el winrate en tu rango. Vos elegís.</div></div></div>
+      <div>${runesPanel(s)}</div>
+    </div>`;
+  }
+  return `${simBanner(s)}${draftHead(s)}<div class="board">
     <div class="col-ally panel team ally"><h2 class="ally">Tu equipo</h2>${team}</div>
-    <div class="col-center">
-      <div class="panel">${vs}</div>${cur}
-      <div class="panel"><h2>Opciones para pickear</h2>${s.situation?`<div class="situ">${esc(s.situation)}</div>`:''}<div class="cards">${opts}</div>
-        ${mios}
-        <div class="note">Ordenadas por lo que le va bien a tu rival de línea y al resto del equipo rival, más el winrate en tu rango. Vos elegís.</div></div>
-      <div class="panel"><h2>Baneados</h2><div class="row" style="gap:4px">${s.bans.map(b=>pimg(b,'por sm')).join('')||'<span class="small">—</span>'}</div></div>
-    </div>
+    <div class="col-center">${centro}</div>
     <div class="col-enemy panel team enemy"><h2 class="enemy">Equipo rival</h2>${foes}</div>
   </div>`;
-}
-
-function player(p,isMe,enemy){
-  const badge = p.dmg?`<span class="dmg d${p.dmg}">${p.dmg}</span>`:'';
-  const def = enemy&&p.armor!=null?`<div class="stat" title="Armadura y resistencia mágica estimadas">${p.armor} armadura · ${p.mr} res. mágica</div>`:'';
-  const flags = (p.flags||[]).map(f=>`<span class="flag f-${f.replace(/[^a-z]/g,'')}">${esc(f)}</span>`).join('');
-  return `<div class="slot ${isMe?'me':''} ${p.threat?'threat':''} ${p.dead?'dead':''}">${pimg(p,'por sm')}
-    <div class="who"><div class="name">${esc(p.name)} ${badge}${p.threat?'<span class="badge">más fuerte</span>':''}${p.dead?`<span class="deadb">muerto · ${p.respawn} s</span>`:''}</div>
-      <div class="stat">${esc(p.role)} · nv ${p.level} · ${p.k}/${p.d}/${p.a} · ${p.cs} cs · <span class="gold">${k(p.gold)}</span></div>${def}
-      ${flags?`<div class="flags">${flags}</div>`:''}
-      <div class="items">${p.items.map(i=>iimg(i)).join('')}</div></div></div>`;
-}
-const sign=n=>(n>0?'+':'')+n;
-function laneChips(c,lo){
-  if(!c||!lo) return '';
-  const cls=n=>n>0?'up':n<0?'down':'';
-  return `<div class="lanecmp"><span class="${cls(c.gold)}">${sign(c.gold)} oro en ítems</span><span class="${cls(c.level)}">${sign(c.level)} nivel</span><span class="${cls(c.cs)}">${sign(c.cs)} cs</span><span class="small">vs ${esc(lo.name)}</span></div>`;
-}
-const OBJ_ICON={drake:'🜂',elder:'✦',grubs:'◉',herald:'◈',baron:'♛'};
-function objectivesPanel(o){
-  const rows=o.rows.map(r=>`<div class="obj st-${r.state}"><span class="oi"><img src="${r.img}" alt=""></span>
-      <div class="ol"><b>${esc(r.label)}</b>${r.extra?`<span>${esc(r.extra)}</span>`:''}</div>
-      <div class="ot">${esc(r.text)}${r.at&&r.state!=='up'?`<small>a las ${r.at}</small>`:''}</div></div>`).join('');
-  const dk=(names,cols,imgs)=>names.map((n,i)=>`<span class="dk" style="border-color:${cols[i]};color:${cols[i]}"><img src="${imgs[i]}" alt="">${esc(n)}</span>`).join('')||'<span class="small">—</span>';
-  const buffs=o.buffs.map(b=>`<div class="buff ${b.mine?'mine':'theirs'}">${esc(b.text)} · <b>${b.left}</b></div>`).join('');
-  const inh=o.inhibs.map(x=>`<div class="small">${esc(x)}</div>`).join('');
-  return `<div class="objs">${rows}</div>${buffs}${inh}
-    <div class="drakes"><div><span class="small">Dragones de tu equipo</span><div>${dk(o.drakes.mine,o.drakes.mineColors,o.drakes.mineImgs)}</div></div>
-    <div style="text-align:right"><span class="small">Dragones del rival</span><div>${dk(o.drakes.theirs,o.drakes.theirsColors,o.drakes.theirsImgs)}</div></div></div>`;
-}
-function cmpBlock(c){
-  const pos=Math.round((c.score+1.5)/3*100);
-  return `<div class="fight ${c.tone}"><div class="flabel">${esc(c.label)}</div>
-    <div class="fmeter"><div class="fz bad"></div><div class="fz even"></div><div class="fz good"></div><div class="fmark" style="left:${pos}%"></div></div>
-    <div class="fscale"><span>Desventaja</span><span>Parejo</span><span>Ventaja</span></div>
-    <div class="factors">${c.factors.map(x=>`<div class="fx ${x.good===true?'g':x.good===false?'b':''}">${x.good===true?'▲':x.good===false?'▼':'•'} ${esc(x.text)}</div>`).join('')}</div></div>`;
-}
-function fightPanel(f){
-  if(f.mode==='objective'){
-    const o=f.objective;
-    return `<div class="objhead st-${o.state}" style="--bg:url('${o.img}')"><span class="oi big"><img src="${o.img}" alt=""></span><div><b>${esc(o.label)}</b><span>${esc(o.when)}</span></div></div>
-      ${f.stakes.map(x=>`<div class="stake">${esc(x)}</div>`).join('')}
-      <div class="reading ${f.tone}">${esc(f.reading)}</div>
-      ${cmpBlock(f.compare)}
-      <div class="alts"><div class="small">Opciones:</div>${f.alts.map(a=>`<div>◆ ${esc(a)}</div>`).join('')}</div>
-      <div class="note">Compara vivos, niveles, oro y mejoras. No sabe las definitivas ni los hechizos del rival: vos decidís.</div>`;
-  }
-  return `${cmpBlock(f.compare)}
-    <div class="macro">${f.options.map((o,i)=>`<div class="mo ${i==0?'best':''}"><div class="mt">${i==0?'<span class="tag">lo más razonable ahora</span>':''}<b>${esc(o.title)}</b></div>
-      <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div>`).join('')}</div>
-    <div class="note">No hay objetivos en juego. Son opciones según cómo viene la partida: vos decidís.</div>`;
-}
-// ---------- orden de los paneles (cada usuario lo acomoda como quiere; se guarda en ajustes.json)
-const COLS=['L','a','b','R'];
-const DEFAULT_LAYOUT={L:['novedades'],a:['compra','build','rival'],b:['pelea','obj'],R:['mision'],min:[]};
-let LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), lastState=null;
-function fixLayout(l){
-  const out={L:[],a:[],b:[],R:[],min:Array.isArray(l&&l.min)?l.min.filter(x=>typeof x==='string'):[]}, seen=new Set();
-  for(const c of COLS) for(const id of ((l&&l[c])||[])) if(DEFAULT_LAYOUT[c]!==undefined&&!seen.has(id)&&COLS.some(k=>DEFAULT_LAYOUT[k].includes(id))){out[c].push(id);seen.add(id);}
-  for(const c of COLS) for(const id of DEFAULT_LAYOUT[c]) if(!seen.has(id)){out[c].push(id);seen.add(id);}
-  return out;
-}
-function layoutCol(c,P){
-  return LAYOUT[c].filter(id=>P[id]).map((id,i,arr)=>{
-    const [title,body,cls]=P[id], min=LAYOUT.min.includes(id), ci=COLS.indexOf(c);
-    const b=(act,sym,tip,off)=>`<button class="pb" ${off?'disabled':''} title="${tip}" onclick="movePanel('${id}','${act}')">${sym}</button>`;
-    return `<div class="panel ${cls||''} ${min?'min':''}" data-p="${id}"><div class="ph"><h2>${esc(title)}</h2><span class="pctl">
-      ${b('up','▲','Subir',i===0)}${b('down','▼','Bajar',i===arr.length-1)}${b('left','◀','Pasar a la columna de la izquierda',ci===0)}${b('right','▶','Pasar a la columna de la derecha',ci===COLS.length-1)}${b('min',min?'+':'–',min?'Mostrar':'Achicar')}</span></div>${min?'':body}</div>`;
-  }).join('');
-}
-function movePanel(id,act){
-  const c=COLS.find(k=>LAYOUT[k].includes(id)); if(!c) return;
-  const col=LAYOUT[c], i=col.indexOf(id);
-  if(act==='up'&&i>0) [col[i-1],col[i]]=[col[i],col[i-1]];
-  else if(act==='down'&&i<col.length-1) [col[i+1],col[i]]=[col[i],col[i+1]];
-  else if(act==='left'||act==='right'){
-    const ci=COLS.indexOf(c)+(act==='left'?-1:1); if(ci<0||ci>=COLS.length) return;
-    col.splice(i,1); LAYOUT[COLS[ci]].splice(Math.min(i,LAYOUT[COLS[ci]].length),0,id);
-  } else if(act==='min') LAYOUT.min=LAYOUT.min.includes(id)?LAYOUT.min.filter(x=>x!==id):[...LAYOUT.min,id];
-  api('/api/layout',{layout:LAYOUT}); render();
-}
-function resetLayout(){ LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)); api('/api/layout',{layout:LAYOUT}); render(); }
-api('/api/settings').then(c=>{ if(c.LAYOUT&&Object.keys(c.LAYOUT).length){ LAYOUT=fixLayout(c.LAYOUT); render(); } }).catch(()=>{});
-
-function game(s){
-  if(s.error) return idle({message:s.error,info:s.info});
-  const [ga,ge]=s.teamGold, tot=(ga+ge)||1;
-  const me=s.me, lo=s.laneOpponent;
-  const vs=`<div class="vs"><div class="side">${pimg(me,'por lg')}<div><div class="small">Vos · ${esc(s.myRoleEs)}</div><div class="name">${esc(me.name)}</div><div class="small">${me.k}/${me.d}/${me.a} · ${k(me.gold)}</div></div></div>
-     <div class="x">VS</div>
-     <div class="side r">${lo?pimg(lo,'por lg'):'<div class="empty-slot"></div>'}<div><div class="small">Rival de línea</div><div class="name">${lo?esc(lo.name):'—'}</div>${lo?`<div class="small">${lo.k}/${lo.d}/${lo.a} · ${k(lo.gold)}</div>`:''}</div></div></div>${laneChips(s.laneCmp,lo)}`;
-  const apPct=Math.round(s.apShare*100);
-  const alerts=`<div class="dmgbar"><div class="ap" style="width:${apPct}%">AP ${apPct}%</div><div class="ad" style="width:${100-apPct}%">AD ${100-apPct}%</div></div>
-    <div class="mydef">Tus defensas: <b>${me.armor}</b> armadura · <b>${me.mr}</b> resistencia mágica · tu daño es ${esc(me.damage)}</div>
-    <div class="alerts">${s.alerts.map(a=>`<div class="al lv-${a.level}"><b>${esc(a.text)}</b>${a.detail?`<span>${esc(a.detail)}</span>`:''}</div>`).join('')}</div>`;
-  const opts=s.options.map((o,i)=>`<div class="card ${o.primary?'best':''}">${iimg(o,'it')}<div style="min-width:0">
-      <div class="t">${esc(o.name)}${o.situational?'<span class="tag">para esta partida</span>':''}</div>
-      <div><span class="cost">${o.gold}</span> ${o.affordable?'<span class="ok">te alcanza</span>':`<span class="no">te faltan ${o.missing}</span>`}</div>
-      <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div></div>`).join('');
-  const sh=s.shopping; let shop='';
-  if(sh){ shop = sh.complete?`<div class="shop ok2">Con tus <b>${me.gold_now}</b> de oro <b>te alcanza para completarlo</b> (te sobran ${sh.left}).</div>`
-      : sh.buy.length?`<div class="shop">Con tus <b>${me.gold_now}</b> de oro podés comprar: ${sh.buy.map(b=>`${iimg(b)} ${esc(b.name)}`).join(' + ')} <span class="small">(te sobran ${sh.left})</span></div>`
-      : `<div class="shop">Te faltan <b>${sh.cost-me.gold_now}</b> de oro para la próxima parte.</div>`; }
-  const slots=[...s.plan]; while(slots.length<(s.nItems||5)) slots.push(null);
-  const changed=new Set(s.changes.map(c=>c.add.id));
-  const plan=`<div class="plan">${slots.map((p,i)=>p?`<div class="ps ${p.owned?'own':''} ${changed.has(p.id)?'chg':''}" title="${esc(p.name)}${p.reasons&&p.reasons.length?' — '+esc(p.reasons.join(', ')):''}">${iimg(p,'it')}<span>${i+1}</span></div>`:'<div class="ps"><div class="empty-slot"></div></div>').join('')}
-     ${s.boots?`<div class="ps boots ${s.boots.owned?'own':''} ${changed.has(s.boots.id)?'chg':''}" title="${esc(s.boots.name)}">${iimg(s.boots,'it')}<span>B</span></div>`:''}</div>
-     <div class="changes">${s.changes.length?s.changes.map(c=>`<div class="chrow">${iimg(c.add)} <b>${esc(c.add.name)}</b>${c.remove?` <span class="small">en lugar de</span> ${iimg(c.remove)} <s>${esc(c.remove.name)}</s>`:''}<div class="why">${c.reasons.map(r=>`<div>${esc(r)}</div>`).join('')}</div></div>`).join(''):'<div class="small">Esta partida no pide cambios: la build de siempre ya cubre lo que hace falta.</div>'}</div>`;
-  const events=s.events.length?s.events.map(e=>`<div class="ev ev-${e.kind}"><span class="t">${e.t}</span>${esc(e.text)}</div>`).join(''):'<div class="small">Acá van apareciendo las compras importantes de los rivales y los cambios en la partida.</div>';
-  const lane = lo?`<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${me.k}/${me.d}/${me.a} · ${k(me.gold)}</span></div>
-      <div class="x">VS</div><div class="gvn r"><b>${esc(lo.name)}</b><span>${lo.k}/${lo.d}/${lo.a} · ${k(lo.gold)}</span></div>${pimg(lo,'por md')}</div>${laneChips(s.laneCmp,lo)}`
-    : `<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${esc(s.myRoleEs)}</span></div></div>`;
-  const P={
-    compra:['Próxima compra',`${s.noMeta?'<div class="small" style="margin-bottom:8px">Sin estadísticas del meta todavía: las opciones salen solo de tu campeón y del rival.</div>':''}<div class="cards">${opts}</div>${shop}`],
-    build:['Tu build para esta partida',`${s.nItems===6?'<div class="small" style="margin-bottom:8px">6 ítems + botas: con la misión de ADC completa las botas pasan a su propio espacio.</div>':''}${plan}`],
-    rival:['Cómo viene el equipo rival',alerts],
-    obj:['Objetivos',objectivesPanel(s.objectives)],
-    pelea:[s.fight.mode==='objective'?'¿Conviene pelear el objetivo?':'¿Qué conviene ahora?',fightPanel(s.fight)],
-    novedades:['Novedades',`<div class="events">${events}</div>`],
-    mision:s.quest?[s.quest.name,`<div>${esc(s.quest.reward)}</div><div class="small" style="margin-top:6px">Cómo se completa: ${esc(s.quest.how)}</div>`,'quest']:null,
-  };
-  const pants = s.pants?`<div class="pants lv${s.pants.level}">
-      <div class="pt"><span class="picon">\u{1F456}</span>${esc(s.pants.title)}</div>
-      <div class="pw">${s.pants.why.map(w=>`<span>${esc(w)}</span>`).join('')}</div>
-      <div class="ptip">${esc(s.pants.tip)}</div></div>`:'';
-  return `${simBanner(s)}${pants}
-  <div class="panel gtop">
-    <div class="gk l"><div class="big">${s.teamKills[0]}</div><div class="small">Tu equipo · ${k(ga)} en ítems</div></div>
-    <div class="glane">${lane}</div>
-    <div class="clock">${mmss(s.time||0)}</div>
-    <div class="gk r"><div class="big">${s.teamKills[1]}</div><div class="small">${k(ge)} en ítems · Rival</div></div>
-    <div class="gbar"><div class="bar"><div class="a" style="width:${ga/tot*100}%"></div><div class="e" style="width:${ge/tot*100}%"></div></div></div>
-  </div>
-  <div class="gboard">
-    <div class="col-ally gside"><div class="panel team ally"><h2 class="ally">Tu equipo</h2>${s.allies.map(p=>player(p,p.id===me.id,false)).join('')}</div>${layoutCol('L',P)}</div>
-    <div class="gcol ga">${layoutCol('a',P)}</div>
-    <div class="gcol gb">${layoutCol('b',P)}</div>
-    <div class="col-enemy gside"><div class="panel team enemy"><h2 class="enemy">Rivales</h2>${s.enemies.map(p=>player(p,false,true)).join('')}</div>${layoutCol('R',P)}</div>
-  </div>
-  <div class="note">Solo usa lo que el juego muestra en el marcador (Tab). Todo son sugerencias: la decisión es tuya.
-    Podés acomodar los paneles con las flechas de cada título (se guarda solo) · <a href="#" onclick="resetLayout();return false">Volver al orden original</a></div>`;
 }
 
 async function refresh(){
@@ -720,6 +815,7 @@ function render(){
   $('#app').innerHTML = s.phase==='draft'?draft(s):s.phase==='game'?game(s):s.phase==='postgame'?postgame(s):H.detail?postgame(H.detail,true):home(s);
   window.scrollTo(0,y);
   layoutBanners();
+  layoutSplashes();
 }
 // ---------- inicio: cuentas e historial de partidas
 const H={accounts:[],sel:null,data:null,ver:-1,cur:undefined,detail:null,importing:''};
