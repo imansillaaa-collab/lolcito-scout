@@ -144,6 +144,42 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
         champs.sort(key=lambda c: c["adj"], reverse=True)
         result["roles"][role] = champs
 
+    # Ítems de cada campeón juntando todos los roles: sirve para la build en partida, que necesita
+    # saber qué arma ESE campeón aunque no llegue a las partidas que pide la tier list de su rol.
+    pool = defaultdict(lambda: {"games": 0, "wins": 0, "items": Counter(), "item_wins": Counter(),
+                                "boots": Counter(), "boot_wins": Counter(), "keystones": Counter()})
+    for r in rows:
+        s = pool[r["champion_id"]]
+        w = r["win"]
+        s["games"] += 1
+        s["wins"] += w
+        for iid in {int(x) for x in (r["items"] or "").split(",") if x and x != "0"}:
+            info = dd.items.get(iid)
+            if not info or not info["completed"]:
+                continue
+            if info["boots"]:
+                s["boots"][iid] += 1
+                s["boot_wins"][iid] += w
+            else:
+                s["items"][iid] += 1
+                s["item_wins"][iid] += w
+        if r["keystone"]:
+            s["keystones"][r["keystone"]] += 1
+    champs = {}
+    for cid, s in pool.items():
+        g = s["games"]
+        if g < 10:
+            continue
+        items = [i for i in sorted(s["items"], key=lambda i: s["items"][i], reverse=True)
+                 if s["items"][i] / g >= 0.05][:12]
+        champs[cid] = {
+            "id": cid, "games": g, "wr": s["wins"] / g,
+            "items": [{"id": i, "share": s["items"][i] / g, "wr": s["item_wins"][i] / s["items"][i]} for i in items],
+            "boots": [{"id": b, "share": n / g, "wr": s["boot_wins"][b] / n} for b, n in s["boots"].most_common(3)],
+            "keystones": [{"id": k, "share": n / g} for k, n in s["keystones"].most_common(2)],
+        }
+    result["champs"] = champs
+
     # Sinergias ADC + Support
     if "BOTTOM" in config.ROLES and "UTILITY" in config.ROLES:
         duos = defaultdict(lambda: [0, 0])
