@@ -44,6 +44,37 @@ class MockLCU:
             return "Lobby"
         return "EndOfGame" if game_over() else "InProgress"
 
+    def summoner(self):
+        return {"gameName": "Lolcito", "tagLine": "LAS", "puuid": "demo", "summonerLevel": 187, "profileIconId": 4567}
+
+    def ranked(self):
+        return {"tier": "PLATINUM", "division": "II", "lp": 47}
+
+    def match_list(self, count=20, puuid=None):
+        data = self.get("/lol-match-history/v1/products/lol/current-summoner/matches") or {}
+        return ((data.get("games") or {}).get("games")) or []
+
+    # --- selección de campeones simulada: cada 4 segundos se revela un pick más
+    DRAFT_MINE = [("TOP", "Garen"), ("JUNGLE", "LeeSin"), ("MIDDLE", "Ahri"), ("BOTTOM", "Jinx"), ("UTILITY", "Thresh")]
+    DRAFT_THEIRS = ["Darius", "Vi", "Syndra", "Caitlyn", "Leona"]
+    MY_SLOT = 3  # jugás de ADC
+
+    def champ_select(self):
+        step = int((time.time() - START) / 4)
+        cid = self.dd.champ_by_alias.get
+        my_team, their_team = [], []
+        for i, (pos, alias) in enumerate(self.DRAFT_MINE):
+            picked = i < step and i != self.MY_SLOT
+            my_team.append({"cellId": i, "assignedPosition": pos,
+                            "championId": cid(alias.lower()) if picked else 0})
+        for i, alias in enumerate(self.DRAFT_THEIRS[:max(0, step - 1)]):
+            their_team.append({"cellId": 5 + i, "championId": cid(alias.lower())})
+        while len(their_team) < 5:
+            their_team.append({"cellId": 5 + len(their_team), "championId": 0})
+        bans = [cid("yuumi"), cid("zed"), cid("kassadin")][:max(0, step - 2)]
+        return {"localPlayerCellId": self.MY_SLOT, "myTeam": my_team, "theirTeam": their_team,
+                "bans": {"myTeamBans": bans, "theirTeamBans": []}, "actions": []}
+
     def get(self, path):
         """Lo que devolvería el cliente de LoL: historial de partidas y, al terminar, la partida simulada."""
         if path.startswith("/lol-match-history/v1/products/lol/current-summoner/matches"):
