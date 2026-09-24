@@ -22,11 +22,16 @@ from lolscout.online import BRACKETS
 
 OUT = Path(__file__).parent / "publicado"
 ALL_ROLES = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
-HISTORY_KEEP = 120  # ~30 días de corridas cada 6 h
+HISTORY_KEEP = 300  # ~3 semanas de tandas
 
 
 def previous_history():
-    """Historial de corridas anteriores: sale del indice.json ya publicado en la rama "datos"."""
+    """Historial de corridas anteriores: el indice.json de la tanda anterior de esta misma corrida
+    o, si es la primera tanda, el que ya está publicado en la rama "datos"."""
+    try:
+        return json.loads((OUT / "indice.json").read_text(encoding="utf-8")).get("historial", [])
+    except Exception:
+        pass
     repo = os.environ.get("GITHUB_REPOSITORY")
     if repo:
         try:
@@ -36,10 +41,7 @@ def previous_history():
         except Exception as e:
             print(f"No pude leer el historial anterior ({e}); empiezo uno nuevo.", flush=True)
             return []
-    try:  # uso local
-        return json.loads((OUT / "indice.json").read_text(encoding="utf-8")).get("historial", [])
-    except Exception:
-        return []
+    return []
 
 
 def publish_bracket(name, tiers, dd, client, demo=False):
