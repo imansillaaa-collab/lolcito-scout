@@ -1,10 +1,14 @@
-# Cada 2 horas escanea partidas rankeds de LAS con TU API key (guardada como secreto del repo),
-# calcula las estadísticas y las publica en la rama "datos". La app de cada usuario las descarga de ahí.
+# Escanea partidas rankeds de LAS con TU API key (guardada como secreto del repo), calcula las estadísticas
+# y las publica en la rama "datos". La app de cada usuario las descarga de ahí.
+#
+# Cada corrida trabaja unas 5 horas seguidas, en tandas de ~35 minutos, y publica al terminar cada tanda.
+# Así no importa si GitHub arranca tarde o se saltea alguna de las programadas: mientras una corre, la
+# siguiente queda en espera y arranca apenas termina.
 name: Estadísticas
 
 on:
   schedule:
-    - cron: "17 */2 * * *"    # cada 2 horas, a los :17 (en punto GitHub las atrasa o se las saltea)
+    - cron: "17 */2 * * *"    # a los :17 (en punto GitHub las atrasa o se las saltea)
   workflow_dispatch:          # botón "Run workflow" para correrlo a mano
 
 permissions:
@@ -12,12 +16,12 @@ permissions:
 
 concurrency:
   group: estadisticas
-  cancel-in-progress: false
+  cancel-in-progress: false   # la que llega mientras otra corre queda en espera
 
 jobs:
   publicar:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 340      # el máximo de GitHub son 6 horas
     steps:
       - uses: actions/checkout@v4
 
@@ -34,10 +38,36 @@ jobs:
           key: stats-db-${{ github.run_id }}
           restore-keys: stats-db-
 
-      - name: Escanear partidas y calcular estadísticas
+      - name: Juntar partidas y publicar, tanda tras tanda (unas 5 horas)
         env:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
-        run: python publicar.py
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: |
+          fin=$(( $(date +%s) + 290 * 60 ))
+          tanda=0
+          while :; do
+            tanda=$((tanda + 1))
+            echo "::group::Tanda $tanda"
+            python publicar.py || echo "La tanda $tanda terminó con error: sigo con la próxima"
+            if [ -f publicado/indice.json ]; then
+              (
+                cd publicado
+                rm -rf .git
+                git init -q -b datos
+                git config user.name "lolcito-bot"
+                git config user.email "lolcito-bot@users.noreply.github.com"
+                git add .
+                git commit -qm "Estadísticas $(date -u '+%F %H:%M') (tanda $tanda)"
+                git push -qf "$DESTINO" datos
+              ) || echo "No pude publicar la tanda $tanda: se publica con la próxima"
+            fi
+            echo "::endgroup::"
+            # otra tanda solo si queda tiempo para terminarla (cada una tarda ~35 minutos)
+            if [ $(( fin - $(date +%s) )) -lt $(( 45 * 60 )) ]; then
+              echo "Listo: $tanda tandas."
+              break
+            fi
+          done
 
       - name: Guardar las partidas acumuladas
         if: always()
@@ -45,13 +75,3 @@ jobs:
         with:
           path: data
           key: stats-db-${{ github.run_id }}
-
-      - name: Publicar en la rama "datos"
-        run: |
-          cd publicado
-          git init -q -b datos
-          git config user.name "lolcito-bot"
-          git config user.email "lolcito-bot@users.noreply.github.com"
-          git add .
-          git commit -qm "Estadísticas $(date -u +%F)"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" datos
