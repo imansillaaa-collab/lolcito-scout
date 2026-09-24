@@ -10,6 +10,7 @@ from itertools import permutations
 
 from ..analyze import adj_wr
 from .duos import partner_picks, synergy as duo_synergy
+from .sinergias import ally_synergy
 
 POSITIONS = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 
@@ -143,16 +144,7 @@ def team_fit(dd, cid, shape, my_team_cids):
             why.append(f"te revientan rápido {', '.join(shape['burst'][:2])}")
     if len(shape["heal"]) >= 2 and not ch.get("ranged"):
         why.append("el rival cura mucho: acordate de un ítem de Heridas Graves")
-    # lo que le falta a tu equipo
-    mine = [c for c in my_team_cids if c]
-    if len(mine) >= 2:
-        if not any("Tank" in dd.champions.get(c, {}).get("tags", []) for c in mine) and "Tank" in tags:
-            pts += 0.008
-            why.append("tu equipo todavía no tiene un tanque")
-        ap_mine = [_ap_ratio(dd, c) for c in mine]
-        if len(ap_mine) >= 2 and sum(ap_mine) / len(ap_mine) < 0.35 and _ap_ratio(dd, cid) > 0.6:
-            pts += 0.008
-            why.append("tu equipo necesita daño mágico")
+    # lo que le falta a tu equipo se mira aparte (sinergias.team_needs), aunque el rival no haya pickeado
     return pts, why
 
 
@@ -184,7 +176,7 @@ def my_pending_pick(session, local):
     return None
 
 
-def ban_options(meta, my_role, pool, unavailable, dd, limit=4):
+def ban_options(meta, my_role, pool, unavailable, dd, limit=8):
     """Qué conviene banear: lo que está fuerte en tu línea y lo que le gana a tus campeones.
 
     Se mira el rol que vas a jugar, porque el baneo que más te cambia la partida es el del
@@ -296,6 +288,12 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         fit, fit_why = team_fit(dd, c["id"], shape, my_cids)
         score += fit
         why += fit_why
+        # 3b) con el resto de tu equipo: combos entre líneas y lo que le falta al equipo
+        #     (la dupla del bot no entra en los combos: la mira el punto 4)
+        otros = [x for x in my_cids if not (my_role in BOT_PARTNER and x == ally_partner)]
+        s_team, why_team, combo_team = ally_synergy(dd, c["id"], my_cids, otros)
+        score += s_team
+        why += why_team
         # 4) con tu compañero de línea (el que ya bloqueó o el que tiene marcado)
         if ally_partner:
             adc, sup = (c["id"], ally_partner) if my_role == "BOTTOM" else (ally_partner, c["id"])
@@ -309,15 +307,16 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             g, w = mine
             score += 0.02 * min(g, 8) / 8 + (w / g - 0.5) * 0.03
             why.append(f"lo jugaste {g} veces ({w / g * 100:.0f}% de victorias)")
-        return score, why, bool(fit_why), mine[0] >= 3
+        return score, why, bool(fit_why), mine[0] >= 3, combo_team
 
     options = []
     for c in meta.get(my_role, []):
         if c["id"] in unavailable:
             continue
-        score, why, counters, mine = evaluate(c)
+        score, why, counters, mine, sinergia = evaluate(c)
         options.append({**_champ_card(dd, c["id"]), "tier": c["tier"], "score": score, "why": why,
                         "games": c["games"], "thin": c["games"] < 40, "counters": counters, "mine": mine,
+                        "sinergia": sinergia,
                         "build": [_item_card(dd, i["id"]) for i in c["items"][:3]],
                         "boots": _item_card(dd, c["boots"][0]["id"]) if c["boots"] else None,
                         "keystone": {"name": dd.rune_name(c["keystones"][0]["id"]),
@@ -395,7 +394,7 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             for p in my_team
         ],
         "bans": [_champ_card(dd, b) for b in bans],
-        "options": options[:5],
+        "options": options[:10],
     }
 
 

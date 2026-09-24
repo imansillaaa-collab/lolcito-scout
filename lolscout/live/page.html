@@ -81,7 +81,27 @@ h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
 .why div::before{content:"◆ ";color:var(--gold-lo);font-size:9px;vertical-align:1px}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 /* Tres columnas: mi equipo | centro | rival */
-.board{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"ally center enemy";gap:16px;align-items:start}
+/* League escribe todo en mayúsculas: Beaufort también, para que se vea igual */
+.sin-mezcla,.sin-mezcla *{font-family:var(--title)!important;font-weight:700;text-transform:uppercase}
+.board{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"ally center enemy";gap:16px;align-items:stretch}
+/* los equipos ocupan todo el alto de la selección, con el splash de cada campeón de fondo */
+.board>.team{display:flex;flex-direction:column}
+.board>.team .slot{flex:1 1 0;min-height:66px;position:relative}
+.board>.team .slot.hassp{background:linear-gradient(90deg,rgba(1,10,19,.94) 30%,rgba(1,10,19,.45)),var(--sp) center 22%/cover}
+.board>.team.enemy .slot.hassp{background:linear-gradient(270deg,rgba(1,10,19,.94) 30%,rgba(1,10,19,.45)),var(--sp) center 22%/cover}
+.board>.team .slot.me{outline:1px solid var(--gold-lo)}
+.board>.team .slot.hover.hassp{filter:saturate(.55)}
+/* más opciones: filas compactas debajo de las tarjetas */
+.masop{margin-top:10px}
+.masop h3{font:700 11px var(--title);letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin:4px 0 6px}
+.chrow2{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid var(--line);background:rgba(1,10,19,.55);margin-bottom:5px}
+.chrow2:hover{border-color:var(--gold-lo)}
+.chrow2 .cr-main{flex:1;min-width:0}
+.chrow2 .cr-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chrow2 .cr-top b{color:var(--gold-hi);font:700 13px var(--title);letter-spacing:.5px}
+.chrow2 .cr-why{font-size:11.5px;color:var(--body);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chrow2 .cr-why i{color:var(--muted);font-style:normal}
+.chrow2 .dact{flex-wrap:nowrap;margin:0;padding:0;flex-shrink:0}
 .col-ally{grid-area:ally}.col-center{grid-area:center}.col-enemy{grid-area:enemy}
 @media (max-width:1350px){.board{grid-template-columns:230px minmax(0,1fr) 230px}}
 @media (max-width:1050px){.board{grid-template-columns:1fr 1fr;grid-template-areas:"center center" "ally enemy"}}
@@ -748,8 +768,25 @@ function layoutSplashes(){
 }
 window.addEventListener('resize',layoutSplashes);
 
+function chTags(o, kind){
+  return `${tier(o.tier)}${o.counters?`<span class="tag">${kind==='ban'?'te contra a vos':'contra este rival'}</span>`:''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}${o.combo?'<span class="tag mio">combo conocido</span>':''}${o.sinergia?'<span class="tag mio">combina con tu equipo</span>':''}`;
+}
+function champRow(o, kind, s){
+  return `<div class="chrow2 ${kind}" title="${esc(o.why.join(' · '))}">${pimg(o,'por sm')}
+    <div class="cr-main"><div class="cr-top"><b>${esc(o.name)}</b>${chTags(o,kind)}</div>
+      <div class="cr-why">${crWhy(o)}</div></div>${draftBtns(o.id,s,kind)}</div>`;
+}
+// en la fila: primero lo que cambia la decisión (sinergias, rival de línea) y el winrate del meta chiquito al final
+function crWhy(o){
+  const meta=o.why.filter(w=>/^(Meta|Está fuerte)/.test(w)), resto=o.why.filter(w=>!/^(Meta|Está fuerte)/.test(w));
+  const txt=(resto.length?resto:meta).slice(0,2).map(esc).join(' · ');
+  return txt + (resto.length&&meta.length?` <i>· ${esc(meta[0].replace(/^Meta: /,'').replace(/^Está fuerte en [^:]+: /,''))}</i>`:'');
+}
+function masOpciones(list, kind, s, titulo){
+  return list.length?`<div class="masop"><h3>${titulo}</h3>${list.map(o=>champRow(o,kind,s)).join('')}</div>`:'';
+}
 function champCard(o, kind, s, best){
-  const tags=`${tier(o.tier)}${o.counters?`<span class="tag">${kind==='ban'?'te contra a vos':'contra este rival'}</span>`:''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}${o.combo?'<span class="tag mio">combo conocido</span>':''}`;
+  const tags=chTags(o,kind);
   const why=o.why.slice(0,3), resto=o.why.length-why.length;
   return `<div class="ch ${kind} ${best?'best':''}" title="${esc(o.why.join(' · '))}">${chSplash(o,'r')}
     <div class="cht"><span class="chn">${esc(o.name)}</span>${tags}</div>
@@ -759,7 +796,8 @@ function champCard(o, kind, s, best){
 function bansPanel(s){
   if(!s.banOptions || !s.banOptions.length) return '';
   return `<div class="panel"><h2>Qué banear${s.myTurn?'<span class="turno">Te toca</span>':'<span class="turno no">Todavía no te toca</span>'}</h2>
-    <div class="chgrid dos">${s.banOptions.map((o,i)=>champCard(o,'ban',s,i===0)).join('')}</div>
+    <div class="chgrid dos">${s.banOptions.slice(0,4).map((o,i)=>champCard(o,'ban',s,i===0)).join('')}</div>
+    ${masOpciones(s.banOptions.slice(4),'ban',s,'Más para banear')}
     <div class="note">Se mira el rol que vas a jugar: el baneo que más te cambia la partida es el del campeón que te toca enfrente. Nunca te propone banear un campeón que jugás vos. «Banear ya» pide un segundo toque porque no se puede deshacer.</div>
   </div>`;
 }
@@ -782,10 +820,11 @@ function draftHead(s){
   </div>`;
 }
 function draft(s){
-  const team = s.team.map(p=>`<div class="slot ${p.isMe?'me':''} ${!p.locked&&p.id?'hover':''}">${pimg(p)}
+  const sp=o=>{ const a=chAlias(o); return a?` hassp" style="--sp:url('https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${a}_0.jpg')`:''; };
+  const team = s.team.map(p=>`<div class="slot ${p.isMe?'me':''} ${!p.locked&&p.id?'hover':''}${sp(p)}">${pimg(p)}
       <div class="who"><div class="name">${p.id?esc(p.name):'<span class="small">Eligiendo…</span>'}${p.isMe?' <span class="small">(vos)</span>':''}</div><div class="role">${esc(p.role)}</div></div></div>`).join('');
   const enemies=[...s.enemies]; while(enemies.length<s.enemySlots) enemies.push(null);
-  const foes = enemies.map(e=>`<div class="slot">${pimg(e)}<div class="who">${e?`<div class="name">${esc(e.name)}</div><div class="role">${esc(e.role)} (probable)</div>`:'<span class="small">Eligiendo…</span>'}</div></div>`).join('');
+  const foes = enemies.map(e=>`<div class="slot${e?sp(e):''}">${pimg(e)}<div class="who">${e?`<div class="name">${esc(e.name)}</div><div class="role">${esc(e.role)} (probable)</div>`:'<span class="small">Eligiendo…</span>'}</div></div>`).join('');
   const mios = (s.myChamps&&s.myChamps.length)?`<div class="mios"><b>Tus campeones</b>${s.myChamps.map(c=>`<span class="mio1">${pimg(c,'por sm')}${esc(c.name)} <i>${Math.round(c.wr*100)}% en ${c.games}</i></span>`).join('')}</div>`:'';
   let centro;
   if(s.step==='ban' && s.banOptions && s.banOptions.length){
@@ -793,7 +832,7 @@ function draft(s){
     centro = bansPanel(s);
   }else{
     const opts = s.options.length
-      ? `<div class="chgrid">${s.options.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>`
+      ? `<div class="chgrid">${s.options.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>${masOpciones(s.options.slice(3),'pick',s,'Más opciones')}`
       : '<div class="small">Sin estadísticas del meta todavía: cargá tu API key en Configuración y tocá «Actualizar ahora».</div>';
     centro = `<div class="dsplit">
       <div>${partnerPanel(s)}<div class="panel tight"><h2>Qué pickear</h2>
@@ -967,6 +1006,22 @@ async function refresh(){
   }catch(e){ console.error(e); ultimoHtml=''; $('#app').innerHTML=idle({message:'Se perdió la conexión con Lolcito Scout',detail:'Cerrá esta ventana y volvé a abrir la app.'}); }
 }
 const PHASE_ES={Lobby:'En el lobby',Matchmaking:'Buscando partida',ReadyCheck:'¡Partida encontrada!',EndOfGame:'Partida terminada',PreEndOfGame:'Partida terminada',WaitingForStats:'Partida terminada'};
+// La fuente League (títulos grandes) no tiene tildes ni ñ. Si un título los tiene, va entero en Beaufort
+// para no mezclar dos fuentes en la misma palabra. Solo miro los textos con tilde (son pocos).
+const CON_TILDE=/[\u00C0-\u00FF\u00A1\u00BF]/;
+function sinMezcla(root){
+  const w=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {acceptNode:n=>CON_TILDE.test(n.nodeValue)?1:3});
+  const vistos=new Set();
+  while(w.nextNode()){
+    const el=w.currentNode.parentElement;
+    if(!el||vistos.has(el)) continue; vistos.add(el);
+    // el título entero (no solo el pedacito con tilde): subo mientras siga siendo la misma fuente
+    let t=el;
+    if(!/LS Display/.test(getComputedStyle(t).fontFamily)) continue;
+    while(t.parentElement && t.parentElement!==root && /LS Display/.test(getComputedStyle(t.parentElement).fontFamily)) t=t.parentElement;
+    t.classList.add('sin-mezcla');
+  }
+}
 let apretado=false, ultimoHtml='';
 document.addEventListener('pointerdown',()=>{ apretado=true; });
 document.addEventListener('pointerup',()=>{ apretado=false; setTimeout(render,60); });
@@ -979,6 +1034,7 @@ function render(){
   ultimoHtml=html;
   const y=window.scrollY;
   $('#app').innerHTML = html;
+  sinMezcla($('#app'));
   window.scrollTo(0,y);
   layoutBanners();
   layoutSplashes();

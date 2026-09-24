@@ -103,8 +103,8 @@ def _style(alias, table):
 
 
 def _alias(dd, cid):
-    img = dd.champ_img(cid) or ""
-    return img.rsplit("/", 1)[-1].replace(".png", "").lower()
+    from .sinergias import _alias as alias
+    return alias(dd, cid)
 
 
 def synergy(dd, adc_cid, sup_cid, duo_idx):
