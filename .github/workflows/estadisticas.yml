@@ -4,7 +4,7 @@ name: Estadísticas
 
 on:
   schedule:
-    - cron: "0 */2 * * *"     # cada 2 horas (GitHub a veces las atrasa; si se pisan, la segunda espera)
+    - cron: "17 */2 * * *"    # cada 2 horas, a los :17 (en punto GitHub las atrasa o se las saltea)
   workflow_dispatch:          # botón "Run workflow" para correrlo a mano
 
 permissions:
