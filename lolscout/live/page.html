@@ -83,6 +83,16 @@ h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
 /* Tres columnas: mi equipo | centro | rival */
 /* League escribe todo en mayúsculas: Beaufort también, para que se vea igual */
 .sin-mezcla,.sin-mezcla *{font-family:var(--title)!important;font-weight:700;text-transform:uppercase}
+/* pantalla que bloquea hasta actualizar (solo si la versión nueva se encontró al abrir) */
+.actu-full{position:fixed;inset:0;z-index:1000;background:rgba(1,10,19,.96);display:flex;align-items:center;justify-content:center;padding:16px}
+.actu-full .caja{max-width:560px;width:100%;border:1px solid var(--gold);background:var(--panel);padding:28px 30px;text-align:center}
+.actu-full h1{font:700 22px var(--title);letter-spacing:1.5px;text-transform:uppercase;color:var(--gold-hi);margin:14px 0 8px}
+.actu-full p{color:var(--body);margin:6px 0}
+.actu-full .ver{color:var(--gold)}
+.actu-full .barra{height:8px;background:var(--line);margin:16px auto 4px;max-width:360px}
+.actu-full .barra i{display:block;height:100%;background:var(--hex);transition:width .3s}
+.actu-full .acc{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.actu-full .err{color:var(--bad);margin-top:10px}
 /* cartel de versión nueva */
 #actu .banner{margin-bottom:12px}
 #actu .banner.nueva{border-color:var(--hex);background:linear-gradient(90deg,rgba(10,200,185,.14),rgba(10,200,185,.03))}
@@ -157,8 +167,8 @@ h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
 .bar .a{background:var(--ally)}.bar .e{background:var(--enemy)}
 /* Inactivo */
 .idle{text-align:center;padding:70px 20px}
-.idle .emblem{width:84px;height:84px;margin:0 auto 18px;border:2px solid var(--gold);transform:rotate(45deg);display:grid;place-items:center;box-shadow:0 0 30px rgba(10,200,185,.18)}
-.idle .emblem span{transform:rotate(-45deg);font:700 30px var(--display);color:var(--gold)}
+.idle .emblem,.actu-full .emblem{width:84px;height:84px;margin:0 auto 18px;border:2px solid var(--gold);transform:rotate(45deg);display:grid;place-items:center;box-shadow:0 0 30px rgba(10,200,185,.18)}
+.idle .emblem span,.actu-full .emblem span{transform:rotate(-45deg);font:700 30px var(--display);color:var(--gold)}
 .idle h1{font:700 28px var(--title);color:var(--gold-hi);letter-spacing:1px;margin:0 0 6px}
 .idle p{margin:0 0 22px}
 .banner{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--gold);background:rgba(200,170,110,.08);padding:8px 12px;margin-bottom:14px;color:var(--text)}
@@ -1230,7 +1240,24 @@ async function startUpdate(){
 
 // ---------- actualización automática del .exe
 let ACTU={version:null}, esperandoReinicio=false;
+function actuFull(v){
+  const n=v.nueva||{}, emb='<div class="emblem" style="margin:0 auto"><span>LS</span></div>';
+  if(v.estado==='revisando') return `<div class="actu-full"><div class="caja">${emb}<h1>Buscando actualizaciones…</h1><p>Un segundo.</p></div></div>`;
+  let cuerpo;
+  if(v.estado==='bajando') cuerpo=`<p>Bajando la versión nueva… <b>${v.progreso||0}%</b></p><div class="barra"><i style="width:${v.progreso||0}%"></i></div>`;
+  else if(v.estado==='reiniciando') cuerpo=`<p><b>Instalando.</b> Lolcito se cierra y se vuelve a abrir solo en unos segundos.</p><p>No cierres esta ventana.</p>`;
+  else cuerpo=`${n.notas?`<p>${esc(n.notas)}</p>`:''}
+      ${v.error?`<p class="err">${esc(v.error)}</p>`:''}
+      <div class="acc"><button class="btn" onclick="actualizar(this)">${v.error?'Probar de nuevo':'Actualizar'}</button>
+        ${v.error?'<button class="btn sec" onclick="omitirActu()">Seguir sin actualizar</button>':''}</div>`;
+  return `<div class="actu-full"><div class="caja">${emb}<h1>Hay una versión nueva</h1>
+      <p>Tenés la <span class="ver">${esc(v.version)}</span> y salió la <span class="ver">${esc(n.version||'')}</span>. Actualizá para seguir usando Lolcito.</p>
+      ${cuerpo}</div></div>`;
+}
+async function omitirActu(){ ACTU=await api('/api/actualizar',{omitir:true}).catch(()=>({...ACTU,obligatoria:false})); pintarActu(); }
 function actuHtml(v){
+  if(v&&v.obligatoria&&['revisando','hay','bajando','reiniciando'].includes(v.estado)) return actuFull(v);
+  if(v&&v.estado==='revisando'&&!v.nueva) return actuFull(v);
   if(!v||!v.nueva&&v.estado!=='reiniciando') return '';
   const n=v.nueva||{};
   if(v.estado==='bajando') return `<div class="banner nueva"><span class="nv">Bajando la versión nueva… <b>${v.progreso||0}%</b><span class="barra"><i style="width:${v.progreso||0}%"></i></span></span></div>`;
@@ -1263,7 +1290,10 @@ async function actualizar(btn){
     }catch(e){ clearInterval(t); esperarReinicio(); }
   },700);
 }
-revisarActu(); setInterval(()=>{ if(!esperandoReinicio) revisarActu(); },60000);
+(async function primeraRevision(){         // al abrir: pregunto seguido hasta que termine la primera revisión
+  for(let i=0;i<20;i++){ await revisarActu(); if(ACTU.estado!=='revisando') break; await new Promise(r=>setTimeout(r,700)); }
+})();
+setInterval(()=>{ if(!esperandoReinicio) revisarActu(); },60000);
 // en la selección de campeones pregunto más seguido: los turnos duran 30 segundos
 async function ciclo(){ await refresh(); setTimeout(ciclo, lastState&&lastState.phase==='draft'?800:2000); }
 ciclo();

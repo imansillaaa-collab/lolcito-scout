@@ -507,6 +507,8 @@ class App:
         if path == "/api/version":
             return self.actualizador.revisar(forzar=method == "POST")
         if path == "/api/actualizar" and method == "POST":
+            if body.get("omitir"):
+                return self.actualizador.omitir()
             return self.actualizador.instalar()
         if path == "/api/stats" and method == "POST":
             self.assistant.load_stats(force=True)

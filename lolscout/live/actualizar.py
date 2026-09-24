@@ -39,12 +39,16 @@ class Actualizador:
         self.error = ""
         self.progreso = 0
         self._t = 0.0
+        # si al abrir Lolcito ya hay una versión nueva, no se puede usar hasta actualizar
+        # (salvo que falle: ahí aparece «Seguir sin actualizar»)
+        self.obligatoria = False
 
     def puede(self):
         return config.FROZEN and sys.platform == "win32" and bool(_base())
 
     def vista(self):
         return {"version": VERSION, "estado": self.estado, "error": self.error, "progreso": self.progreso,
+                "obligatoria": self.obligatoria,
                 "nueva": {"version": self.nueva["version"], "notas": self.nueva.get("notas", "")} if self.nueva else None}
 
     # ---- revisar
@@ -55,7 +59,7 @@ class Actualizador:
             return self.vista()
         self._t = time.time()
         try:
-            r = requests.get(f"{_base()}/version.json", timeout=10, headers={"Cache-Control": "no-cache"})
+            r = requests.get(f"{_base()}/version.json", timeout=6, headers={"Cache-Control": "no-cache"})
             if r.status_code == 404:          # todavía no se publicó ninguna versión
                 self.estado, self.nueva = "al-dia", None
                 return self.vista()
@@ -71,11 +75,21 @@ class Actualizador:
 
     def en_segundo_plano(self):
         def ciclo():
-            time.sleep(20)       # que primero arranque todo lo demás
+            if self.puede():     # al abrir: la primera revisión va enseguida y es la que puede bloquear
+                self.estado = "revisando"
+                self.revisar(forzar=True)
+                if self.estado == "revisando":      # no se pudo revisar (sin internet): se usa normal
+                    self.estado = "sin-revisar"
+                self.obligatoria = self.estado == "hay"
             while True:
-                self.revisar()
                 time.sleep(600)
+                self.revisar()
         threading.Thread(target=ciclo, daemon=True).start()
+
+    def omitir(self):
+        """«Seguir sin actualizar»: solo se ofrece si la actualización falló."""
+        self.obligatoria, self.error = False, ""
+        return self.vista()
 
     # ---- instalar
     def instalar(self):
