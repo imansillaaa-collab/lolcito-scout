@@ -5,7 +5,7 @@ Tiempos del parche 26.x:
 - Dragón elemental: 5:00, reaparece 5:00 después de morir. Con 4 dragones de un equipo aparece el Anciano
   (6:00 después), que reaparece cada 6:00.
 - Larvas del Vacío: 8:00, una sola vez; desaparecen a las 14:45.
-- Heraldo de la Grieta: 15:00, una sola vez.
+- Heraldo de la Grieta: 15:00, una sola vez; si nadie lo toma, se va a las 19:45 (a las 20:00 sale el Barón).
 - Barón Nashor: 20:00, reaparece 6:00 después de morir. Su mejora dura 3:00; la del Anciano, 2:30.
 - Inhibidores: vuelven 5:00 después de caer.
 """
@@ -102,7 +102,8 @@ def objectives(game, my_team):
     elif gm or gt:
         grub_by = "tu equipo" if gm else "el rival"
     rows.append(timer("grubs", "Larvas del Vacío", 480, available_until=885, taken=bool(gm or gt), taken_by=grub_by))
-    rows.append(timer("herald", "Heraldo", 900, taken=herald_by is not None, taken_by=who(herald_by)))
+    rows.append(timer("herald", "Heraldo", 900, available_until=1185, taken=herald_by is not None,
+                      taken_by=who(herald_by)))
     baron_next = 1200 if last_baron is None else last_baron + 360
     rows.append(timer("baron", "Barón Nashor", baron_next))
 

@@ -117,25 +117,44 @@ class LCU:
         if not ok or not lock:
             return ok, res
         ok, res = self._send("POST", path + "/complete", {})
-        if ok or self.action_done(action_id):
+        if ok or self.action_done(action_id, champion_id, wait=1.5):
             return True, res
         # algunos clientes no aceptan /complete: el mismo PATCH con "completed" también bloquea
         ok2, res2 = self._send("PATCH", path, {"championId": int(champion_id), "completed": True})
         return (True, res2) if ok2 else (False, res)
 
-    def action_done(self, action_id, wait: float = 1.5) -> bool:
-        """¿El cliente ya tiene esa acción como completada? (espera un poco a que se actualice)"""
+    def action_done(self, action_id, champion_id=None, wait: float = 4.0) -> bool:
+        """¿El cliente ya tiene esa acción como bloqueada? Espera un poco a que se actualice.
+
+        El cliente a veces tarda en marcar "completed": también cuenta como bloqueado si la acción
+        ya no está en curso con tu campeón, si el campeón aparece en tu casillero o entre los baneos.
+        """
         fin = time.time() + wait
+        ultimo = None
         while True:
-            ses = self.get("/lol-champ-select/v1/session") or {}
+            ses = self.get("/lol-champ-select/v1/session", timeout=3) or {}
+            local = ses.get("localPlayerCellId")
             for group in ses.get("actions", []):
                 for a in group:
                     if a.get("id") == int(action_id):
+                        ultimo = a
                         if a.get("completed"):
                             return True
+                        if champion_id and a.get("championId") == int(champion_id) and not a.get("isInProgress"):
+                            return True
+            if champion_id:
+                me = next((p for p in ses.get("myTeam", []) if p.get("cellId") == local), {})
+                if me.get("championId") == int(champion_id):
+                    return True
+                bans = ses.get("bans") or {}
+                if int(champion_id) in (bans.get("myTeamBans") or []) + (bans.get("theirTeamBans") or []):
+                    return True
+            if not ses:          # ya no hay selección (empezó la carga de la partida): el bloqueo pasó
+                return True
             if time.time() >= fin:
+                print(f"[draft] sin confirmar la acción {action_id}: {ultimo}", flush=True)
                 return False
-            time.sleep(0.25)
+            time.sleep(0.3)
 
     # --- Páginas de runas ---
     PAGE_PREFIX = "Lolcito runas para "

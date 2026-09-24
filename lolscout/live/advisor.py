@@ -8,7 +8,7 @@ Reglas de Riot para apps de terceros que respetamos acá:
 from collections import defaultdict
 from itertools import permutations
 
-from ..analyze import adj_wr
+from ..analyze import adj_wr, tier_of
 from .duos import partner_picks, synergy as duo_synergy
 from .sinergias import ally_synergy
 
@@ -301,16 +301,47 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             score += s_duo
             why += [f"Con {dd.champ_name(ally_partner)}: {w[len('Juntos: '):]}" if w.startswith("Juntos: ") else w
                     for w in why_duo]
-        # 5) tus campeones: los que jugás seguido y te salen bien
+        # 5) tus campeones: lo que ya sabés jugar pesa más que un campeón fuerte que nunca tocaste,
+        #    salvo que esté injugable (muy flojo en el parche o muy contrarrestado por tu rival de línea)
         mine = pool.get(c["id"], [0, 0])
-        if mine[0] >= 3:
+        if mine[0] >= 2:
             g, w = mine
-            score += 0.02 * min(g, 8) / 8 + (w / g - 0.5) * 0.03
-            why.append(f"lo jugaste {g} veces ({w / g * 100:.0f}% de victorias)")
-        return score, why, bool(fit_why), mine[0] >= 3, combo_team
+            comodidad = 0.05 * min(g, 10) / 10               # hasta +5 puntos de winrate por saber jugarlo
+            propio = (adj_wr(w, g, 8) - 0.5) * 0.12          # cómo te va a vos, achicado si son pocas partidas
+            flojo = c.get("games", 0) >= 60 and c.get("adj", 0.5) < 0.47
+            contra = False
+            if lane_opp and str(lane_opp) in c.get("vs_all", {}):
+                vg, vw = c["vs_all"][str(lane_opp)]
+                contra = vg >= 15 and adj_wr(vw * vg, vg, 20) < 0.45
+            if flojo or contra:
+                comodidad *= 0.3
+                why.append(f"lo jugaste {g} veces ({w / g * 100:.0f}% de victorias), pero "
+                           + ("está muy flojo en este parche" if flojo else f"{dd.champ_name(lane_opp)} le gana mucho"))
+            else:
+                why.insert(1, f"Lo sabés jugar: {g} partidas tuyas ({w / g * 100:.0f}% de victorias)")
+            score += comodidad + propio
+        return score, why, bool(fit_why), mine[0] >= 2, combo_team
+
+    # tus campeones que casi no aparecen en el meta de tu rango para este rol (pocas partidas en la base):
+    # los sumo igual si se juegan en este rol, con los datos generales del campeón
+    candidatos = list(meta.get(my_role, []))
+    en_meta = {c["id"] for c in candidatos}
+    for cid, (g, w) in pool.items():
+        if g < 3 or cid in en_meta or cid in unavailable:
+            continue
+        roles = dist.get(cid) or dist.get(str(cid)) or {}
+        total = sum(roles.values())
+        if not total or roles.get(my_role, 0) / total < 0.2:
+            continue
+        gen = (champs or {}).get(cid) or {}
+        gg = gen.get("games", 0)
+        a = adj_wr(gen.get("wr", 0.5) * gg, gg, 20)
+        candidatos.append({"id": cid, "games": gg, "wr": gen.get("wr", 0.5), "adj": a, "tier": tier_of(a),
+                           "pick": 0, "vs_all": {}, "items": gen.get("items", []), "boots": gen.get("boots", []),
+                           "keystones": gen.get("keystones", [])})
 
     options = []
-    for c in meta.get(my_role, []):
+    for c in candidatos:
         if c["id"] in unavailable:
             continue
         score, why, counters, mine, sinergia = evaluate(c)

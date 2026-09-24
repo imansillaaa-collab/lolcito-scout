@@ -319,8 +319,9 @@ class Assistant:
               f"{'ok' if ok else res}", flush=True)
         if not ok:
             return {"ok": False, "error": str(res)}
-        if lock and hasattr(self.lcu, "action_done") and not self.lcu.action_done(accion["id"]):
-            return {"ok": False, "error": "El cliente no confirmó el bloqueo: bloquealo a mano en el LoL."}
+        if lock and hasattr(self.lcu, "action_done") and not self.lcu.action_done(accion["id"], cid):
+            # el cliente dijo que sí pero todavía no lo muestra: no es un error, solo aviso que lo mire
+            return {"ok": True, "msg": f"{nombre}: el cliente lo aceptó, fijate que figure bloqueado"}
         es_ban = accion["type"] == "ban"
         if lock:
             return {"ok": True, "msg": f"{nombre} {'baneado' if es_ban else 'bloqueado'}"}
