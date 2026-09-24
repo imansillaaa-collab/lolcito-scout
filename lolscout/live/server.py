@@ -478,6 +478,9 @@ class App:
         self.quit_when_closed = quit_when_closed
         self.last_ping = None
         self.started = time.time()
+        from .actualizar import Actualizador
+        self.actualizador = Actualizador()
+        self.actualizador.en_segundo_plano()
 
     # ---- rutas
     def api(self, method, path, body):
@@ -501,6 +504,10 @@ class App:
             if method == "POST":
                 self.updater.start()
             return self.updater.status()
+        if path == "/api/version":
+            return self.actualizador.revisar(forzar=method == "POST")
+        if path == "/api/actualizar" and method == "POST":
+            return self.actualizador.instalar()
         if path == "/api/stats" and method == "POST":
             self.assistant.load_stats(force=True)
             return self.assistant.info

@@ -83,6 +83,13 @@ h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
 /* Tres columnas: mi equipo | centro | rival */
 /* League escribe todo en mayúsculas: Beaufort también, para que se vea igual */
 .sin-mezcla,.sin-mezcla *{font-family:var(--title)!important;font-weight:700;text-transform:uppercase}
+/* cartel de versión nueva */
+#actu .banner{margin-bottom:12px}
+#actu .banner.nueva{border-color:var(--hex);background:linear-gradient(90deg,rgba(10,200,185,.14),rgba(10,200,185,.03))}
+#actu .banner .nv b{color:var(--gold-hi)}
+#actu .banner .notas{display:block;font-size:12px;color:var(--body);margin-top:2px}
+#actu .barra{height:6px;background:var(--line);margin-top:6px;min-width:220px}
+#actu .barra i{display:block;height:100%;background:var(--hex);transition:width .3s}
 .board{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"ally center enemy";gap:16px;align-items:stretch}
 /* los equipos ocupan todo el alto de la selección, con el splash de cada campeón de fondo */
 .board>.team{display:flex;flex-direction:column}
@@ -567,6 +574,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 </div>
 
 <main>
+  <div id="actu"></div>
   <section class="view on" id="v-vivo"><div id="app"><div class="idle"><h1>Conectando…</h1></div></div></section>
 
   <section class="view" id="v-stats">
@@ -1220,6 +1228,42 @@ async function startUpdate(){
   await api('/api/update',{}); updTimer=0; updStatus();
 }
 
+// ---------- actualización automática del .exe
+let ACTU={version:null}, esperandoReinicio=false;
+function actuHtml(v){
+  if(!v||!v.nueva&&v.estado!=='reiniciando') return '';
+  const n=v.nueva||{};
+  if(v.estado==='bajando') return `<div class="banner nueva"><span class="nv">Bajando la versión nueva… <b>${v.progreso||0}%</b><span class="barra"><i style="width:${v.progreso||0}%"></i></span></span></div>`;
+  if(v.estado==='reiniciando') return `<div class="banner nueva"><span class="nv"><b>Instalando la versión nueva:</b> Lolcito se reinicia solo en unos segundos. No cierres esta ventana.</span></div>`;
+  const enPartida=lastState&&lastState.phase==='game';
+  return `<div class="banner nueva"><span class="nv">Hay una versión nueva de Lolcito <b>${esc(n.version)}</b>${v.error?` — <span style="color:var(--bad)">${esc(v.error)}</span>`:''}${n.notas?`<span class="notas">${esc(n.notas)}</span>`:''}</span>
+    ${enPartida?'<span class="small">Actualizala cuando termine la partida.</span>':'<button class="btn" onclick="actualizar(this)">Actualizar</button>'}</div>`;
+}
+function pintarActu(){ $('#actu').innerHTML=actuHtml(ACTU); }
+async function revisarActu(){
+  try{
+    const v=await api('/api/version');
+    if(esperandoReinicio && ACTU.version && v.version!==ACTU.version){ location.reload(); return; }
+    if(!esperandoReinicio) ACTU=v;
+  }catch(e){ /* mientras se reinicia el servidor no contesta */ }
+  pintarActu();
+}
+function esperarReinicio(){
+  esperandoReinicio=true; setInterval(revisarActu,2000);
+  setTimeout(()=>location.reload(), 120000);   // por si algo falla, a los 2 minutos recargo igual
+}
+async function actualizar(btn){
+  btn.disabled=true; btn.textContent='Empezando…';
+  const r=await api('/api/actualizar',{}).catch(()=>({ok:false,error:'Sin conexión con Lolcito'}));
+  if(!r.ok){ ACTU.error=r.error; pintarActu(); return; }
+  const t=setInterval(async()=>{
+    try{ const v=await api('/api/version'); ACTU=v; pintarActu();
+      if(v.estado==='reiniciando'){ clearInterval(t); esperarReinicio(); }
+      if(v.estado==='hay'&&v.error) clearInterval(t);
+    }catch(e){ clearInterval(t); esperarReinicio(); }
+  },700);
+}
+revisarActu(); setInterval(()=>{ if(!esperandoReinicio) revisarActu(); },60000);
 // en la selección de campeones pregunto más seguido: los turnos duran 30 segundos
 async function ciclo(){ await refresh(); setTimeout(ciclo, lastState&&lastState.phase==='draft'?800:2000); }
 ciclo();
