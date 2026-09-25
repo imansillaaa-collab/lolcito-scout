@@ -6,6 +6,9 @@ from . import config, db
 from .riot import RiotClient
 
 
+PAGINAS = 12
+
+
 def collect(client: RiotClient = None, conn=None, log=print) -> int:
     client = client or RiotClient()
     conn = conn or db.connect()
@@ -15,7 +18,11 @@ def collect(client: RiotClient = None, conn=None, log=print) -> int:
     players = []
     for tier in config.TIERS:
         for div in config.DIVISIONS:
-            entries = client.league_entries(tier, div, page=random.randint(1, 3))
+            # página al azar entre las primeras PAGINAS (cada una trae ~200 jugadores): con más páginas se
+            # repiten menos los jugadores de una tanda a otra y aparecen más partidas nuevas
+            entries = client.league_entries(tier, div, page=random.randint(1, PAGINAS))
+            if not entries:   # esa división tiene menos páginas (Diamante, Maestro...): pruebo más arriba
+                entries = client.league_entries(tier, div, page=random.randint(1, 3))
             if not entries:
                 entries = client.league_entries(tier, div, page=1)
             players += [e["puuid"] for e in entries if e.get("puuid")]
