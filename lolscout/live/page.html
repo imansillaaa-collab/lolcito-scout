@@ -476,6 +476,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .hrow.win{border-left-color:var(--ally);background:linear-gradient(90deg,rgba(30,156,216,.12),rgba(1,10,19,.55) 40%)}
 .hrow.loss{border-left-color:var(--enemy);background:linear-gradient(90deg,rgba(224,72,75,.12),rgba(1,10,19,.55) 40%)}
 .hrow.remake{opacity:.6}
+/* el arte de fondo más claro (menos en los remakes, que quedan como estaban) */
+.hrow.hsp:not(.remake) .hbg{filter:brightness(1.35) saturate(1.08)}
+.hrow.hsp:not(.remake)::after{opacity:.75}
 .hrow span{display:block;font-size:12px;color:var(--body)}
 .hres b{font:600 16px var(--title)}.hrow.win .hres b{color:#7fc8ef}.hrow.loss .hres b{color:#ff8a8c}
 .hchamp{display:flex;gap:10px;align-items:center}.hchamp b{color:var(--gold-hi);font-weight:600}
@@ -1072,7 +1075,15 @@ async function selectAcct(p){ H.sel=p; H.detail=null; H.data=await api('/api/his
 async function openGame(id){ const d=await api(`/api/partida?puuid=${encodeURIComponent(H.sel)}&id=${encodeURIComponent(id)}`); if(d.error) return; H.detail=d; render(); window.scrollTo(0,0); }
 // Ubica el arte de cada fila: la cara centrada de arriba a abajo y del tamaño justo.
 // Campeones grandes (Kog'Maw, Tahm Kench...) se achican para que entre la cabeza; el fade tapa el resto.
+// Todas las filas del historial con la misma altura: la de la más alta (los remakes quedan chicos).
+function igualarFilas(){
+  const filas=[...document.querySelectorAll('.hrow:not(.remake)')];
+  filas.forEach(r=>r.style.minHeight='');
+  const alto=Math.max(0,...filas.map(r=>r.offsetHeight));
+  if(alto) filas.forEach(r=>r.style.minHeight=alto+'px');
+}
 function layoutBanners(){
+  igualarFilas();
   document.querySelectorAll('.hrow .hbg').forEach(img=>{
     const row=img.closest('.hrow'), rw=row.offsetWidth, rh=row.offsetHeight; if(!rw) return;
     const fx=+img.dataset.fx, fy=+img.dataset.fy, t=+img.dataset.t||0.33;
@@ -1084,6 +1095,8 @@ function layoutBanners(){
   });
 }
 window.addEventListener('resize',layoutBanners);
+// las alturas cambian cuando terminan de cargar las fuentes: vuelvo a medir
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>layoutBanners());
 function closeDetail(){ H.detail=null; render(); }
 function fmtWhen(ms){
   const d=new Date(ms), diff=(Date.now()-ms)/3600000;
