@@ -25,7 +25,7 @@
   --bg:#010a13;--bg2:#091428;--panel:#0b1520;--panel2:#111c28;--line:#1e2d3d;
   --gold:#c8aa6e;--gold-hi:#f0e6d2;--gold-lo:#785a28;--text:#cdbe91;--body:#a09b8c;--muted:#6b7480;
   --hex:#0ac8b9;--ally:#1e9cd8;--enemy:#e0484b;--good:#0acbe6;--ok:#3fb27f;--bad:#e0484b;
-  --S:#e8b84a;--A:#6fc27a;--B:#5a9bd8;--C:#9a8fc9;--D:#6b7480;
+  --Sp:#ffe9a8;--S:#e8b84a;--A:#6fc27a;--B:#5a9bd8;--C:#9a8fc9;--D:#6b7480;
   --display:"LS Display","LS Numbers",Georgia,serif;--title:"LS Title",Georgia,serif;--sans:"LS Body","Segoe UI",system-ui,sans-serif;
 }
 *{box-sizing:border-box}
@@ -490,7 +490,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .gsm{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:relative;color:var(--gold)}
 .gsm::before{content:"";position:absolute;inset:6px;border:2px solid currentColor;transform:rotate(45deg);background:#010a13;box-shadow:0 0 10px currentColor,inset 0 0 6px rgba(0,0,0,.6)}
 .gsm span{position:relative;font:700 15px var(--display);color:inherit;text-shadow:0 0 8px currentColor,0 0 16px currentColor}
-.gsm.g-Sp,.gsm.g-S{color:var(--S)}.gsm.g-A{color:var(--A)}.gsm.g-B{color:var(--B)}.gsm.g-C{color:var(--C)}.gsm.g-D,.gsm.none{color:var(--D)}
+.gsm.g-Sp{color:var(--Sp)}.gsm.g-S{color:var(--S)}.gsm.g-A{color:var(--A)}.gsm.g-B{color:var(--B)}.gsm.g-C{color:var(--C)}.gsm.g-D,.gsm.none{color:var(--D)}
 @media (max-width:1500px){.hrow{grid-template-columns:130px 175px 150px 110px minmax(150px,1fr) 52px 16px;gap:16px}.hfb{display:none}.hitems{flex-wrap:nowrap;gap:3px}.hitems img{width:28px;height:28px}}
 @media (max-width:1100px){.homegrid{grid-template-columns:1fr}.hrow{grid-template-columns:100px 1fr 120px 44px}.hcs,.hitems,.hgo{display:none}}
 /* Paneles movibles */
@@ -516,6 +516,23 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dd{color:#ff8a8c}
 .kdacap{font-size:12px;color:var(--body);margin:1px 0 2px}.kdacap b{color:var(--gold-hi);font-weight:600}
 .pgme .small .mn{height:11px;vertical-align:-1px}
+/* el brillo de las notas late despacio; en S y S+ además cruza un destello */
+@keyframes latido{0%,100%{box-shadow:0 0 6px currentColor,inset 0 0 6px rgba(0,0,0,.6)}50%{box-shadow:0 0 15px currentColor,0 0 24px -6px currentColor,inset 0 0 6px rgba(0,0,0,.6)}}
+@keyframes latidoTxt{0%,100%{text-shadow:0 0 6px currentColor,0 0 12px currentColor}50%{text-shadow:0 0 10px currentColor,0 0 22px currentColor}}
+@keyframes latidoG{0%,100%{box-shadow:0 0 12px currentColor,0 0 30px -8px currentColor,inset 0 0 14px rgba(0,0,0,.6)}50%{box-shadow:0 0 22px currentColor,0 0 48px -4px currentColor,inset 0 0 14px rgba(0,0,0,.6)}}
+@keyframes destello{0%,45%{background-position:160% 0}100%{background-position:-60% 0}}
+.gsm::before{animation:latido 2.8s ease-in-out infinite}
+.gsm span{animation:latidoTxt 2.8s ease-in-out infinite}
+.hrow:nth-child(3n+2) .gsm::before,.hrow:nth-child(3n+2) .gsm span{animation-delay:-.9s}
+.hrow:nth-child(3n) .gsm::before,.hrow:nth-child(3n) .gsm span{animation-delay:-1.8s}
+.grade::before{animation:latidoG 3.2s ease-in-out infinite}
+.gsm.g-Sp::before,.gsm.g-S::before,.grade.g-Sp::before,.grade.g-S::before{animation-duration:2.2s}
+.gsm.g-Sp::after,.gsm.g-S::after,.grade.g-Sp::after,.grade.g-S::after{content:"";position:absolute;inset:6px;transform:rotate(45deg);
+  pointer-events:none;z-index:1;background:linear-gradient(90deg,transparent 42%,rgba(255,255,255,.45) 50%,transparent 58%) 160% 0/300% 100% no-repeat;
+  animation:destello 3.6s ease-in-out infinite}
+.grade.g-Sp::after,.grade.g-S::after{inset:22px}
+.gsm.g-Sp::after,.grade.g-Sp::after{animation-duration:2.4s;background-image:linear-gradient(90deg,transparent 38%,rgba(255,255,255,.75) 50%,transparent 62%)}
+@media (prefers-reduced-motion:reduce){.gsm::before,.gsm span,.grade::before,.gsm::after,.grade::after{animation:none}}
 .grade{position:relative;width:150px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gold)}
 .grade .gbg{position:absolute;inset:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:#010a13 center 18%/cover no-repeat}
 .grade::before{content:"";position:absolute;inset:22px;border:2px solid currentColor;transform:rotate(45deg);box-shadow:0 0 16px currentColor,0 0 38px -6px currentColor,inset 0 0 14px rgba(0,0,0,.6);z-index:1}
@@ -523,7 +540,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .grade>span,.grade>small{position:relative;z-index:2;text-shadow:0 2px 8px #000,0 0 3px #000}
 .grade span{font:700 44px var(--display);line-height:1}
 .grade small{font-size:12px;color:var(--gold-hi);margin-top:2px}
-.grade.g-Sp,.grade.g-S{color:var(--S)}.grade.g-A{color:var(--A)}.grade.g-B{color:var(--B)}.grade.g-C{color:var(--C)}.grade.g-D{color:var(--D)}
+.grade.g-Sp{color:var(--Sp)}.grade.g-S{color:var(--S)}.grade.g-A{color:var(--A)}.grade.g-B{color:var(--B)}.grade.g-C{color:var(--C)}.grade.g-D{color:var(--D)}
 .grade span{color:inherit}
 .pgact{align-self:start}
 .headline{font:600 17px var(--title);color:var(--gold-hi);margin:0 0 14px;padding:10px 16px;border-left:3px solid var(--gold);background:rgba(200,170,110,.06)}
@@ -1082,8 +1099,20 @@ function igualarFilas(){
   const alto=Math.max(0,...filas.map(r=>r.offsetHeight));
   if(alto) filas.forEach(r=>r.style.minHeight=alto+'px');
 }
+// La cara del campeón centrada en el rombo de la nota (mismo punto de cara que usa el historial)
+function layoutGrade(){
+  document.querySelectorAll('.grade .gbg[data-a]').forEach(el=>{
+    const box=el.offsetWidth||150, [fx,fy,t]=CARAS[el.dataset.a]||[0.5,0.25,0.33];
+    const h=1.05*box/t, w=h/0.59;                        // la zona de la cara ≈ el alto del rombo
+    let left=box/2-fx*w, top=box*0.34-fy*h;             // los ojos arriba de la letra de la nota
+    left=Math.min(0,Math.max(box-w,left)); top=Math.min(0,Math.max(box-h,top));
+    el.style.backgroundSize=`100% 100%, ${w}px ${h}px`;
+    el.style.backgroundPosition=`center, ${left}px ${top}px`;
+  });
+}
 function layoutBanners(){
   igualarFilas();
+  layoutGrade();
   document.querySelectorAll('.hrow .hbg').forEach(img=>{
     const row=img.closest('.hrow'), rw=row.offsetWidth, rh=row.offsetHeight; if(!rw) return;
     const fx=+img.dataset.fx, fy=+img.dataset.fy, t=+img.dataset.t||0.33;
@@ -1105,7 +1134,7 @@ function fmtWhen(ms){
   if(diff<48) return 'ayer '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
   return d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
 }
-let CARAS={}; fetch('/static/caras.json').then(r=>r.json()).then(j=>{CARAS=j; render();}).catch(()=>{});
+let CARAS={}; fetch('/static/caras.json').then(r=>r.json()).then(j=>{CARAS=j; render(); layoutBanners();}).catch(()=>{});
 const gsm=(g,sc)=>g?`<div class="gsm g-${g.replace('+','p')}" title="Nota ${g} (${sc}/100)"><span>${g}</span></div>`:'<div class="gsm none"><span>—</span></div>';
 function histRow(g){
   const cls=g.remake?'remake':g.result==='win'?'win':g.result==='loss'?'loss':'';
@@ -1170,7 +1199,7 @@ function pgTeam(rows,label,cls,kills,gold){
 }
 function postgame(s,fromHist){
   const m=s.me, win=s.result==='win', loss=s.result==='loss';
-  const grade=s.grade?`<div class="grade g-${s.grade.replace('+','p')}">${m.splash?`<div class="gbg" style="background-image:radial-gradient(circle,rgba(1,10,19,.55) 0,rgba(1,10,19,.1) 70%),url('${m.splash}')"></div>`:''}<span>${esc(s.grade)}</span><small>${s.score}/100</small></div>`:'';
+  const grade=s.grade?`<div class="grade g-${s.grade.replace('+','p')}">${chAlias(m)?`<div class="gbg" data-a="${esc(chAlias(m))}" style="background-image:radial-gradient(circle,rgba(1,10,19,.55) 0,rgba(1,10,19,.1) 70%),url('https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${esc(chAlias(m))}_0.jpg')"></div>`:''}<span>${esc(s.grade)}</span><small>${s.score}/100</small></div>`:'';
   const fb=s.feedback.map(f=>`<div class="fbk ${f.tone}"><div class="fi">${f.tone==='good'?'▲':f.tone==='bad'?'▼':'◆'}</div><div><b>${esc(f.title)}</b><div>${esc(f.text)}</div></div></div>`).join('')
     ||'<div class="small">Partida muy corta: no hay nada para evaluar.</div>';
   const mets=s.metrics.map(x=>`<div class="met ${x.tone}"><span>${esc(x.label)}</span><b>${esc(x.value)}</b><small>${esc(x.ref)}</small></div>`).join('');
