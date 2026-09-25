@@ -516,23 +516,30 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dd{color:#ff8a8c}
 .kdacap{font-size:12px;color:var(--body);margin:1px 0 2px}.kdacap b{color:var(--gold-hi);font-weight:600}
 .pgme .small .mn{height:11px;vertical-align:-1px}
-/* notas S y S+: el brillo es humo que gira alrededor del rombo (dos capas en sentidos contrarios);
-   el borde queda quieto y nada se prende ni se apaga */
+/* notas S y S+: volutas de humo que recorren el borde del rombo (siguen su forma, sin círculo),
+   semitransparentes para que se vea el fondo; el borde queda quieto y nada se prende ni se apaga */
+@keyframes humo{
+  0%  {background-position:0% 0%,100% 0%,100% 100%,0% 100%,50% 0%}
+  25% {background-position:100% 0%,100% 100%,0% 100%,0% 0%,100% 50%}
+  50% {background-position:100% 100%,0% 100%,0% 0%,100% 0%,50% 100%}
+  75% {background-position:0% 100%,0% 0%,100% 0%,100% 100%,0% 50%}
+  100%{background-position:0% 0%,100% 0%,100% 100%,0% 100%,50% 0%}}
 .gsm.g-S,.gsm.g-Sp,.grade.g-S,.grade.g-Sp{isolation:isolate}
 .gsm.g-S::before,.gsm.g-Sp::before{box-shadow:0 0 5px currentColor,inset 0 0 6px rgba(0,0,0,.6)}
-.gsm:is(.g-S,.g-Sp)::after,.grade:is(.g-S,.g-Sp)::after{content:"";position:absolute;inset:-9px;border-radius:50%;z-index:-1;pointer-events:none;
+.gsm:is(.g-S,.g-Sp)::after,.grade:is(.g-S,.g-Sp)::after{content:"";position:absolute;z-index:-1;pointer-events:none;
+  transform:rotate(45deg);
   background:
-    conic-gradient(from calc(var(--giro) * -1.5),transparent 0deg,color-mix(in srgb,#fff 45%,transparent) 40deg,transparent 95deg,
-      color-mix(in srgb,#fff 25%,transparent) 200deg,transparent 260deg),
-    conic-gradient(from var(--giro),color-mix(in srgb,currentColor 90%,transparent) 0deg,transparent 55deg,
-      color-mix(in srgb,currentColor 55%,transparent) 115deg,transparent 175deg,color-mix(in srgb,currentColor 80%,transparent) 235deg,
-      transparent 300deg,color-mix(in srgb,currentColor 90%,transparent) 360deg);
-  -webkit-mask:radial-gradient(closest-side,transparent 42%,#000 60%,#000 76%,transparent 100%);
-  mask:radial-gradient(closest-side,transparent 42%,#000 60%,#000 76%,transparent 100%);
-  filter:blur(4px);animation:girar 5s linear infinite}
-.gsm.g-Sp::after{inset:-11px;animation-duration:3.6s}
-.grade:is(.g-S,.g-Sp)::after{inset:-16px;filter:blur(9px);animation-duration:6s}
-.grade.g-Sp::after{inset:-20px;animation-duration:4.4s}
+    radial-gradient(closest-side,color-mix(in srgb,currentColor 85%,transparent),transparent) ,
+    radial-gradient(closest-side,color-mix(in srgb,currentColor 55%,transparent),transparent) ,
+    radial-gradient(closest-side,color-mix(in srgb,#fff 45%,transparent),transparent) ,
+    radial-gradient(closest-side,color-mix(in srgb,currentColor 65%,transparent),transparent) ,
+    radial-gradient(closest-side,color-mix(in srgb,currentColor 40%,transparent),transparent);
+  background-size:55% 30%,30% 55%,28% 28%,45% 32%,38% 38%;background-repeat:no-repeat;
+  filter:blur(3px);opacity:.55;animation:humo 7s ease-in-out infinite}
+.gsm:is(.g-S,.g-Sp)::after{inset:-7px}
+.gsm.g-Sp::after{inset:-9px;opacity:.65;animation-duration:5s}
+.grade:is(.g-S,.g-Sp)::after{inset:-10px;filter:blur(7px);animation-duration:9s}
+.grade.g-Sp::after{inset:-14px;opacity:.65;animation-duration:7s}
 /* notas A, B, C y D: una luz que da vueltas por el borde del rombo (sin prender y apagar) */
 @property --giro{syntax:'<angle>';inherits:false;initial-value:0deg}
 @keyframes girar{to{--giro:360deg}}
