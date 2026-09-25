@@ -141,10 +141,16 @@ class Actualizador:
             f"Start-Process -FilePath {q(exe)} -ArgumentList '--actualizado'\n"
         )
         cod = base64.b64encode(script.encode("utf-16-le")).decode()   # así no importan la ñ ni los espacios
+        # sin DETACHED_PROCESS: PowerShell sin consola se cierra apenas arranca (probado en Windows 10);
+        # CREATE_NO_WINDOW le da una consola invisible y sigue vivo aunque Lolcito se cierre
+        # el .exe nuevo hereda el entorno: sin esto cree que es hijo del viejo y busca su carpeta temporal
+        # (ya borrada) → «Failed to load Python DLL»
+        env = {k: v for k, v in os.environ.items() if not k.upper().startswith(("_PYI_", "_MEI"))}
+        env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
         subprocess.Popen(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass",
                           "-EncodedCommand", cod],
-                         creationflags=0x00000008 | 0x00000200 | 0x08000000,  # desacoplado, grupo nuevo, sin consola
-                         close_fds=True)
+                         creationflags=0x00000200 | 0x08000000,  # grupo nuevo, consola invisible
+                         close_fds=True, env=env)
         self.estado = "reiniciando"
         print(f"[actualizar] instalando {self.nueva['version']}: cierro para reemplazar el .exe", flush=True)
         threading.Timer(1.5, lambda: os._exit(0)).start()   # tiempo para que la pantalla reciba la respuesta
