@@ -516,30 +516,20 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dd{color:#ff8a8c}
 .kdacap{font-size:12px;color:var(--body);margin:1px 0 2px}.kdacap b{color:var(--gold-hi);font-weight:600}
 .pgme .small .mn{height:11px;vertical-align:-1px}
-/* notas S y S+: volutas de humo que recorren el borde del rombo (siguen su forma, sin círculo),
-   semitransparentes para que se vea el fondo; el borde queda quieto y nada se prende ni se apaga */
-@keyframes humo{
-  0%  {background-position:0% 0%,100% 0%,100% 100%,0% 100%,50% 0%}
-  25% {background-position:100% 0%,100% 100%,0% 100%,0% 0%,100% 50%}
-  50% {background-position:100% 100%,0% 100%,0% 0%,100% 0%,50% 100%}
-  75% {background-position:0% 100%,0% 0%,100% 0%,100% 100%,0% 50%}
-  100%{background-position:0% 0%,100% 0%,100% 100%,0% 100%,50% 0%}}
-.gsm.g-S,.gsm.g-Sp,.grade.g-S,.grade.g-Sp{isolation:isolate}
-.gsm.g-S::before,.gsm.g-Sp::before{box-shadow:0 0 5px currentColor,inset 0 0 6px rgba(0,0,0,.6)}
-.gsm:is(.g-S,.g-Sp)::after,.grade:is(.g-S,.g-Sp)::after{content:"";position:absolute;z-index:-1;pointer-events:none;
-  transform:rotate(45deg);
-  background:
-    radial-gradient(closest-side,color-mix(in srgb,currentColor 85%,transparent),transparent) ,
-    radial-gradient(closest-side,color-mix(in srgb,currentColor 55%,transparent),transparent) ,
-    radial-gradient(closest-side,color-mix(in srgb,#fff 45%,transparent),transparent) ,
-    radial-gradient(closest-side,color-mix(in srgb,currentColor 65%,transparent),transparent) ,
-    radial-gradient(closest-side,color-mix(in srgb,currentColor 40%,transparent),transparent);
-  background-size:55% 30%,30% 55%,28% 28%,45% 32%,38% 38%;background-repeat:no-repeat;
-  filter:blur(3px);opacity:.55;animation:humo 7s ease-in-out infinite}
-.gsm:is(.g-S,.g-Sp)::after{inset:-7px}
-.gsm.g-Sp::after{inset:-9px;opacity:.65;animation-duration:5s}
-.grade:is(.g-S,.g-Sp)::after{inset:-10px;filter:blur(7px);animation-duration:9s}
-.grade.g-Sp::after{inset:-14px;opacity:.65;animation-duration:7s}
+/* notas S y S+: humo que sube. Partículas sueltas que nacen alrededor del rombo y suben despacio,
+   cada una con su tamaño, velocidad y desvío; se agrandan y se desvanecen. El borde queda quieto. */
+@keyframes sube{
+  0%  {transform:translate(0,0) scale(.45);opacity:0}
+  20% {opacity:var(--o)}
+  55% {transform:translate(calc(var(--dx) * -.45),calc(var(--dy) * .5)) scale(calc(var(--sc) * .7))}
+  100%{transform:translate(var(--dx),var(--dy)) scale(var(--sc));opacity:0}}
+.gsm:is(.g-S,.g-Sp),.grade:is(.g-S,.g-Sp){isolation:isolate}
+.gsm:is(.g-S,.g-Sp)::before{box-shadow:0 0 6px currentColor,inset 0 0 6px rgba(0,0,0,.6)}
+.humo{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);margin:calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  border-radius:50%;z-index:-1;pointer-events:none;opacity:0;
+  background:radial-gradient(closest-side,color-mix(in srgb,currentColor 80%,#fff),transparent);filter:blur(2px);
+  animation:sube var(--dur) cubic-bezier(.25,.55,.45,1) var(--d) infinite}
+.grade .humo{filter:blur(6px)}
 /* notas A, B, C y D: una luz que da vueltas por el borde del rombo (sin prender y apagar) */
 @property --giro{syntax:'<angle>';inherits:false;initial-value:0deg}
 @keyframes girar{to{--giro:360deg}}
@@ -551,7 +541,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
   animation:girar 3.2s linear infinite}
 .grade:is(.g-A,.g-B,.g-C,.g-D)::after{inset:22px;padding:3px;animation-duration:4s}
 .hrow:nth-child(3n+2) .gsm::after{animation-delay:-1.1s}.hrow:nth-child(3n) .gsm::after{animation-delay:-2.2s}
-@media (prefers-reduced-motion:reduce){.gsm::before,.gsm span,.grade::before,.gsm::after,.grade::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.gsm::before,.gsm span,.grade::before,.gsm::after,.grade::after{animation:none}.humo{display:none}}
 .grade{position:relative;width:150px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gold)}
 .grade .gbg{position:absolute;inset:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:#010a13 center 18%/cover no-repeat}
 .grade::before{content:"";position:absolute;inset:22px;border:2px solid currentColor;transform:rotate(45deg);box-shadow:0 0 16px currentColor,0 0 38px -6px currentColor,inset 0 0 14px rgba(0,0,0,.6);z-index:1}
@@ -1154,7 +1144,22 @@ function fmtWhen(ms){
   return d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
 }
 let CARAS={}; fetch('/static/caras.json').then(r=>r.json()).then(j=>{CARAS=j; render(); layoutBanners();}).catch(()=>{});
-const gsm=(g,sc)=>g?`<div class="gsm g-${g.replace('+','p')}" title="Nota ${g} (${sc}/100)"><span>${g}</span></div>`:'<div class="gsm none"><span>—</span></div>';
+// Humo de las notas S y S+: partículas con valores "al azar" pero fijos para cada partida
+function azar(sem){ let t=(sem>>>0)||1; return ()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t); r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; }
+function semilla(txt){ let h=2166136261; for(const c of String(txt)) h=Math.imul(h^c.charCodeAt(0),16777619); return h>>>0; }
+function humo(sem, grande){
+  const r=azar(sem), n=grande?9:7; let out='';
+  for(let i=0;i<n;i++){
+    const dur=grande?4+r()*3:3.2+r()*2.6;
+    const v={x:(12+r()*76).toFixed(1)+'%', y:(30+r()*40).toFixed(1)+'%', s:(grande?22+r()*26:9+r()*9).toFixed(1)+'px',
+             dur:dur.toFixed(2)+'s', d:(-r()*dur).toFixed(2)+'s', dx:((r()-.5)*(grande?46:16)).toFixed(1)+'px',
+             dy:(-(grande?55+r()*55:20+r()*18)).toFixed(1)+'px', sc:(1.5+r()*1.3).toFixed(2), o:((grande?.22:.4)+r()*.28).toFixed(2)};
+    out+=`<i class="humo" style="${Object.entries(v).map(([k,x])=>`--${k}:${x}`).join(';')}"></i>`;
+  }
+  return out;
+}
+const esS=g=>g==='S'||g==='S+';
+const gsm=(g,sc,sem)=>g?`<div class="gsm g-${g.replace('+','p')}" title="Nota ${g} (${sc}/100)">${esS(g)?humo(semilla(sem||g)):''}<span>${g}</span></div>`:'<div class="gsm none"><span>—</span></div>';
 function histRow(g){
   const cls=g.remake?'remake':g.result==='win'?'win':g.result==='loss'?'loss':'';
   const alias=((g.champ&&g.champ.img)||'').split('/').pop().replace('.png','');
@@ -1172,7 +1177,7 @@ function histRow(g){
     <div class="hcs"><div class="hcsn"><img class="mn" src="/static/minions.png" alt=""><b>${g.cs}</b></div><span>súbditos · ${g.csMin}/min</span></div>
     <div class="hitems">${(g.items||[]).map(i=>iimg(i)).join('')}</div>
     <div class="hfb">${g.best?`<div class="up">▲ ${esc(g.best)}</div>`:''}${g.tip?`<div class="down">▼ ${esc(g.tip)}</div>`:''}</div>
-    ${gsm(g.grade,g.score)}
+    ${gsm(g.grade,g.score,g.gameId)}
     <div class="hgo">›</div></div>`;
 }
 function home(s){
@@ -1218,7 +1223,7 @@ function pgTeam(rows,label,cls,kills,gold){
 }
 function postgame(s,fromHist){
   const m=s.me, win=s.result==='win', loss=s.result==='loss';
-  const grade=s.grade?`<div class="grade g-${s.grade.replace('+','p')}">${chAlias(m)?`<div class="gbg" data-a="${esc(chAlias(m))}" style="background-image:radial-gradient(circle,rgba(1,10,19,.55) 0,rgba(1,10,19,.1) 70%),url('https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${esc(chAlias(m))}_0.jpg')"></div>`:''}<span>${esc(s.grade)}</span><small>${s.score}/100</small></div>`:'';
+  const grade=s.grade?`<div class="grade g-${s.grade.replace('+','p')}">${esS(s.grade)?humo(semilla(s.gameId||s.created||'nota'),true):''}${chAlias(m)?`<div class="gbg" data-a="${esc(chAlias(m))}" style="background-image:radial-gradient(circle,rgba(1,10,19,.55) 0,rgba(1,10,19,.1) 70%),url('https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${esc(chAlias(m))}_0.jpg')"></div>`:''}<span>${esc(s.grade)}</span><small>${s.score}/100</small></div>`:'';
   const fb=s.feedback.map(f=>`<div class="fbk ${f.tone}"><div class="fi">${f.tone==='good'?'▲':f.tone==='bad'?'▼':'◆'}</div><div><b>${esc(f.title)}</b><div>${esc(f.text)}</div></div></div>`).join('')
     ||'<div class="small">Partida muy corta: no hay nada para evaluar.</div>';
   const mets=s.metrics.map(x=>`<div class="met ${x.tone}"><span>${esc(x.label)}</span><b>${esc(x.value)}</b><small>${esc(x.ref)}</small></div>`).join('');
