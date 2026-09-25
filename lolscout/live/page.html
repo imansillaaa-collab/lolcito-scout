@@ -25,7 +25,7 @@
   --bg:#010a13;--bg2:#091428;--panel:#0b1520;--panel2:#111c28;--line:#1e2d3d;
   --gold:#c8aa6e;--gold-hi:#f0e6d2;--gold-lo:#785a28;--text:#cdbe91;--body:#a09b8c;--muted:#6b7480;
   --hex:#0ac8b9;--ally:#1e9cd8;--enemy:#e0484b;--good:#0acbe6;--ok:#3fb27f;--bad:#e0484b;
-  --S:#e8b84a;--A:#6fc27a;--B:#5a9bd8;--C:#9a8fc9;--D:#6b7480;
+  --Sp:#ffe9a8;--S:#e8b84a;--A:#6fc27a;--B:#5a9bd8;--C:#9a8fc9;--D:#6b7480;
   --display:"LS Display","LS Numbers",Georgia,serif;--title:"LS Title",Georgia,serif;--sans:"LS Body","Segoe UI",system-ui,sans-serif;
 }
 *{box-sizing:border-box}
@@ -83,6 +83,23 @@ h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
 /* Tres columnas: mi equipo | centro | rival */
 /* League escribe todo en mayúsculas: Beaufort también, para que se vea igual */
 .sin-mezcla,.sin-mezcla *{font-family:var(--title)!important;font-weight:700;text-transform:uppercase}
+/* pantalla que bloquea hasta actualizar (solo si la versión nueva se encontró al abrir) */
+.actu-full{position:fixed;inset:0;z-index:1000;background:rgba(1,10,19,.96);display:flex;align-items:center;justify-content:center;padding:16px}
+.actu-full .caja{max-width:560px;width:100%;border:1px solid var(--gold);background:var(--panel);padding:28px 30px;text-align:center}
+.actu-full h1{font:700 22px var(--title);letter-spacing:1.5px;text-transform:uppercase;color:var(--gold-hi);margin:14px 0 8px}
+.actu-full p{color:var(--body);margin:6px 0}
+.actu-full .ver{color:var(--gold)}
+.actu-full .barra{height:8px;background:var(--line);margin:16px auto 4px;max-width:360px}
+.actu-full .barra i{display:block;height:100%;background:var(--hex);transition:width .3s}
+.actu-full .acc{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.actu-full .err{color:var(--bad);margin-top:10px}
+/* cartel de versión nueva */
+#actu .banner{margin-bottom:12px}
+#actu .banner.nueva{border-color:var(--hex);background:linear-gradient(90deg,rgba(10,200,185,.14),rgba(10,200,185,.03))}
+#actu .banner .nv b{color:var(--gold-hi)}
+#actu .banner .notas{display:block;font-size:12px;color:var(--body);margin-top:2px}
+#actu .barra{height:6px;background:var(--line);margin-top:6px;min-width:220px}
+#actu .barra i{display:block;height:100%;background:var(--hex);transition:width .3s}
 .board{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"ally center enemy";gap:16px;align-items:stretch}
 /* los equipos ocupan todo el alto de la selección, con el splash de cada campeón de fondo */
 .board>.team{display:flex;flex-direction:column}
@@ -150,8 +167,8 @@ h2.ally{color:var(--ally)}h2.enemy{color:var(--enemy);text-align:right}
 .bar .a{background:var(--ally)}.bar .e{background:var(--enemy)}
 /* Inactivo */
 .idle{text-align:center;padding:70px 20px}
-.idle .emblem{width:84px;height:84px;margin:0 auto 18px;border:2px solid var(--gold);transform:rotate(45deg);display:grid;place-items:center;box-shadow:0 0 30px rgba(10,200,185,.18)}
-.idle .emblem span{transform:rotate(-45deg);font:700 30px var(--display);color:var(--gold)}
+.idle .emblem,.actu-full .emblem{width:84px;height:84px;margin:0 auto 18px;border:2px solid var(--gold);transform:rotate(45deg);display:grid;place-items:center;box-shadow:0 0 30px rgba(10,200,185,.18)}
+.idle .emblem span,.actu-full .emblem span{transform:rotate(-45deg);font:700 30px var(--display);color:var(--gold)}
 .idle h1{font:700 28px var(--title);color:var(--gold-hi);letter-spacing:1px;margin:0 0 6px}
 .idle p{margin:0 0 22px}
 .banner{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--gold);background:rgba(200,170,110,.08);padding:8px 12px;margin-bottom:14px;color:var(--text)}
@@ -459,6 +476,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .hrow.win{border-left-color:var(--ally);background:linear-gradient(90deg,rgba(30,156,216,.12),rgba(1,10,19,.55) 40%)}
 .hrow.loss{border-left-color:var(--enemy);background:linear-gradient(90deg,rgba(224,72,75,.12),rgba(1,10,19,.55) 40%)}
 .hrow.remake{opacity:.6}
+/* el arte de fondo más claro (menos en los remakes, que quedan como estaban) */
+.hrow.hsp:not(.remake) .hbg{filter:brightness(1.35) saturate(1.08)}
+.hrow.hsp:not(.remake)::after{opacity:.75}
 .hrow span{display:block;font-size:12px;color:var(--body)}
 .hres b{font:600 16px var(--title)}.hrow.win .hres b{color:#7fc8ef}.hrow.loss .hres b{color:#ff8a8c}
 .hchamp{display:flex;gap:10px;align-items:center}.hchamp b{color:var(--gold-hi);font-weight:600}
@@ -470,7 +490,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .gsm{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:relative;color:var(--gold)}
 .gsm::before{content:"";position:absolute;inset:6px;border:2px solid currentColor;transform:rotate(45deg);background:#010a13;box-shadow:0 0 10px currentColor,inset 0 0 6px rgba(0,0,0,.6)}
 .gsm span{position:relative;font:700 15px var(--display);color:inherit;text-shadow:0 0 8px currentColor,0 0 16px currentColor}
-.gsm.g-Sp,.gsm.g-S{color:var(--S)}.gsm.g-A{color:var(--A)}.gsm.g-B{color:var(--B)}.gsm.g-C{color:var(--C)}.gsm.g-D,.gsm.none{color:var(--D)}
+.gsm.g-Sp{color:var(--Sp)}.gsm.g-S{color:var(--S)}.gsm.g-A{color:var(--A)}.gsm.g-B{color:var(--B)}.gsm.g-C{color:var(--C)}.gsm.g-D,.gsm.none{color:var(--D)}
 @media (max-width:1500px){.hrow{grid-template-columns:130px 175px 150px 110px minmax(150px,1fr) 52px 16px;gap:16px}.hfb{display:none}.hitems{flex-wrap:nowrap;gap:3px}.hitems img{width:28px;height:28px}}
 @media (max-width:1100px){.homegrid{grid-template-columns:1fr}.hrow{grid-template-columns:100px 1fr 120px 44px}.hcs,.hitems,.hgo{display:none}}
 /* Paneles movibles */
@@ -496,6 +516,32 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dd{color:#ff8a8c}
 .kdacap{font-size:12px;color:var(--body);margin:1px 0 2px}.kdacap b{color:var(--gold-hi);font-weight:600}
 .pgme .small .mn{height:11px;vertical-align:-1px}
+/* notas S y S+: humo que sube. Partículas sueltas que nacen alrededor del rombo y suben despacio,
+   cada una con su tamaño, velocidad y desvío; se agrandan y se desvanecen. El borde queda quieto. */
+@keyframes sube{
+  0%  {transform:translate(0,0) scale(.45);opacity:0}
+  20% {opacity:var(--o)}
+  55% {transform:translate(calc(var(--dx) * -.45),calc(var(--dy) * .5)) scale(calc(var(--sc) * .7))}
+  100%{transform:translate(var(--dx),var(--dy)) scale(var(--sc));opacity:0}}
+.gsm:is(.g-S,.g-Sp),.grade:is(.g-S,.g-Sp){isolation:isolate}
+.gsm:is(.g-S,.g-Sp)::before{box-shadow:0 0 6px currentColor,inset 0 0 6px rgba(0,0,0,.6)}
+.humo{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);margin:calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  border-radius:50%;z-index:-1;pointer-events:none;opacity:0;
+  background:radial-gradient(closest-side,color-mix(in srgb,currentColor 80%,#fff),transparent);filter:blur(2px);
+  animation:sube var(--dur) cubic-bezier(.25,.55,.45,1) var(--d) infinite}
+.grade .humo{filter:blur(6px)}
+/* notas A, B, C y D: una luz que da vueltas por el borde del rombo (sin prender y apagar) */
+@property --giro{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes girar{to{--giro:360deg}}
+.gsm:is(.g-A,.g-B,.g-C,.g-D)::after,.grade:is(.g-A,.g-B,.g-C,.g-D)::after{content:"";position:absolute;inset:6px;padding:2px;
+  transform:rotate(45deg);pointer-events:none;z-index:1;
+  background:conic-gradient(from var(--giro),transparent 0deg 220deg,currentColor 300deg,#fff 342deg,currentColor 352deg,transparent 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  animation:girar 3.2s linear infinite}
+.grade:is(.g-A,.g-B,.g-C,.g-D)::after{inset:22px;padding:3px;animation-duration:4s}
+.hrow:nth-child(3n+2) .gsm::after{animation-delay:-1.1s}.hrow:nth-child(3n) .gsm::after{animation-delay:-2.2s}
+@media (prefers-reduced-motion:reduce){.gsm::before,.gsm span,.grade::before,.gsm::after,.grade::after{animation:none}.humo{display:none}}
 .grade{position:relative;width:150px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gold)}
 .grade .gbg{position:absolute;inset:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:#010a13 center 18%/cover no-repeat}
 .grade::before{content:"";position:absolute;inset:22px;border:2px solid currentColor;transform:rotate(45deg);box-shadow:0 0 16px currentColor,0 0 38px -6px currentColor,inset 0 0 14px rgba(0,0,0,.6);z-index:1}
@@ -503,7 +549,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .grade>span,.grade>small{position:relative;z-index:2;text-shadow:0 2px 8px #000,0 0 3px #000}
 .grade span{font:700 44px var(--display);line-height:1}
 .grade small{font-size:12px;color:var(--gold-hi);margin-top:2px}
-.grade.g-Sp,.grade.g-S{color:var(--S)}.grade.g-A{color:var(--A)}.grade.g-B{color:var(--B)}.grade.g-C{color:var(--C)}.grade.g-D{color:var(--D)}
+.grade.g-Sp{color:var(--Sp)}.grade.g-S{color:var(--S)}.grade.g-A{color:var(--A)}.grade.g-B{color:var(--B)}.grade.g-C{color:var(--C)}.grade.g-D{color:var(--D)}
 .grade span{color:inherit}
 .pgact{align-self:start}
 .headline{font:600 17px var(--title);color:var(--gold-hi);margin:0 0 14px;padding:10px 16px;border-left:3px solid var(--gold);background:rgba(200,170,110,.06)}
@@ -567,6 +613,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 </div>
 
 <main>
+  <div id="actu"></div>
   <section class="view on" id="v-vivo"><div id="app"><div class="idle"><h1>Conectando…</h1></div></div></section>
 
   <section class="view" id="v-stats">
@@ -1054,7 +1101,27 @@ async function selectAcct(p){ H.sel=p; H.detail=null; H.data=await api('/api/his
 async function openGame(id){ const d=await api(`/api/partida?puuid=${encodeURIComponent(H.sel)}&id=${encodeURIComponent(id)}`); if(d.error) return; H.detail=d; render(); window.scrollTo(0,0); }
 // Ubica el arte de cada fila: la cara centrada de arriba a abajo y del tamaño justo.
 // Campeones grandes (Kog'Maw, Tahm Kench...) se achican para que entre la cabeza; el fade tapa el resto.
+// Todas las filas del historial con la misma altura: la de la más alta (los remakes quedan chicos).
+function igualarFilas(){
+  const filas=[...document.querySelectorAll('.hrow:not(.remake)')];
+  filas.forEach(r=>r.style.minHeight='');
+  const alto=Math.max(0,...filas.map(r=>r.offsetHeight));
+  if(alto) filas.forEach(r=>r.style.minHeight=alto+'px');
+}
+// La cara del campeón centrada en el rombo de la nota (mismo punto de cara que usa el historial)
+function layoutGrade(){
+  document.querySelectorAll('.grade .gbg[data-a]').forEach(el=>{
+    const box=el.offsetWidth||150, [fx,fy,t]=CARAS[el.dataset.a]||[0.5,0.25,0.33];
+    const h=1.05*box/t, w=h/0.59;                        // la zona de la cara ≈ el alto del rombo
+    let left=box/2-fx*w, top=box*0.34-fy*h;             // los ojos arriba de la letra de la nota
+    left=Math.min(0,Math.max(box-w,left)); top=Math.min(0,Math.max(box-h,top));
+    el.style.backgroundSize=`100% 100%, ${w}px ${h}px`;
+    el.style.backgroundPosition=`center, ${left}px ${top}px`;
+  });
+}
 function layoutBanners(){
+  igualarFilas();
+  layoutGrade();
   document.querySelectorAll('.hrow .hbg').forEach(img=>{
     const row=img.closest('.hrow'), rw=row.offsetWidth, rh=row.offsetHeight; if(!rw) return;
     const fx=+img.dataset.fx, fy=+img.dataset.fy, t=+img.dataset.t||0.33;
@@ -1066,6 +1133,8 @@ function layoutBanners(){
   });
 }
 window.addEventListener('resize',layoutBanners);
+// las alturas cambian cuando terminan de cargar las fuentes: vuelvo a medir
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>layoutBanners());
 function closeDetail(){ H.detail=null; render(); }
 function fmtWhen(ms){
   const d=new Date(ms), diff=(Date.now()-ms)/3600000;
@@ -1074,8 +1143,25 @@ function fmtWhen(ms){
   if(diff<48) return 'ayer '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
   return d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
 }
-let CARAS={}; fetch('/static/caras.json').then(r=>r.json()).then(j=>{CARAS=j; render();}).catch(()=>{});
-const gsm=(g,sc)=>g?`<div class="gsm g-${g.replace('+','p')}" title="Nota ${g} (${sc}/100)"><span>${g}</span></div>`:'<div class="gsm none"><span>—</span></div>';
+let CARAS={}; fetch('/static/caras.json').then(r=>r.json()).then(j=>{CARAS=j; render(); layoutBanners();}).catch(()=>{});
+// Humo de las notas S y S+: partículas con valores "al azar" pero fijos para cada partida
+function azar(sem){ let t=(sem>>>0)||1; return ()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t); r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; }
+function semilla(txt){ let h=2166136261; for(const c of String(txt)) h=Math.imul(h^c.charCodeAt(0),16777619); return h>>>0; }
+function humo(sem, grande){
+  const r=azar(sem), n=grande?9:7; let out='';
+  for(let i=0;i<n;i++){
+    const dur=grande?4+r()*3:3.2+r()*2.6;
+    // repartidas parejo de izquierda a derecha (al azar podían caer todas de un lado)
+    const franja=(i%2? n-1-(i>>1) : (i>>1)), xx=10+(franja+.5)*80/n+(r()-.5)*(60/n);
+    const v={x:xx.toFixed(1)+'%', y:(30+r()*40).toFixed(1)+'%', s:(grande?22+r()*26:9+r()*9).toFixed(1)+'px',
+             dur:dur.toFixed(2)+'s', d:(-r()*dur).toFixed(2)+'s', dx:((r()-.5)*(grande?46:16)).toFixed(1)+'px',
+             dy:(-(grande?55+r()*55:20+r()*18)).toFixed(1)+'px', sc:(1.5+r()*1.3).toFixed(2), o:((grande?.22:.4)+r()*.28).toFixed(2)};
+    out+=`<i class="humo" style="${Object.entries(v).map(([k,x])=>`--${k}:${x}`).join(';')}"></i>`;
+  }
+  return out;
+}
+const esS=g=>g==='S'||g==='S+';
+const gsm=(g,sc,sem)=>g?`<div class="gsm g-${g.replace('+','p')}" title="Nota ${g} (${sc}/100)">${esS(g)?humo(semilla(sem||g)):''}<span>${g}</span></div>`:'<div class="gsm none"><span>—</span></div>';
 function histRow(g){
   const cls=g.remake?'remake':g.result==='win'?'win':g.result==='loss'?'loss':'';
   const alias=((g.champ&&g.champ.img)||'').split('/').pop().replace('.png','');
@@ -1093,7 +1179,7 @@ function histRow(g){
     <div class="hcs"><div class="hcsn"><img class="mn" src="/static/minions.png" alt=""><b>${g.cs}</b></div><span>súbditos · ${g.csMin}/min</span></div>
     <div class="hitems">${(g.items||[]).map(i=>iimg(i)).join('')}</div>
     <div class="hfb">${g.best?`<div class="up">▲ ${esc(g.best)}</div>`:''}${g.tip?`<div class="down">▼ ${esc(g.tip)}</div>`:''}</div>
-    ${gsm(g.grade,g.score)}
+    ${gsm(g.grade,g.score,g.gameId)}
     <div class="hgo">›</div></div>`;
 }
 function home(s){
@@ -1139,7 +1225,7 @@ function pgTeam(rows,label,cls,kills,gold){
 }
 function postgame(s,fromHist){
   const m=s.me, win=s.result==='win', loss=s.result==='loss';
-  const grade=s.grade?`<div class="grade g-${s.grade.replace('+','p')}">${m.splash?`<div class="gbg" style="background-image:radial-gradient(circle,rgba(1,10,19,.55) 0,rgba(1,10,19,.1) 70%),url('${m.splash}')"></div>`:''}<span>${esc(s.grade)}</span><small>${s.score}/100</small></div>`:'';
+  const grade=s.grade?`<div class="grade g-${s.grade.replace('+','p')}">${esS(s.grade)?humo(semilla(s.gameId||s.created||'nota'),true):''}${chAlias(m)?`<div class="gbg" data-a="${esc(chAlias(m))}" style="background-image:radial-gradient(circle,rgba(1,10,19,.55) 0,rgba(1,10,19,.1) 70%),url('https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${esc(chAlias(m))}_0.jpg')"></div>`:''}<span>${esc(s.grade)}</span><small>${s.score}/100</small></div>`:'';
   const fb=s.feedback.map(f=>`<div class="fbk ${f.tone}"><div class="fi">${f.tone==='good'?'▲':f.tone==='bad'?'▼':'◆'}</div><div><b>${esc(f.title)}</b><div>${esc(f.text)}</div></div></div>`).join('')
     ||'<div class="small">Partida muy corta: no hay nada para evaluar.</div>';
   const mets=s.metrics.map(x=>`<div class="met ${x.tone}"><span>${esc(x.label)}</span><b>${esc(x.value)}</b><small>${esc(x.ref)}</small></div>`).join('');
@@ -1220,6 +1306,62 @@ async function startUpdate(){
   await api('/api/update',{}); updTimer=0; updStatus();
 }
 
+// ---------- actualización automática del .exe
+let ACTU={version:null}, esperandoReinicio=false;
+function actuFull(v){
+  const n=v.nueva||{}, emb='<div class="emblem" style="margin:0 auto"><span>LS</span></div>';
+  if(v.estado==='revisando') return `<div class="actu-full"><div class="caja">${emb}<h1>Buscando actualizaciones…</h1><p>Un segundo.</p></div></div>`;
+  let cuerpo;
+  if(v.estado==='bajando') cuerpo=`<p>Bajando la versión nueva… <b>${v.progreso||0}%</b></p><div class="barra"><i style="width:${v.progreso||0}%"></i></div>`;
+  else if(v.estado==='reiniciando') cuerpo=`<p><b>Instalando.</b> Lolcito se cierra y se vuelve a abrir solo en unos segundos.</p><p>No cierres esta ventana.</p>`;
+  else cuerpo=`${n.notas?`<p>${esc(n.notas)}</p>`:''}
+      ${v.error?`<p class="err">${esc(v.error)}</p>`:''}
+      <div class="acc"><button class="btn" onclick="actualizar(this)">${v.error?'Probar de nuevo':'Actualizar'}</button>
+        ${v.error?'<button class="btn sec" onclick="omitirActu()">Seguir sin actualizar</button>':''}</div>`;
+  return `<div class="actu-full"><div class="caja">${emb}<h1>Hay una versión nueva</h1>
+      <p>Tenés la <span class="ver">${esc(v.version)}</span> y salió la <span class="ver">${esc(n.version||'')}</span>. Actualizá para seguir usando Lolcito.</p>
+      ${cuerpo}</div></div>`;
+}
+async function omitirActu(){ ACTU=await api('/api/actualizar',{omitir:true}).catch(()=>({...ACTU,obligatoria:false})); pintarActu(); }
+function actuHtml(v){
+  if(v&&v.obligatoria&&['revisando','hay','bajando','reiniciando'].includes(v.estado)) return actuFull(v);
+  if(v&&v.estado==='revisando'&&!v.nueva) return actuFull(v);
+  if(!v||!v.nueva&&v.estado!=='reiniciando') return '';
+  const n=v.nueva||{};
+  if(v.estado==='bajando') return `<div class="banner nueva"><span class="nv">Bajando la versión nueva… <b>${v.progreso||0}%</b><span class="barra"><i style="width:${v.progreso||0}%"></i></span></span></div>`;
+  if(v.estado==='reiniciando') return `<div class="banner nueva"><span class="nv"><b>Instalando la versión nueva:</b> Lolcito se reinicia solo en unos segundos. No cierres esta ventana.</span></div>`;
+  const enPartida=lastState&&lastState.phase==='game';
+  return `<div class="banner nueva"><span class="nv">Hay una versión nueva de Lolcito <b>${esc(n.version)}</b>${v.error?` — <span style="color:var(--bad)">${esc(v.error)}</span>`:''}${n.notas?`<span class="notas">${esc(n.notas)}</span>`:''}</span>
+    ${enPartida?'<span class="small">Actualizala cuando termine la partida.</span>':'<button class="btn" onclick="actualizar(this)">Actualizar</button>'}</div>`;
+}
+function pintarActu(){ $('#actu').innerHTML=actuHtml(ACTU); }
+async function revisarActu(){
+  try{
+    const v=await api('/api/version');
+    if(esperandoReinicio && ACTU.version && v.version!==ACTU.version){ location.reload(); return; }
+    if(!esperandoReinicio) ACTU=v;
+  }catch(e){ /* mientras se reinicia el servidor no contesta */ }
+  pintarActu();
+}
+function esperarReinicio(){
+  esperandoReinicio=true; setInterval(revisarActu,2000);
+  setTimeout(()=>location.reload(), 120000);   // por si algo falla, a los 2 minutos recargo igual
+}
+async function actualizar(btn){
+  btn.disabled=true; btn.textContent='Empezando…';
+  const r=await api('/api/actualizar',{}).catch(()=>({ok:false,error:'Sin conexión con Lolcito'}));
+  if(!r.ok){ ACTU.error=r.error; pintarActu(); return; }
+  const t=setInterval(async()=>{
+    try{ const v=await api('/api/version'); ACTU=v; pintarActu();
+      if(v.estado==='reiniciando'){ clearInterval(t); esperarReinicio(); }
+      if(v.estado==='hay'&&v.error) clearInterval(t);
+    }catch(e){ clearInterval(t); esperarReinicio(); }
+  },700);
+}
+(async function primeraRevision(){         // al abrir: pregunto seguido hasta que termine la primera revisión
+  for(let i=0;i<20;i++){ await revisarActu(); if(ACTU.estado!=='revisando') break; await new Promise(r=>setTimeout(r,700)); }
+})();
+setInterval(()=>{ if(!esperandoReinicio) revisarActu(); },60000);
 // en la selección de campeones pregunto más seguido: los turnos duran 30 segundos
 async function ciclo(){ await refresh(); setTimeout(ciclo, lastState&&lastState.phase==='draft'?800:2000); }
 ciclo();

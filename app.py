@@ -66,6 +66,7 @@ def main():
     ap.add_argument("--lan", action="store_true", help="permitir abrirlo desde el celular")
     ap.add_argument("--puerto", type=int, default=8765)
     ap.add_argument("--sin-ventana", action="store_true")
+    ap.add_argument("--actualizado", action="store_true", help="lo abre la actualización: la ventana ya está abierta")
     args = ap.parse_args()
     url = f"http://localhost:{args.puerto}"
 
@@ -89,7 +90,7 @@ def main():
     app = App(dd, assistant, lan=args.lan, quit_when_closed=not args.sin_ventana)
     if args.simular:
         app.simulate(args.simular)
-    if not args.sin_ventana:
+    if not args.sin_ventana and not args.actualizado:   # tras actualizar, la ventana que ya estaba se recarga sola
         threading.Timer(0.8, open_window, [url]).start()
     try:
         app.serve(args.puerto)

@@ -23,6 +23,9 @@ from lolscout.online import BRACKETS
 OUT = Path(__file__).parent / "publicado"
 ALL_ROLES = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 HISTORY_KEEP = 300  # ~3 semanas de tandas
+# Orden y peso de cada nivel en cada tanda: Oro–Platino primero y con más jugadores, después Hierro–Plata,
+# y Esmeralda–Maestro con menos (el tiempo de la API key se reparte según estos pesos)
+PRIORIDAD = [("medio", 1.35), ("bajo", 1.0), ("alto", 0.55)]
 
 
 def previous_history():
@@ -94,13 +97,16 @@ def main():
     if not args.demo:
         from lolscout.riot import RiotClient
         client = RiotClient()
-    config.PLAYERS_PER_RUN = int(config.PLAYERS_PER_RUN)
+    jugadores_base, partidas_base = int(config.PLAYERS_PER_RUN), int(config.MAX_NEW_MATCHES)
     index = {"generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), "brackets": {}}
     run = {"inicio": index["generated"], "evento": os.environ.get("GITHUB_EVENT_NAME", "local"), "niveles": {}}
     t0 = time.time()
-    for name, tiers in BRACKETS.items():
+    for name, peso in PRIORIDAD:
+        tiers = BRACKETS[name]
         if args.solo and name != args.solo:
             continue
+        config.PLAYERS_PER_RUN = max(20, int(jugadores_base * peso))
+        config.MAX_NEW_MATCHES = max(100, int(partidas_base * peso))
         try:
             p = publish_bracket(name, tiers, dd, client, args.demo)
             index["brackets"][name] = {"matches": p["matches"], "patches": p["patches"]}
