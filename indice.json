@@ -1,0 +1,3299 @@
+{
+ "generated": "2026-09-26T15:19Z",
+ "brackets": {
+  "medio": {
+   "matches": 8685,
+   "patches": [
+    "16.19"
+   ]
+  },
+  "bajo": {
+   "matches": 6317,
+   "patches": [
+    "16.19"
+   ]
+  },
+  "alto": {
+   "matches": 9213,
+   "patches": [
+    "16.19"
+   ]
+  }
+ },
+ "historial": [
+  {
+   "inicio": "2026-09-24T00:18Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1337,
+     "parches": [
+      "16.19",
+      "16.18"
+     ],
+     "antes": 1174,
+     "nuevas": 163,
+     "borradas": 0,
+     "base": 1337,
+     "pedidos": 440,
+     "segundos": 490
+    },
+    "medio": {
+     "partidas": 1649,
+     "parches": [
+      "16.19",
+      "16.18"
+     ],
+     "antes": 1433,
+     "nuevas": 216,
+     "borradas": 0,
+     "base": 1649,
+     "pedidos": 486,
+     "segundos": 598
+    },
+    "alto": {
+     "partidas": 351,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2655,
+     "nuevas": 463,
+     "borradas": 0,
+     "base": 3118,
+     "pedidos": 743,
+     "segundos": 851
+    }
+   },
+   "minutos": 32.3
+  },
+  {
+   "inicio": "2026-09-24T07:25Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1498,
+     "parches": [
+      "16.19",
+      "16.18"
+     ],
+     "antes": 1337,
+     "nuevas": 161,
+     "borradas": 0,
+     "base": 1498,
+     "pedidos": 438,
+     "segundos": 490
+    },
+    "medio": {
+     "partidas": 1924,
+     "parches": [
+      "16.19",
+      "16.18"
+     ],
+     "antes": 1649,
+     "nuevas": 275,
+     "borradas": 0,
+     "base": 1924,
+     "pedidos": 546,
+     "segundos": 610
+    },
+    "alto": {
+     "partidas": 602,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3118,
+     "nuevas": 441,
+     "borradas": 0,
+     "base": 3559,
+     "pedidos": 717,
+     "segundos": 939
+    }
+   },
+   "minutos": 34.0
+  },
+  {
+   "inicio": "2026-09-24T13:23Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1596,
+     "parches": [
+      "16.19",
+      "16.18"
+     ],
+     "antes": 1498,
+     "nuevas": 98,
+     "borradas": 0,
+     "base": 1596,
+     "pedidos": 368,
+     "segundos": 374
+    },
+    "medio": {
+     "partidas": 314,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 1924,
+     "nuevas": 209,
+     "borradas": 0,
+     "base": 2133,
+     "pedidos": 487,
+     "segundos": 598
+    },
+    "alto": {
+     "partidas": 856,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3559,
+     "nuevas": 421,
+     "borradas": 0,
+     "base": 3980,
+     "pedidos": 704,
+     "segundos": 841
+    }
+   },
+   "minutos": 30.2
+  },
+  {
+   "inicio": "2026-09-24T21:30Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1743,
+     "parches": [
+      "16.19",
+      "16.18"
+     ],
+     "antes": 1596,
+     "nuevas": 147,
+     "borradas": 0,
+     "base": 1743,
+     "pedidos": 422,
+     "segundos": 487
+    },
+    "medio": {
+     "partidas": 438,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2133,
+     "nuevas": 237,
+     "borradas": 0,
+     "base": 2370,
+     "pedidos": 510,
+     "segundos": 602
+    },
+    "alto": {
+     "partidas": 1085,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3980,
+     "nuevas": 344,
+     "borradas": 0,
+     "base": 4324,
+     "pedidos": 617,
+     "segundos": 727
+    }
+   },
+   "minutos": 30.3
+  },
+  {
+   "inicio": "2026-09-25T00:33Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 381,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 1743,
+     "nuevas": 197,
+     "borradas": 0,
+     "base": 1940,
+     "pedidos": 480,
+     "segundos": 498
+    },
+    "medio": {
+     "partidas": 551,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2370,
+     "nuevas": 189,
+     "borradas": 0,
+     "base": 2559,
+     "pedidos": 461,
+     "segundos": 592
+    },
+    "alto": {
+     "partidas": 1389,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4324,
+     "nuevas": 375,
+     "borradas": 0,
+     "base": 4699,
+     "pedidos": 661,
+     "segundos": 830
+    }
+   },
+   "minutos": 32.0
+  },
+  {
+   "inicio": "2026-09-25T01:05Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 477,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 1940,
+     "nuevas": 155,
+     "borradas": 0,
+     "base": 2095,
+     "pedidos": 431,
+     "segundos": 490
+    },
+    "medio": {
+     "partidas": 725,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2559,
+     "nuevas": 228,
+     "borradas": 0,
+     "base": 2787,
+     "pedidos": 505,
+     "segundos": 601
+    },
+    "alto": {
+     "partidas": 1657,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4699,
+     "nuevas": 319,
+     "borradas": 0,
+     "base": 5018,
+     "pedidos": 608,
+     "segundos": 722
+    }
+   },
+   "minutos": 30.2
+  },
+  {
+   "inicio": "2026-09-25T01:35Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 560,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2095,
+     "nuevas": 123,
+     "borradas": 0,
+     "base": 2218,
+     "pedidos": 398,
+     "segundos": 475
+    },
+    "medio": {
+     "partidas": 881,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2787,
+     "nuevas": 225,
+     "borradas": 0,
+     "base": 3012,
+     "pedidos": 497,
+     "segundos": 600
+    },
+    "alto": {
+     "partidas": 1826,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5018,
+     "nuevas": 227,
+     "borradas": 0,
+     "base": 5245,
+     "pedidos": 498,
+     "segundos": 599
+    }
+   },
+   "minutos": 27.9
+  },
+  {
+   "inicio": "2026-09-25T02:03Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 660,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2218,
+     "nuevas": 158,
+     "borradas": 0,
+     "base": 2376,
+     "pedidos": 429,
+     "segundos": 487
+    },
+    "medio": {
+     "partidas": 1020,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3012,
+     "nuevas": 198,
+     "borradas": 0,
+     "base": 3210,
+     "pedidos": 470,
+     "segundos": 494
+    },
+    "alto": {
+     "partidas": 2092,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5245,
+     "nuevas": 349,
+     "borradas": 0,
+     "base": 5594,
+     "pedidos": 620,
+     "segundos": 827
+    }
+   },
+   "minutos": 30.1
+  },
+  {
+   "inicio": "2026-09-25T02:33Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 771,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2376,
+     "nuevas": 188,
+     "borradas": 0,
+     "base": 2564,
+     "pedidos": 462,
+     "segundos": 493
+    },
+    "medio": {
+     "partidas": 1121,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3210,
+     "nuevas": 145,
+     "borradas": 0,
+     "base": 3355,
+     "pedidos": 407,
+     "segundos": 482
+    },
+    "alto": {
+     "partidas": 2264,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5594,
+     "nuevas": 214,
+     "borradas": 0,
+     "base": 5808,
+     "pedidos": 483,
+     "segundos": 596
+    }
+   },
+   "minutos": 26.2
+  },
+  {
+   "inicio": "2026-09-25T02:59Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 861,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2564,
+     "nuevas": 118,
+     "borradas": 0,
+     "base": 2682,
+     "pedidos": 390,
+     "segundos": 474
+    },
+    "medio": {
+     "partidas": 1236,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3355,
+     "nuevas": 158,
+     "borradas": 0,
+     "base": 3513,
+     "pedidos": 428,
+     "segundos": 497
+    },
+    "alto": {
+     "partidas": 2421,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5808,
+     "nuevas": 218,
+     "borradas": 0,
+     "base": 6026,
+     "pedidos": 500,
+     "segundos": 600
+    }
+   },
+   "minutos": 26.2
+  },
+  {
+   "inicio": "2026-09-25T03:26Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 933,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2682,
+     "nuevas": 126,
+     "borradas": 0,
+     "base": 2808,
+     "pedidos": 401,
+     "segundos": 465
+    },
+    "medio": {
+     "partidas": 1419,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3513,
+     "nuevas": 231,
+     "borradas": 0,
+     "base": 3744,
+     "pedidos": 497,
+     "segundos": 599
+    },
+    "alto": {
+     "partidas": 2550,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6026,
+     "nuevas": 173,
+     "borradas": 0,
+     "base": 6199,
+     "pedidos": 449,
+     "segundos": 508
+    }
+   },
+   "minutos": 26.2
+  },
+  {
+   "inicio": "2026-09-25T03:52Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1033,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2808,
+     "nuevas": 162,
+     "borradas": 0,
+     "base": 2970,
+     "pedidos": 437,
+     "segundos": 566
+    },
+    "medio": {
+     "partidas": 1528,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3744,
+     "nuevas": 163,
+     "borradas": 0,
+     "base": 3907,
+     "pedidos": 443,
+     "segundos": 489
+    },
+    "alto": {
+     "partidas": 2683,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6199,
+     "nuevas": 176,
+     "borradas": 0,
+     "base": 6375,
+     "pedidos": 449,
+     "segundos": 589
+    }
+   },
+   "minutos": 27.4
+  },
+  {
+   "inicio": "2026-09-25T04:19Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1131,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 2970,
+     "nuevas": 133,
+     "borradas": 0,
+     "base": 3103,
+     "pedidos": 401,
+     "segundos": 379
+    },
+    "medio": {
+     "partidas": 1625,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3907,
+     "nuevas": 137,
+     "borradas": 0,
+     "base": 4044,
+     "pedidos": 405,
+     "segundos": 582
+    },
+    "alto": {
+     "partidas": 2874,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6375,
+     "nuevas": 258,
+     "borradas": 0,
+     "base": 6633,
+     "pedidos": 533,
+     "segundos": 610
+    }
+   },
+   "minutos": 26.2
+  },
+  {
+   "inicio": "2026-09-25T07:47Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1228,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3103,
+     "nuevas": 104,
+     "borradas": 0,
+     "base": 3207,
+     "pedidos": 377,
+     "segundos": 376
+    },
+    "medio": {
+     "partidas": 1746,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4044,
+     "nuevas": 153,
+     "borradas": 0,
+     "base": 4197,
+     "pedidos": 418,
+     "segundos": 487
+    },
+    "alto": {
+     "partidas": 3072,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6633,
+     "nuevas": 264,
+     "borradas": 0,
+     "base": 6897,
+     "pedidos": 540,
+     "segundos": 707
+    }
+   },
+   "minutos": 26.2
+  },
+  {
+   "inicio": "2026-09-25T08:14Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1331,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3207,
+     "nuevas": 142,
+     "borradas": 0,
+     "base": 3349,
+     "pedidos": 418,
+     "segundos": 484
+    },
+    "medio": {
+     "partidas": 1846,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4197,
+     "nuevas": 116,
+     "borradas": 0,
+     "base": 4313,
+     "pedidos": 380,
+     "segundos": 472
+    },
+    "alto": {
+     "partidas": 3238,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6897,
+     "nuevas": 184,
+     "borradas": 0,
+     "base": 7081,
+     "pedidos": 454,
+     "segundos": 495
+    }
+   },
+   "minutos": 24.2
+  },
+  {
+   "inicio": "2026-09-25T08:38Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1449,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3349,
+     "nuevas": 144,
+     "borradas": 0,
+     "base": 3493,
+     "pedidos": 416,
+     "segundos": 483
+    },
+    "medio": {
+     "partidas": 1957,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4313,
+     "nuevas": 136,
+     "borradas": 0,
+     "base": 4449,
+     "pedidos": 396,
+     "segundos": 479
+    },
+    "alto": {
+     "partidas": 3367,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7081,
+     "nuevas": 151,
+     "borradas": 0,
+     "base": 7232,
+     "pedidos": 422,
+     "segundos": 487
+    }
+   },
+   "minutos": 24.2
+  },
+  {
+   "inicio": "2026-09-25T09:02Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1546,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3493,
+     "nuevas": 123,
+     "borradas": 0,
+     "base": 3616,
+     "pedidos": 394,
+     "segundos": 465
+    },
+    "medio": {
+     "partidas": 2026,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4449,
+     "nuevas": 93,
+     "borradas": 0,
+     "base": 4542,
+     "pedidos": 357,
+     "segundos": 472
+    },
+    "alto": {
+     "partidas": 3457,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7232,
+     "nuevas": 114,
+     "borradas": 0,
+     "base": 7346,
+     "pedidos": 381,
+     "segundos": 476
+    }
+   },
+   "minutos": 23.6
+  },
+  {
+   "inicio": "2026-09-25T09:26Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1639,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3616,
+     "nuevas": 123,
+     "borradas": 0,
+     "base": 3739,
+     "pedidos": 397,
+     "segundos": 377
+    },
+    "medio": {
+     "partidas": 2146,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4542,
+     "nuevas": 140,
+     "borradas": 0,
+     "base": 4682,
+     "pedidos": 405,
+     "segundos": 584
+    },
+    "alto": {
+     "partidas": 3574,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7346,
+     "nuevas": 138,
+     "borradas": 0,
+     "base": 7484,
+     "pedidos": 408,
+     "segundos": 482
+    }
+   },
+   "minutos": 24.1
+  },
+  {
+   "inicio": "2026-09-25T09:50Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1731,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3739,
+     "nuevas": 118,
+     "borradas": 0,
+     "base": 3857,
+     "pedidos": 388,
+     "segundos": 378
+    },
+    "medio": {
+     "partidas": 2222,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4682,
+     "nuevas": 89,
+     "borradas": 0,
+     "base": 4771,
+     "pedidos": 359,
+     "segundos": 474
+    },
+    "alto": {
+     "partidas": 3655,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7484,
+     "nuevas": 103,
+     "borradas": 0,
+     "base": 7587,
+     "pedidos": 368,
+     "segundos": 474
+    }
+   },
+   "minutos": 22.1
+  },
+  {
+   "inicio": "2026-09-25T10:12Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1811,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3857,
+     "nuevas": 102,
+     "borradas": 0,
+     "base": 3959,
+     "pedidos": 375,
+     "segundos": 374
+    },
+    "medio": {
+     "partidas": 2316,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4771,
+     "nuevas": 118,
+     "borradas": 0,
+     "base": 4889,
+     "pedidos": 385,
+     "segundos": 477
+    },
+    "alto": {
+     "partidas": 3758,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7587,
+     "nuevas": 121,
+     "borradas": 0,
+     "base": 7708,
+     "pedidos": 392,
+     "segundos": 479
+    }
+   },
+   "minutos": 22.2
+  },
+  {
+   "inicio": "2026-09-25T10:34Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 1911,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 3959,
+     "nuevas": 108,
+     "borradas": 0,
+     "base": 4067,
+     "pedidos": 378,
+     "segundos": 473
+    },
+    "medio": {
+     "partidas": 2395,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4889,
+     "nuevas": 88,
+     "borradas": 0,
+     "base": 4977,
+     "pedidos": 352,
+     "segundos": 373
+    },
+    "alto": {
+     "partidas": 3906,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7708,
+     "nuevas": 186,
+     "borradas": 0,
+     "base": 7894,
+     "pedidos": 456,
+     "segundos": 589
+    }
+   },
+   "minutos": 23.9
+  },
+  {
+   "inicio": "2026-09-25T10:58Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2001,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4067,
+     "nuevas": 124,
+     "borradas": 0,
+     "base": 4191,
+     "pedidos": 403,
+     "segundos": 481
+    },
+    "medio": {
+     "partidas": 2437,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4977,
+     "nuevas": 58,
+     "borradas": 0,
+     "base": 5035,
+     "pedidos": 322,
+     "segundos": 364
+    },
+    "alto": {
+     "partidas": 3967,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7894,
+     "nuevas": 73,
+     "borradas": 0,
+     "base": 7967,
+     "pedidos": 339,
+     "segundos": 371
+    }
+   },
+   "minutos": 20.3
+  },
+  {
+   "inicio": "2026-09-25T11:19Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2067,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4191,
+     "nuevas": 89,
+     "borradas": 0,
+     "base": 4280,
+     "pedidos": 359,
+     "segundos": 461
+    },
+    "medio": {
+     "partidas": 2540,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5035,
+     "nuevas": 135,
+     "borradas": 0,
+     "base": 5170,
+     "pedidos": 400,
+     "segundos": 480
+    },
+    "alto": {
+     "partidas": 4093,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7967,
+     "nuevas": 156,
+     "borradas": 0,
+     "base": 8123,
+     "pedidos": 425,
+     "segundos": 488
+    }
+   },
+   "minutos": 23.9
+  },
+  {
+   "inicio": "2026-09-25T11:42Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2148,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4280,
+     "nuevas": 104,
+     "borradas": 0,
+     "base": 4384,
+     "pedidos": 376,
+     "segundos": 469
+    },
+    "medio": {
+     "partidas": 2605,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5170,
+     "nuevas": 85,
+     "borradas": 0,
+     "base": 5255,
+     "pedidos": 347,
+     "segundos": 376
+    },
+    "alto": {
+     "partidas": 4199,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8123,
+     "nuevas": 134,
+     "borradas": 0,
+     "base": 8257,
+     "pedidos": 408,
+     "segundos": 482
+    }
+   },
+   "minutos": 22.1
+  },
+  {
+   "inicio": "2026-09-25T13:46Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2218,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4384,
+     "nuevas": 96,
+     "borradas": 0,
+     "base": 4480,
+     "pedidos": 368,
+     "segundos": 373
+    },
+    "medio": {
+     "partidas": 2654,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5255,
+     "nuevas": 64,
+     "borradas": 0,
+     "base": 5319,
+     "pedidos": 325,
+     "segundos": 365
+    },
+    "alto": {
+     "partidas": 4288,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8257,
+     "nuevas": 106,
+     "borradas": 0,
+     "base": 8363,
+     "pedidos": 374,
+     "segundos": 478
+    }
+   },
+   "minutos": 20.3
+  },
+  {
+   "inicio": "2026-09-25T14:07Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2274,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4480,
+     "nuevas": 88,
+     "borradas": 0,
+     "base": 4568,
+     "pedidos": 360,
+     "segundos": 469
+    },
+    "medio": {
+     "partidas": 2707,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5319,
+     "nuevas": 77,
+     "borradas": 0,
+     "base": 5396,
+     "pedidos": 341,
+     "segundos": 384
+    },
+    "alto": {
+     "partidas": 4375,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8363,
+     "nuevas": 101,
+     "borradas": 0,
+     "base": 8464,
+     "pedidos": 365,
+     "segundos": 473
+    }
+   },
+   "minutos": 22.1
+  },
+  {
+   "inicio": "2026-09-25T14:29Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2349,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4568,
+     "nuevas": 88,
+     "borradas": 0,
+     "base": 4656,
+     "pedidos": 359,
+     "segundos": 372
+    },
+    "medio": {
+     "partidas": 2751,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5396,
+     "nuevas": 69,
+     "borradas": 0,
+     "base": 5465,
+     "pedidos": 335,
+     "segundos": 384
+    },
+    "alto": {
+     "partidas": 4471,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8464,
+     "nuevas": 125,
+     "borradas": 0,
+     "base": 8589,
+     "pedidos": 391,
+     "segundos": 478
+    }
+   },
+   "minutos": 20.6
+  },
+  {
+   "inicio": "2026-09-25T14:50Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2424,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4656,
+     "nuevas": 87,
+     "borradas": 0,
+     "base": 4743,
+     "pedidos": 357,
+     "segundos": 453
+    },
+    "medio": {
+     "partidas": 2814,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5465,
+     "nuevas": 76,
+     "borradas": 0,
+     "base": 5541,
+     "pedidos": 335,
+     "segundos": 368
+    },
+    "alto": {
+     "partidas": 4532,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8589,
+     "nuevas": 77,
+     "borradas": 0,
+     "base": 8666,
+     "pedidos": 345,
+     "segundos": 468
+    }
+   },
+   "minutos": 21.5
+  },
+  {
+   "inicio": "2026-09-25T15:11Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2493,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4743,
+     "nuevas": 80,
+     "borradas": 0,
+     "base": 4823,
+     "pedidos": 346,
+     "segundos": 371
+    },
+    "medio": {
+     "partidas": 2874,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5541,
+     "nuevas": 78,
+     "borradas": 0,
+     "base": 5619,
+     "pedidos": 344,
+     "segundos": 369
+    },
+    "alto": {
+     "partidas": 4604,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8666,
+     "nuevas": 79,
+     "borradas": 0,
+     "base": 8745,
+     "pedidos": 342,
+     "segundos": 468
+    }
+   },
+   "minutos": 20.2
+  },
+  {
+   "inicio": "2026-09-25T15:31Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2549,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4823,
+     "nuevas": 62,
+     "borradas": 0,
+     "base": 4885,
+     "pedidos": 328,
+     "segundos": 366
+    },
+    "medio": {
+     "partidas": 2948,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5619,
+     "nuevas": 83,
+     "borradas": 0,
+     "base": 5702,
+     "pedidos": 354,
+     "segundos": 371
+    },
+    "alto": {
+     "partidas": 4675,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8745,
+     "nuevas": 85,
+     "borradas": 0,
+     "base": 8830,
+     "pedidos": 357,
+     "segundos": 472
+    }
+   },
+   "minutos": 20.2
+  },
+  {
+   "inicio": "2026-09-25T15:52Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2595,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4885,
+     "nuevas": 62,
+     "borradas": 0,
+     "base": 4947,
+     "pedidos": 331,
+     "segundos": 367
+    },
+    "medio": {
+     "partidas": 3011,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5702,
+     "nuevas": 76,
+     "borradas": 0,
+     "base": 5778,
+     "pedidos": 342,
+     "segundos": 462
+    },
+    "alto": {
+     "partidas": 4738,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8830,
+     "nuevas": 65,
+     "borradas": 0,
+     "base": 8895,
+     "pedidos": 332,
+     "segundos": 386
+    }
+   },
+   "minutos": 20.3
+  },
+  {
+   "inicio": "2026-09-25T16:12Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2682,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 4947,
+     "nuevas": 110,
+     "borradas": 0,
+     "base": 5057,
+     "pedidos": 381,
+     "segundos": 453
+    },
+    "medio": {
+     "partidas": 3055,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5778,
+     "nuevas": 58,
+     "borradas": 0,
+     "base": 5836,
+     "pedidos": 318,
+     "segundos": 380
+    },
+    "alto": {
+     "partidas": 4803,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8895,
+     "nuevas": 84,
+     "borradas": 0,
+     "base": 8979,
+     "pedidos": 349,
+     "segundos": 379
+    }
+   },
+   "minutos": 20.2
+  },
+  {
+   "inicio": "2026-09-25T16:32Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2719,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5057,
+     "nuevas": 45,
+     "borradas": 0,
+     "base": 5102,
+     "pedidos": 314,
+     "segundos": 364
+    },
+    "medio": {
+     "partidas": 3097,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5836,
+     "nuevas": 57,
+     "borradas": 0,
+     "base": 5893,
+     "pedidos": 318,
+     "segundos": 381
+    },
+    "alto": {
+     "partidas": 4905,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8979,
+     "nuevas": 110,
+     "borradas": 0,
+     "base": 9089,
+     "pedidos": 382,
+     "segundos": 460
+    }
+   },
+   "minutos": 20.1
+  },
+  {
+   "inicio": "2026-09-25T16:52Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2778,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5102,
+     "nuevas": 78,
+     "borradas": 0,
+     "base": 5180,
+     "pedidos": 350,
+     "segundos": 438
+    },
+    "medio": {
+     "partidas": 3137,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5893,
+     "nuevas": 45,
+     "borradas": 0,
+     "base": 5938,
+     "pedidos": 306,
+     "segundos": 378
+    },
+    "alto": {
+     "partidas": 4978,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9089,
+     "nuevas": 83,
+     "borradas": 0,
+     "base": 9172,
+     "pedidos": 352,
+     "segundos": 390
+    }
+   },
+   "minutos": 20.1
+  },
+  {
+   "inicio": "2026-09-25T17:12Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2821,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5180,
+     "nuevas": 45,
+     "borradas": 0,
+     "base": 5225,
+     "pedidos": 310,
+     "segundos": 363
+    },
+    "medio": {
+     "partidas": 3182,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5938,
+     "nuevas": 52,
+     "borradas": 0,
+     "base": 5990,
+     "pedidos": 313,
+     "segundos": 363
+    },
+    "alto": {
+     "partidas": 5027,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9172,
+     "nuevas": 61,
+     "borradas": 0,
+     "base": 9233,
+     "pedidos": 328,
+     "segundos": 424
+    }
+   },
+   "minutos": 19.2
+  },
+  {
+   "inicio": "2026-09-25T17:32Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2865,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5225,
+     "nuevas": 50,
+     "borradas": 0,
+     "base": 5275,
+     "pedidos": 316,
+     "segundos": 364
+    },
+    "medio": {
+     "partidas": 3211,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5990,
+     "nuevas": 33,
+     "borradas": 0,
+     "base": 6023,
+     "pedidos": 293,
+     "segundos": 358
+    },
+    "alto": {
+     "partidas": 5101,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9233,
+     "nuevas": 92,
+     "borradas": 0,
+     "base": 9325,
+     "pedidos": 359,
+     "segundos": 376
+    }
+   },
+   "minutos": 18.3
+  },
+  {
+   "inicio": "2026-09-25T17:50Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2907,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5275,
+     "nuevas": 49,
+     "borradas": 0,
+     "base": 5324,
+     "pedidos": 319,
+     "segundos": 365
+    },
+    "medio": {
+     "partidas": 3249,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6023,
+     "nuevas": 43,
+     "borradas": 0,
+     "base": 6066,
+     "pedidos": 305,
+     "segundos": 362
+    },
+    "alto": {
+     "partidas": 5207,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9325,
+     "nuevas": 121,
+     "borradas": 0,
+     "base": 9446,
+     "pedidos": 392,
+     "segundos": 478
+    }
+   },
+   "minutos": 20.1
+  },
+  {
+   "inicio": "2026-09-25T18:36Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 2947,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5324,
+     "nuevas": 48,
+     "borradas": 0,
+     "base": 5372,
+     "pedidos": 314,
+     "segundos": 365
+    },
+    "medio": {
+     "partidas": 3297,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6066,
+     "nuevas": 57,
+     "borradas": 0,
+     "base": 6123,
+     "pedidos": 321,
+     "segundos": 365
+    },
+    "alto": {
+     "partidas": 5281,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9446,
+     "nuevas": 89,
+     "borradas": 0,
+     "base": 9535,
+     "pedidos": 356,
+     "segundos": 374
+    }
+   },
+   "minutos": 18.4
+  },
+  {
+   "inicio": "2026-09-25T18:54Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3003,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5372,
+     "nuevas": 69,
+     "borradas": 0,
+     "base": 5441,
+     "pedidos": 339,
+     "segundos": 460
+    },
+    "medio": {
+     "partidas": 3356,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6123,
+     "nuevas": 61,
+     "borradas": 0,
+     "base": 6184,
+     "pedidos": 323,
+     "segundos": 365
+    },
+    "alto": {
+     "partidas": 5346,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9535,
+     "nuevas": 70,
+     "borradas": 0,
+     "base": 9605,
+     "pedidos": 335,
+     "segundos": 370
+    }
+   },
+   "minutos": 19.9
+  },
+  {
+   "inicio": "2026-09-25T19:14Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3077,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5441,
+     "nuevas": 86,
+     "borradas": 0,
+     "base": 5527,
+     "pedidos": 352,
+     "segundos": 463
+    },
+    "medio": {
+     "partidas": 3388,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6184,
+     "nuevas": 35,
+     "borradas": 0,
+     "base": 6219,
+     "pedidos": 295,
+     "segundos": 267
+    },
+    "alto": {
+     "partidas": 5410,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9605,
+     "nuevas": 76,
+     "borradas": 0,
+     "base": 9681,
+     "pedidos": 343,
+     "segundos": 463
+    }
+   },
+   "minutos": 19.9
+  },
+  {
+   "inicio": "2026-09-25T19:34Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3129,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5527,
+     "nuevas": 60,
+     "borradas": 0,
+     "base": 5587,
+     "pedidos": 325,
+     "segundos": 366
+    },
+    "medio": {
+     "partidas": 3425,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6219,
+     "nuevas": 43,
+     "borradas": 0,
+     "base": 6262,
+     "pedidos": 306,
+     "segundos": 362
+    },
+    "alto": {
+     "partidas": 5487,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9681,
+     "nuevas": 79,
+     "borradas": 0,
+     "base": 9760,
+     "pedidos": 343,
+     "segundos": 371
+    }
+   },
+   "minutos": 18.3
+  },
+  {
+   "inicio": "2026-09-25T19:53Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3155,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5587,
+     "nuevas": 27,
+     "borradas": 0,
+     "base": 5614,
+     "pedidos": 291,
+     "segundos": 344
+    },
+    "medio": {
+     "partidas": 3441,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6262,
+     "nuevas": 16,
+     "borradas": 0,
+     "base": 6278,
+     "pedidos": 275,
+     "segundos": 357
+    },
+    "alto": {
+     "partidas": 5561,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9760,
+     "nuevas": 89,
+     "borradas": 0,
+     "base": 9849,
+     "pedidos": 354,
+     "segundos": 384
+    }
+   },
+   "minutos": 18.1
+  },
+  {
+   "inicio": "2026-09-25T20:11Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3206,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5614,
+     "nuevas": 64,
+     "borradas": 0,
+     "base": 5678,
+     "pedidos": 332,
+     "segundos": 451
+    },
+    "medio": {
+     "partidas": 3478,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6278,
+     "nuevas": 48,
+     "borradas": 0,
+     "base": 6326,
+     "pedidos": 310,
+     "segundos": 362
+    },
+    "alto": {
+     "partidas": 5665,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9849,
+     "nuevas": 114,
+     "borradas": 0,
+     "base": 9963,
+     "pedidos": 383,
+     "segundos": 476
+    }
+   },
+   "minutos": 21.5
+  },
+  {
+   "inicio": "2026-09-25T20:32Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3252,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5678,
+     "nuevas": 48,
+     "borradas": 0,
+     "base": 5726,
+     "pedidos": 314,
+     "segundos": 363
+    },
+    "medio": {
+     "partidas": 3504,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6326,
+     "nuevas": 27,
+     "borradas": 0,
+     "base": 6353,
+     "pedidos": 286,
+     "segundos": 252
+    },
+    "alto": {
+     "partidas": 5767,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9963,
+     "nuevas": 122,
+     "borradas": 0,
+     "base": 10085,
+     "pedidos": 389,
+     "segundos": 485
+    }
+   },
+   "minutos": 18.4
+  },
+  {
+   "inicio": "2026-09-25T20:51Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3306,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5726,
+     "nuevas": 73,
+     "borradas": 0,
+     "base": 5799,
+     "pedidos": 345,
+     "segundos": 466
+    },
+    "medio": {
+     "partidas": 3565,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6353,
+     "nuevas": 63,
+     "borradas": 0,
+     "base": 6416,
+     "pedidos": 328,
+     "segundos": 366
+    },
+    "alto": {
+     "partidas": 5847,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10085,
+     "nuevas": 84,
+     "borradas": 0,
+     "base": 10169,
+     "pedidos": 351,
+     "segundos": 374
+    }
+   },
+   "minutos": 20.1
+  },
+  {
+   "inicio": "2026-09-25T21:11Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3335,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5799,
+     "nuevas": 31,
+     "borradas": 0,
+     "base": 5830,
+     "pedidos": 297,
+     "segundos": 347
+    },
+    "medio": {
+     "partidas": 3614,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6416,
+     "nuevas": 50,
+     "borradas": 0,
+     "base": 6466,
+     "pedidos": 316,
+     "segundos": 376
+    },
+    "alto": {
+     "partidas": 5903,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10169,
+     "nuevas": 56,
+     "borradas": 0,
+     "base": 10225,
+     "pedidos": 322,
+     "segundos": 455
+    }
+   },
+   "minutos": 19.7
+  },
+  {
+   "inicio": "2026-09-25T21:31Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3386,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5830,
+     "nuevas": 55,
+     "borradas": 0,
+     "base": 5885,
+     "pedidos": 326,
+     "segundos": 366
+    },
+    "medio": {
+     "partidas": 3644,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6466,
+     "nuevas": 34,
+     "borradas": 0,
+     "base": 6500,
+     "pedidos": 296,
+     "segundos": 359
+    },
+    "alto": {
+     "partidas": 6000,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10225,
+     "nuevas": 106,
+     "borradas": 0,
+     "base": 10331,
+     "pedidos": 373,
+     "segundos": 377
+    }
+   },
+   "minutos": 18.4
+  },
+  {
+   "inicio": "2026-09-25T21:49Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3458,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5885,
+     "nuevas": 88,
+     "borradas": 0,
+     "base": 5973,
+     "pedidos": 359,
+     "segundos": 464
+    },
+    "medio": {
+     "partidas": 3686,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6500,
+     "nuevas": 43,
+     "borradas": 0,
+     "base": 6543,
+     "pedidos": 301,
+     "segundos": 361
+    },
+    "alto": {
+     "partidas": 6059,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10331,
+     "nuevas": 70,
+     "borradas": 0,
+     "base": 10401,
+     "pedidos": 335,
+     "segundos": 371
+    }
+   },
+   "minutos": 20.0
+  },
+  {
+   "inicio": "2026-09-25T22:09Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3514,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 5973,
+     "nuevas": 64,
+     "borradas": 0,
+     "base": 6037,
+     "pedidos": 332,
+     "segundos": 367
+    },
+    "medio": {
+     "partidas": 3735,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6543,
+     "nuevas": 50,
+     "borradas": 0,
+     "base": 6593,
+     "pedidos": 312,
+     "segundos": 454
+    },
+    "alto": {
+     "partidas": 6134,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10401,
+     "nuevas": 79,
+     "borradas": 0,
+     "base": 10480,
+     "pedidos": 345,
+     "segundos": 373
+    }
+   },
+   "minutos": 19.9
+  },
+  {
+   "inicio": "2026-09-25T22:29Z",
+   "evento": "schedule",
+   "niveles": {
+    "bajo": {
+     "partidas": 3571,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6037,
+     "nuevas": 60,
+     "borradas": 0,
+     "base": 6097,
+     "pedidos": 336,
+     "segundos": 368
+    },
+    "medio": {
+     "partidas": 3750,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6593,
+     "nuevas": 15,
+     "borradas": 0,
+     "base": 6608,
+     "pedidos": 274,
+     "segundos": 355
+    },
+    "alto": {
+     "partidas": 6211,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10480,
+     "nuevas": 86,
+     "borradas": 0,
+     "base": 10566,
+     "pedidos": 349,
+     "segundos": 372
+    }
+   },
+   "minutos": 18.3
+  },
+  {
+   "inicio": "2026-09-25T23:18Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 3966,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6608,
+     "nuevas": 255,
+     "borradas": 0,
+     "base": 6863,
+     "pedidos": 617,
+     "segundos": 727
+    },
+    "bajo": {
+     "partidas": 3641,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6097,
+     "nuevas": 91,
+     "borradas": 0,
+     "base": 6188,
+     "pedidos": 366,
+     "segundos": 374
+    },
+    "alto": {
+     "partidas": 6346,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10566,
+     "nuevas": 162,
+     "borradas": 0,
+     "base": 10728,
+     "pedidos": 320,
+     "segundos": 460
+    }
+   },
+   "minutos": 26.0
+  },
+  {
+   "inicio": "2026-09-25T23:44Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4266,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6863,
+     "nuevas": 349,
+     "borradas": 0,
+     "base": 7212,
+     "pedidos": 717,
+     "segundos": 846
+    },
+    "bajo": {
+     "partidas": 3782,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6188,
+     "nuevas": 161,
+     "borradas": 0,
+     "base": 6349,
+     "pedidos": 439,
+     "segundos": 488
+    },
+    "alto": {
+     "partidas": 6478,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10728,
+     "nuevas": 148,
+     "borradas": 0,
+     "base": 10876,
+     "pedidos": 303,
+     "segundos": 362
+    }
+   },
+   "minutos": 28.3
+  },
+  {
+   "inicio": "2026-09-26T00:12Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4431,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7212,
+     "nuevas": 190,
+     "borradas": 0,
+     "base": 7402,
+     "pedidos": 547,
+     "segundos": 610
+    },
+    "bajo": {
+     "partidas": 3881,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6349,
+     "nuevas": 112,
+     "borradas": 0,
+     "base": 6461,
+     "pedidos": 377,
+     "segundos": 475
+    },
+    "alto": {
+     "partidas": 6672,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10876,
+     "nuevas": 209,
+     "borradas": 0,
+     "base": 11085,
+     "pedidos": 369,
+     "segundos": 470
+    }
+   },
+   "minutos": 25.9
+  },
+  {
+   "inicio": "2026-09-26T00:38Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4680,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7402,
+     "nuevas": 283,
+     "borradas": 0,
+     "base": 7685,
+     "pedidos": 647,
+     "segundos": 731
+    },
+    "bajo": {
+     "partidas": 4039,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6461,
+     "nuevas": 185,
+     "borradas": 0,
+     "base": 6646,
+     "pedidos": 471,
+     "segundos": 594
+    },
+    "alto": {
+     "partidas": 6825,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11085,
+     "nuevas": 163,
+     "borradas": 0,
+     "base": 11248,
+     "pedidos": 318,
+     "segundos": 368
+    }
+   },
+   "minutos": 28.2
+  },
+  {
+   "inicio": "2026-09-26T01:06Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4872,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7685,
+     "nuevas": 204,
+     "borradas": 0,
+     "base": 7889,
+     "pedidos": 562,
+     "segundos": 701
+    },
+    "bajo": {
+     "partidas": 4147,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6646,
+     "nuevas": 117,
+     "borradas": 0,
+     "base": 6763,
+     "pedidos": 385,
+     "segundos": 389
+    },
+    "alto": {
+     "partidas": 6951,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11248,
+     "nuevas": 127,
+     "borradas": 0,
+     "base": 11375,
+     "pedidos": 285,
+     "segundos": 357
+    }
+   },
+   "minutos": 24.2
+  },
+  {
+   "inicio": "2026-09-26T01:31Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 5078,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7889,
+     "nuevas": 229,
+     "borradas": 0,
+     "base": 8118,
+     "pedidos": 595,
+     "segundos": 707
+    },
+    "bajo": {
+     "partidas": 4313,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6763,
+     "nuevas": 180,
+     "borradas": 0,
+     "base": 6943,
+     "pedidos": 460,
+     "segundos": 592
+    },
+    "alto": {
+     "partidas": 7078,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11375,
+     "nuevas": 133,
+     "borradas": 0,
+     "base": 11508,
+     "pedidos": 290,
+     "segundos": 358
+    }
+   },
+   "minutos": 27.6
+  },
+  {
+   "inicio": "2026-09-26T01:58Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 5269,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8118,
+     "nuevas": 228,
+     "borradas": 0,
+     "base": 8346,
+     "pedidos": 596,
+     "segundos": 620
+    },
+    "bajo": {
+     "partidas": 4447,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6943,
+     "nuevas": 139,
+     "borradas": 0,
+     "base": 7082,
+     "pedidos": 407,
+     "segundos": 581
+    },
+    "alto": {
+     "partidas": 7218,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11508,
+     "nuevas": 144,
+     "borradas": 0,
+     "base": 11652,
+     "pedidos": 299,
+     "segundos": 360
+    }
+   },
+   "minutos": 26.0
+  },
+  {
+   "inicio": "2026-09-26T04:57Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4034,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6608,
+     "nuevas": 286,
+     "borradas": 0,
+     "base": 6894,
+     "pedidos": 650,
+     "segundos": 732
+    },
+    "bajo": {
+     "partidas": 3686,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6097,
+     "nuevas": 117,
+     "borradas": 0,
+     "base": 6214,
+     "pedidos": 393,
+     "segundos": 479
+    },
+    "alto": {
+     "partidas": 6375,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10566,
+     "nuevas": 166,
+     "borradas": 0,
+     "base": 10732,
+     "pedidos": 327,
+     "segundos": 368
+    }
+   },
+   "minutos": 26.3
+  },
+  {
+   "inicio": "2026-09-26T05:23Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4307,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6894,
+     "nuevas": 278,
+     "borradas": 0,
+     "base": 7172,
+     "pedidos": 638,
+     "segundos": 728
+    },
+    "bajo": {
+     "partidas": 3856,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6214,
+     "nuevas": 170,
+     "borradas": 0,
+     "base": 6384,
+     "pedidos": 457,
+     "segundos": 584
+    },
+    "alto": {
+     "partidas": 6588,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10732,
+     "nuevas": 213,
+     "borradas": 0,
+     "base": 10945,
+     "pedidos": 371,
+     "segundos": 475
+    }
+   },
+   "minutos": 29.8
+  },
+  {
+   "inicio": "2026-09-26T05:53Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4559,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7172,
+     "nuevas": 252,
+     "borradas": 0,
+     "base": 7424,
+     "pedidos": 618,
+     "segundos": 724
+    },
+    "bajo": {
+     "partidas": 4021,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6384,
+     "nuevas": 165,
+     "borradas": 0,
+     "base": 6549,
+     "pedidos": 439,
+     "segundos": 489
+    },
+    "alto": {
+     "partidas": 6803,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10945,
+     "nuevas": 215,
+     "borradas": 0,
+     "base": 11160,
+     "pedidos": 377,
+     "segundos": 476
+    }
+   },
+   "minutos": 28.2
+  },
+  {
+   "inicio": "2026-09-26T06:21Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 4811,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7424,
+     "nuevas": 252,
+     "borradas": 0,
+     "base": 7676,
+     "pedidos": 624,
+     "segundos": 725
+    },
+    "bajo": {
+     "partidas": 4145,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6549,
+     "nuevas": 124,
+     "borradas": 0,
+     "base": 6673,
+     "pedidos": 401,
+     "segundos": 480
+    },
+    "alto": {
+     "partidas": 6961,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11160,
+     "nuevas": 158,
+     "borradas": 0,
+     "base": 11318,
+     "pedidos": 314,
+     "segundos": 366
+    }
+   },
+   "minutos": 26.2
+  },
+  {
+   "inicio": "2026-09-26T06:48Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 5106,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7676,
+     "nuevas": 295,
+     "borradas": 0,
+     "base": 7971,
+     "pedidos": 661,
+     "segundos": 814
+    },
+    "bajo": {
+     "partidas": 4262,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6673,
+     "nuevas": 117,
+     "borradas": 0,
+     "base": 6790,
+     "pedidos": 400,
+     "segundos": 480
+    },
+    "alto": {
+     "partidas": 7116,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11318,
+     "nuevas": 155,
+     "borradas": 0,
+     "base": 11473,
+     "pedidos": 314,
+     "segundos": 366
+    }
+   },
+   "minutos": 27.7
+  },
+  {
+   "inicio": "2026-09-26T07:16Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 5475,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7971,
+     "nuevas": 369,
+     "borradas": 0,
+     "base": 8340,
+     "pedidos": 744,
+     "segundos": 849
+    },
+    "bajo": {
+     "partidas": 4389,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6790,
+     "nuevas": 127,
+     "borradas": 0,
+     "base": 6917,
+     "pedidos": 403,
+     "segundos": 481
+    },
+    "alto": {
+     "partidas": 7329,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11473,
+     "nuevas": 213,
+     "borradas": 0,
+     "base": 11686,
+     "pedidos": 372,
+     "segundos": 474
+    }
+   },
+   "minutos": 30.1
+  },
+  {
+   "inicio": "2026-09-26T07:46Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 5689,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8340,
+     "nuevas": 214,
+     "borradas": 0,
+     "base": 8554,
+     "pedidos": 575,
+     "segundos": 706
+    },
+    "bajo": {
+     "partidas": 4546,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 6917,
+     "nuevas": 157,
+     "borradas": 0,
+     "base": 7074,
+     "pedidos": 439,
+     "segundos": 497
+    },
+    "alto": {
+     "partidas": 7528,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11686,
+     "nuevas": 199,
+     "borradas": 0,
+     "base": 11885,
+     "pedidos": 358,
+     "segundos": 462
+    }
+   },
+   "minutos": 27.8
+  },
+  {
+   "inicio": "2026-09-26T08:14Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 5948,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8554,
+     "nuevas": 259,
+     "borradas": 0,
+     "base": 8813,
+     "pedidos": 618,
+     "segundos": 726
+    },
+    "bajo": {
+     "partidas": 4656,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7074,
+     "nuevas": 110,
+     "borradas": 0,
+     "base": 7184,
+     "pedidos": 385,
+     "segundos": 477
+    },
+    "alto": {
+     "partidas": 7714,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11885,
+     "nuevas": 186,
+     "borradas": 0,
+     "base": 12071,
+     "pedidos": 343,
+     "segundos": 371
+    }
+   },
+   "minutos": 26.3
+  },
+  {
+   "inicio": "2026-09-26T08:40Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 6290,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8813,
+     "nuevas": 342,
+     "borradas": 0,
+     "base": 9155,
+     "pedidos": 711,
+     "segundos": 843
+    },
+    "bajo": {
+     "partidas": 4821,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7184,
+     "nuevas": 165,
+     "borradas": 0,
+     "base": 7349,
+     "pedidos": 441,
+     "segundos": 488
+    },
+    "alto": {
+     "partidas": 7932,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 12071,
+     "nuevas": 218,
+     "borradas": 0,
+     "base": 12289,
+     "pedidos": 373,
+     "segundos": 476
+    }
+   },
+   "minutos": 30.1
+  },
+  {
+   "inicio": "2026-09-26T11:24Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 6641,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9155,
+     "nuevas": 351,
+     "borradas": 0,
+     "base": 9506,
+     "pedidos": 717,
+     "segundos": 846
+    },
+    "bajo": {
+     "partidas": 4930,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7349,
+     "nuevas": 109,
+     "borradas": 0,
+     "base": 7458,
+     "pedidos": 380,
+     "segundos": 391
+    },
+    "alto": {
+     "partidas": 8107,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 12289,
+     "nuevas": 175,
+     "borradas": 0,
+     "base": 12464,
+     "pedidos": 332,
+     "segundos": 468
+    }
+   },
+   "minutos": 28.5
+  },
+  {
+   "inicio": "2026-09-26T11:52Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 6862,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9506,
+     "nuevas": 221,
+     "borradas": 0,
+     "base": 9727,
+     "pedidos": 589,
+     "segundos": 618
+    },
+    "bajo": {
+     "partidas": 5105,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7458,
+     "nuevas": 175,
+     "borradas": 0,
+     "base": 7633,
+     "pedidos": 457,
+     "segundos": 593
+    },
+    "alto": {
+     "partidas": 8243,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 12464,
+     "nuevas": 136,
+     "borradas": 0,
+     "base": 12600,
+     "pedidos": 292,
+     "segundos": 360
+    }
+   },
+   "minutos": 26.2
+  },
+  {
+   "inicio": "2026-09-26T12:19Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 7074,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9727,
+     "nuevas": 212,
+     "borradas": 0,
+     "base": 9939,
+     "pedidos": 567,
+     "segundos": 613
+    },
+    "bajo": {
+     "partidas": 5288,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7633,
+     "nuevas": 183,
+     "borradas": 0,
+     "base": 7816,
+     "pedidos": 457,
+     "segundos": 592
+    },
+    "alto": {
+     "partidas": 8403,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 12600,
+     "nuevas": 160,
+     "borradas": 0,
+     "base": 12760,
+     "pedidos": 314,
+     "segundos": 383
+    }
+   },
+   "minutos": 26.5
+  },
+  {
+   "inicio": "2026-09-26T12:45Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 7300,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 9939,
+     "nuevas": 226,
+     "borradas": 0,
+     "base": 10165,
+     "pedidos": 586,
+     "segundos": 688
+    },
+    "bajo": {
+     "partidas": 5396,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7816,
+     "nuevas": 108,
+     "borradas": 0,
+     "base": 7924,
+     "pedidos": 378,
+     "segundos": 476
+    },
+    "alto": {
+     "partidas": 8516,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 12760,
+     "nuevas": 113,
+     "borradas": 0,
+     "base": 12873,
+     "pedidos": 268,
+     "segundos": 283
+    }
+   },
+   "minutos": 24.2
+  },
+  {
+   "inicio": "2026-09-26T13:09Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 7494,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10165,
+     "nuevas": 194,
+     "borradas": 0,
+     "base": 10359,
+     "pedidos": 554,
+     "segundos": 676
+    },
+    "bajo": {
+     "partidas": 5543,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 7924,
+     "nuevas": 147,
+     "borradas": 0,
+     "base": 8071,
+     "pedidos": 424,
+     "segundos": 486
+    },
+    "alto": {
+     "partidas": 8667,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 12873,
+     "nuevas": 151,
+     "borradas": 0,
+     "base": 13024,
+     "pedidos": 310,
+     "segundos": 380
+    }
+   },
+   "minutos": 25.7
+  },
+  {
+   "inicio": "2026-09-26T13:35Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 7683,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10359,
+     "nuevas": 189,
+     "borradas": 0,
+     "base": 10548,
+     "pedidos": 548,
+     "segundos": 687
+    },
+    "bajo": {
+     "partidas": 5692,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8071,
+     "nuevas": 149,
+     "borradas": 0,
+     "base": 8220,
+     "pedidos": 423,
+     "segundos": 486
+    },
+    "alto": {
+     "partidas": 8792,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 13024,
+     "nuevas": 125,
+     "borradas": 0,
+     "base": 13149,
+     "pedidos": 282,
+     "segundos": 356
+    }
+   },
+   "minutos": 25.5
+  },
+  {
+   "inicio": "2026-09-26T14:01Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 7911,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10548,
+     "nuevas": 228,
+     "borradas": 0,
+     "base": 10776,
+     "pedidos": 585,
+     "segundos": 617
+    },
+    "bajo": {
+     "partidas": 5847,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8220,
+     "nuevas": 155,
+     "borradas": 0,
+     "base": 8375,
+     "pedidos": 425,
+     "segundos": 586
+    },
+    "alto": {
+     "partidas": 8885,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 13149,
+     "nuevas": 93,
+     "borradas": 0,
+     "base": 13242,
+     "pedidos": 244,
+     "segundos": 268
+    }
+   },
+   "minutos": 24.5
+  },
+  {
+   "inicio": "2026-09-26T14:25Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 8186,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 10776,
+     "nuevas": 275,
+     "borradas": 0,
+     "base": 11051,
+     "pedidos": 638,
+     "segundos": 728
+    },
+    "bajo": {
+     "partidas": 6045,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8375,
+     "nuevas": 198,
+     "borradas": 0,
+     "base": 8573,
+     "pedidos": 476,
+     "segundos": 596
+    },
+    "alto": {
+     "partidas": 8958,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 13242,
+     "nuevas": 73,
+     "borradas": 0,
+     "base": 13315,
+     "pedidos": 226,
+     "segundos": 265
+    }
+   },
+   "minutos": 26.5
+  },
+  {
+   "inicio": "2026-09-26T14:52Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 8414,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11051,
+     "nuevas": 228,
+     "borradas": 0,
+     "base": 11279,
+     "pedidos": 582,
+     "segundos": 660
+    },
+    "bajo": {
+     "partidas": 6160,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8573,
+     "nuevas": 115,
+     "borradas": 0,
+     "base": 8688,
+     "pedidos": 388,
+     "segundos": 478
+    },
+    "alto": {
+     "partidas": 9150,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 13315,
+     "nuevas": 192,
+     "borradas": 0,
+     "base": 13507,
+     "pedidos": 353,
+     "segundos": 472
+    }
+   },
+   "minutos": 26.8
+  },
+  {
+   "inicio": "2026-09-26T15:19Z",
+   "evento": "schedule",
+   "niveles": {
+    "medio": {
+     "partidas": 8685,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 11279,
+     "nuevas": 271,
+     "borradas": 0,
+     "base": 11550,
+     "pedidos": 632,
+     "segundos": 728
+    },
+    "bajo": {
+     "partidas": 6317,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 8688,
+     "nuevas": 157,
+     "borradas": 0,
+     "base": 8845,
+     "pedidos": 433,
+     "segundos": 504
+    },
+    "alto": {
+     "partidas": 9213,
+     "parches": [
+      "16.19"
+     ],
+     "antes": 13507,
+     "nuevas": 63,
+     "borradas": 0,
+     "base": 13570,
+     "pedidos": 215,
+     "segundos": 262
+    }
+   },
+   "minutos": 24.9
+  }
+ ]
+}
