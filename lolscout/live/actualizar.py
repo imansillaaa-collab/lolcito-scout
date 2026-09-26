@@ -75,13 +75,20 @@ class Actualizador:
             return self.vista()
         self._t = time.time()
         try:
-            base = _base(fijo=True)
-            r = requests.get(f"{base}/version.json", timeout=6, headers={"Cache-Control": "no-cache"})
-            if r.status_code == 404:          # todavía no se publicó ninguna versión
+            # Las dos direcciones pueden estar atrasadas unos minutos (cada una por su copia guardada):
+            # pregunto a las dos y me quedo con la versión más nueva.
+            leidas = []
+            for base in dict.fromkeys([_base(fijo=True), _base()]):
+                try:
+                    r = requests.get(f"{base}/version.json", timeout=6, headers={"Cache-Control": "no-cache"})
+                    if r.status_code == 200:
+                        leidas.append((str(r.json().get("version", "")), base, r.json()))
+                except (requests.RequestException, ValueError):
+                    continue
+            if not leidas:                    # sin internet o todavía no se publicó ninguna versión
                 self.estado, self.nueva = "al-dia", None
                 return self.vista()
-            r.raise_for_status()
-            info = r.json()
+            _, base, info = max(leidas, key=lambda x: x[0])
             if str(info.get("version", "")) > VERSION and info.get("sha256"):
                 self.nueva, self.estado = {**info, "_base": base}, "hay"   # el .exe se baja de ese mismo commit
             else:
