@@ -508,6 +508,18 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .gboard .obj{padding:4px 8px}
 .gboard .fight .flabel{font-size:16px;margin-bottom:6px}
 .panel.quest{margin-top:0}.panel.quest h2{margin-bottom:6px}
+.apoyo{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.apest{font-size:12px;color:var(--body)}
+.apest.ya{color:var(--hex);font-weight:600;animation:pulso 1.6s ease-in-out infinite;padding:4px 8px;border:1px solid var(--hex)}
+.apest.ok{color:var(--ok)}.apest.ok b{color:var(--gold-hi)}
+.apo{display:flex;gap:9px;align-items:flex-start;padding:6px 8px;border:1px solid var(--line);background:rgba(1,10,19,.45)}
+.apo .t{font-weight:600;color:var(--gold-hi);font-size:13px}
+.apo .tag{margin-left:6px}
+.apo .tag.ok{color:var(--ok);border-color:var(--ok)}
+.apo.best{border-color:var(--gold)}
+.apo.sel{border-color:var(--ok);background:rgba(10,200,120,.08)}
+.apo.off{opacity:.45}
+.apo .why{font-size:11.5px}
 .gboard h2{margin-bottom:10px}
 .tag{white-space:nowrap}
 @media (max-width:1420px){.pill.meta{display:none}.top{gap:14px}}
@@ -1017,6 +1029,18 @@ function draft(s){
 }
 
 // ---------- partida en curso (recuperado: se había perdido en la versión de la tarde del 23/9)
+// Misión de Support: las 5 mejoras del ítem, la mejor para esta partida primero; cuando la elegís, se marca
+function apoyoHtml(ap){
+  if(!ap) return '';
+  const est = ap.estado==='elegido' ? `<div class="apest ok">Elegiste <b>${esc((ap.opciones.find(o=>o.id===ap.elegido)||{}).name||'')}</b>${ap.elegido===ap.mejor?' · era la mejor para esta partida':''}</div>`
+    : ap.estado==='elegir' ? '<div class="apest ya">¡Ya podés elegir tu mejora! Es gratis: abrí la tienda.</div>'
+    : '<div class="apest">Cuando completes la misión vas a elegir una de estas mejoras gratis. Para esta partida:</div>';
+  return `<div class="apoyo">${est}${ap.opciones.map((o,i)=>{
+      const sel=ap.elegido===o.id, mejor=o.id===ap.mejor;
+      return `<div class="apo ${sel?'sel':''} ${mejor?'best':''} ${ap.elegido&&!sel?'off':''}">${iimg(o,'it')}<div style="min-width:0">
+        <div class="t">${esc(o.name)}${sel?'<span class="tag ok">la elegiste</span>':''}${mejor&&!sel?'<span class="tag">la mejor para esta partida</span>':''}</div>
+        <div class="small">${esc(o.que)}</div>${o.why.length&&!ap.elegido?`<div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div>`:''}</div></div>`;}).join('')}</div>`;
+}
 function player(p,isMe,enemy){
   const badge = p.dmg?`<span class="dmg d${p.dmg}">${p.dmg}</span>`:'';
   const duo = ((lastState&&lastState.duos)||{})[p.id];
@@ -1206,7 +1230,7 @@ function game(s){
     obj:['Objetivos',objectivesPanel(s.objectives)],
     pelea:[s.fight.mode==='objective'?'¿Conviene pelear el objetivo?':'¿Qué conviene ahora?',fightPanel(s.fight)],
     novedades:['Novedades',`<div class="events">${events}</div>`],
-    mision:s.quest?[s.quest.name,`<div>${esc(s.quest.reward)}</div><div class="small" style="margin-top:6px">Cómo se completa: ${esc(s.quest.how)}</div>`,'quest']:null,
+    mision:s.quest?[s.quest.name,`<div>${esc(s.quest.reward)}</div><div class="small" style="margin-top:6px">Cómo se completa: ${esc(s.quest.how)}</div>${apoyoHtml(s.apoyo)}`,'quest']:null,
   };
   const pants = s.pants?`<div class="pants lv${s.pants.level}">
       <div class="pt"><span class="picon">\u{1F456}</span>${esc(s.pants.title)}</div>

@@ -489,6 +489,17 @@ def pants(me, allies, enemies, lane_cmp, team_kills, t, role):
             "why": why[:3], "tip": PANTS_TIPS.get(role, "Hacete cargo de la partida: llevala vos.")}
 
 
+def _apoyo(dd, me, allies, enemies, fight, my_role):
+    """Misión de Support: las cinco mejoras del ítem, la mejor para esta partida primero, y cuál elegiste."""
+    if my_role != "UTILITY":
+        return None
+    from .apoyo import mejora_support
+    r = mejora_support(dd, me, allies, enemies, ((fight or {}).get("compare") or {}).get("score", 0.0))
+    for o in r["opciones"]:
+        o.update(_item_card(dd, o["id"]))
+    return r
+
+
 def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=None, champs=None) -> dict:
     from . import gameplan as gp
     from . import objectives as ob
@@ -603,6 +614,7 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
         "objectives": {k: v for k, v in obj.items() if k != "soonest"},
         "fight": fight,
         "quest": quest, "nItems": n_items,
+        "apoyo": _apoyo(dd, me, allies, enemies, fight, my_role),
         "enemies": enemy_rows,
         "allies": sorted((row(p) for p in allies), key=by_role),
         "teamGold": [sum(p["gold"] for p in allies), sum(p["gold"] for p in enemies)],

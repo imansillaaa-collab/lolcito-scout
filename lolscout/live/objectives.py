@@ -459,5 +459,5 @@ ROLE_QUEST = {
                "reward": "300 de oro, +2 de oro por súbdito, +40 por kill y las botas pasan a su propio espacio: "
                          "te queda lugar para 6 ítems más las botas."},
     "UTILITY": {"name": "Misión de Support", "how": "Oro de tu ítem de support y cargas de Riquezas Compartidas (800).",
-                "reward": "Tu ítem de support mejora gratis (6 caminos a elegir) y el Centinela de Control cuesta 40."},
+                "reward": "Tu ítem de support mejora gratis (5 caminos a elegir) y el Centinela de Control cuesta 40."},
 }
