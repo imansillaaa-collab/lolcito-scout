@@ -181,6 +181,7 @@ class Assistant:
             if phase is not None:
                 self.refresh_account()
             self.enrich_postgame()
+            self.seguir_lp()
             if phase == "ChampSelect":
                 self.postgame_hidden = bool(self.postgame)
                 st = draft_advice(self.lcu.champ_select() or {}, self.meta, self.duos, self.dist, self.dd,
@@ -224,6 +225,10 @@ class Assistant:
         if summary:
             summary["_live_t"] = rec.game.get("gameData", {}).get("gameTime")
             summary["_rec"] = rec  # para rehacerlo cuando llegue el historial
+            # LP ganados o perdidos: el rango de antes de la partida (durante la partida no se relee) y
+            # después se pregunta al cliente hasta que Riot lo actualiza
+            if self.rank and not self.simulated:
+                self._lp = {"antes": dict(self.rank), "hasta": time.time() + 300, "t": 0.0}
             self.postgame, self.postgame_hidden = summary, False
             if not self.simulated:
                 pg.save({k: v for k, v in summary.items() if not k.startswith("_")})
@@ -232,6 +237,25 @@ class Assistant:
         self.tracker.reset()
         new = pg.GameRecorder()
         self.recorder = new
+
+    def seguir_lp(self):
+        """Después de la partida: cuando Riot actualiza tu rango, anota en el resumen cuántos LP ganaste o perdiste."""
+        lp = getattr(self, "_lp", None)
+        if not lp or not self.postgame or time.time() - lp["t"] < 5:
+            return
+        if time.time() > lp["hasta"]:      # no era rankeada solo/dúo, o Riot no lo actualizó
+            self._lp = None
+            return
+        lp["t"] = time.time()
+        nuevo = self.lcu.ranked() if hasattr(self.lcu, "ranked") else None
+        antes = lp["antes"]
+        if not nuevo or (nuevo["wins"] + nuevo["losses"]) == (antes["wins"] + antes["losses"]):
+            return                          # todavía no contó la partida
+        self.rank, self._lp = nuevo, None
+        self.postgame["lp"] = lp_cambio(antes, nuevo)
+        puuid = (self.account or {}).get("puuid")
+        self.history.save(puuid, {k: v for k, v in self.postgame.items() if not k.startswith("_")})
+        pg.save({k: v for k, v in self.postgame.items() if not k.startswith("_")})
 
     def enrich_postgame(self):
         """El historial del cliente tarda un poco en tener la partida: lo sigo buscando unos minutos."""
@@ -267,6 +291,8 @@ class Assistant:
         if summary:
             summary["_live_t"] = self.postgame.get("_live_t")
             summary["_rec"] = self.postgame.get("_rec")
+            if self.postgame.get("lp"):          # los LP ya calculados no se pierden al rehacer el resumen
+                summary["lp"] = self.postgame["lp"]
             old_id, old_created = self.postgame.get("gameId"), self.postgame.get("created")
             self.postgame = summary
             puuid = (self.account or {}).get("puuid")
@@ -440,6 +466,28 @@ class Updater:
             self.log(f"ERROR inesperado: {e}")
         finally:
             self.running = False
+
+
+LP_TIERS = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"]
+LP_DIVS = ["IV", "III", "II", "I"]
+
+
+def lp_cambio(antes: dict, despues: dict) -> dict:
+    """Cuántos LP ganaste o perdiste (contando subidas y bajadas de división) y el rango nuevo."""
+    def valor(r):
+        t = LP_TIERS.index(r["tier"]) if r["tier"] in LP_TIERS else 0
+        if t >= LP_TIERS.index("MASTER"):   # de Maestro para arriba no hay divisiones: solo LP
+            return LP_TIERS.index("MASTER") * 400 + r["lp"]
+        d = LP_DIVS.index(r["division"]) if r["division"] in LP_DIVS else 0
+        return t * 400 + d * 100 + r["lp"]
+
+    nombre = lambda r: f"{online.TIER_ES.get(r['tier'], r['tier'].title())} {r['division'] if r['tier'] not in LP_TIERS[7:] else ''}".strip()  # noqa: E731
+    delta = valor(despues) - valor(antes)
+    cambio = None
+    if nombre(despues) != nombre(antes):
+        cambio = f"¡Subiste a {nombre(despues)}!" if delta > 0 else f"Bajaste a {nombre(despues)}"
+    return {"delta": delta, "text": f"{'+' if delta >= 0 else '−'}{abs(delta)} LP", "cambio": cambio,
+            "rango": f"{nombre(despues)} · {despues['lp']} LP"}
 
 
 def build_report_html(dd, assistant, nivel: str = None) -> str:
