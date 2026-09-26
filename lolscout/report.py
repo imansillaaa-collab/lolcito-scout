@@ -181,7 +181,7 @@ footer{margin-top:40px;color:var(--muted);font-size:12px}
   <div id="meBox"></div>
   </div>
 
-  <footer>Winrate ajustado: suma 30 partidas “fantasma” al 50% para que los campeones con pocas partidas no aparezcan inflados. Datos: API de Riot Games. Lolcito Scout no está respaldado por Riot Games.</footer>
+  <footer>Orden: winrate ajustado por cantidad de partidas (se suman 300 partidas “fantasma” al 50%): un campeón con muchas partidas y buen winrate va arriba de uno con pocas partidas y winrate altísimo. En «Mejores del parche» solo entran los que se juegan en al menos el 1% de las partidas de ese rol. Datos: API de Riot Games. Lolcito Scout no está respaldado por Riot Games.</footer>
 </div>
 
 <script>
@@ -226,10 +226,13 @@ if(!DIA || !DIA.roles){
     </div></div>`).join('');
 }
 
-// Top 5 por rol del parche
+// Top 5 por rol del parche: solo campeones que se juegan de verdad en ese rol (al menos el 1% de las partidas
+// del rol); así no aparece arriba el que juega un solo OTP ni el que lo usan fuera de su rol
+const TOTAL_ROL = r => D.roles[r].reduce((a,c)=>a+c.games,0) || 1;
+const populares = r => { const t=TOTAL_ROL(r), l=D.roles[r].filter(c=>c.games/t>=0.01); return l.length>=5?l:D.roles[r]; };
 $('#tops').innerHTML = roles.map(r => `
   <div class="panel"><h3>Mejores ${RN(r)} del parche</h3><div class="top">
-  ${D.roles[r].slice(0,5).map((c,i)=>`
+  ${populares(r).slice(0,5).map((c,i)=>`
     <div class="toprow"><span class="rank">${i+1}</span>${cimg(c.id)}
       <span class="name">${c.name}</span>${tier(c.tier)}
       <span class="num small">${c.games} p.</span>${wrc(c.wr)}</div>`).join('') || '<div class="empty">Sin datos suficientes todavía.</div>'}

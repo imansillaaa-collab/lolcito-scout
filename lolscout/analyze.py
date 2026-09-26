@@ -4,7 +4,10 @@ from collections import Counter, defaultdict
 
 from . import config
 
-PRIOR = 30  # "partidas fantasma" al 50%: evita que un campeón con 5 partidas y 5 victorias salga primero
+# «Partidas fantasma» al 50%: cuantas menos partidas tiene un campeón, más se acerca su puntaje al 50%.
+# Con 30 salían primeros campeones de 20 partidas y 70% (los que juega solo un OTP); con 300, uno con
+# 1500 partidas y 54% queda arriba de uno con 21 partidas y 71%.
+PRIOR = 300
 
 
 def adj_wr(wins: float, games: int, prior: int = PRIOR) -> float:

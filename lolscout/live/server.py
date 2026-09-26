@@ -182,12 +182,16 @@ class Assistant:
                 self.refresh_account()
             self.enrich_postgame()
             self.seguir_lp()
+            if phase != "ChampSelect":
+                self._runas_auto = self._runas_msg = None   # fuera de la selección: la próxima se vuelven a poner
             if phase == "ChampSelect":
                 self.postgame_hidden = bool(self.postgame)
-                st = draft_advice(self.lcu.champ_select() or {}, self.meta, self.duos, self.dist, self.dd,
+                ses = self.lcu.champ_select() or {}
+                st = draft_advice(ses, self.meta, self.duos, self.dist, self.dd,
                                   default_role=config.ROLES[0] if config.ROLES else "BOTTOM", pool=self.pool,
                                   champs=self.champs)
                 self.role_memory = st["myRole"]
+                self.runas_solas(ses, st)
             elif self.postgame and not self.postgame_hidden and phase not in ("InProgress", "GameStart", "Reconnect"):
                 st = self.show_postgame(phase)
             elif phase is None:
@@ -237,6 +241,33 @@ class Assistant:
         self.tracker.reset()
         new = pg.GameRecorder()
         self.recorder = new
+
+    def runas_solas(self, ses, st):
+        """Con «Runas automáticas» prendido: cuando tu campeón queda bloqueado (o lo cambiás por un intercambio),
+        pone la página recomendada. Una sola vez por campeón: si después la cambiás a mano, no la pisa."""
+        st["autoRunas"] = bool(config.AUTO_RUNAS)
+        st["autoRunasMsg"] = getattr(self, "_runas_msg", None)
+        if not config.AUTO_RUNAS or self.simulated or not hasattr(self.lcu, "apply_runes"):
+            return
+        local = ses.get("localPlayerCellId")
+        mis_picks = [a for g in ses.get("actions", []) for a in g if a.get("actorCellId") == local and a.get("type") == "pick"]
+        if not mis_picks or not all(a.get("completed") for a in mis_picks):
+            return                              # todavía no bloqueaste
+        me = next((p for p in ses.get("myTeam", []) if p.get("cellId") == local), {})
+        cid = me.get("championId") or 0
+        rc = st.get("runeChamp") or {}
+        if not cid or cid == getattr(self, "_runas_auto", None) or rc.get("id") != cid or not st.get("runes"):
+            return
+        self._runas_auto = cid
+        o = st["runes"][0]
+        nombre = f"{self.lcu.PAGE_PREFIX}{rc.get('name')}"
+        self.lcu.pagina_borrada = None
+        ok, res = self.lcu.apply_runes(nombre, o["primary"], o["sub"], o["perks"], o["shards"])
+        borrada = getattr(self.lcu, "pagina_borrada", None)
+        self._runas_msg = (f"Runas puestas solas: {o.get('title', 'la recomendada')} para {rc.get('name')}"
+                           + (f" (borré «{borrada}» para hacer lugar)" if borrada else "")) if ok             else f"No pude poner las runas solas: {res}"
+        print(f"[runas] automáticas para {rc.get('name')}: {'ok' if ok else res}", flush=True)
+        st["autoRunasMsg"] = self._runas_msg
 
     def seguir_lp(self):
         """Después de la partida: cuando Riot actualiza tu rango, anota en el resumen cuántos LP ganaste o perdiste."""
@@ -545,6 +576,9 @@ class App:
             return {"app": "lolscout"}
         if path == "/api/state":
             return self.assistant.get_state()
+        if path == "/api/auto-runas" and method == "POST":
+            config.save_settings({"AUTO_RUNAS": bool(body.get("on"))})
+            return {"ok": True, "on": config.AUTO_RUNAS}
         if path == "/api/settings":
             if method == "POST":
                 config.save_settings(body)

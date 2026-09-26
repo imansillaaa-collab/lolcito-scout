@@ -60,6 +60,7 @@ LOL_PATH = os.environ.get("LOL_PATH", "")
 # Estadísticas: "online" (las descarga ya calculadas, sin key) o "local" (las calcula con tu propia key)
 STATS_SOURCE = os.environ.get("STATS_SOURCE", "online")
 BRACKET = os.environ.get("BRACKET", "auto")               # auto = según el rango de tu cuenta
+AUTO_RUNAS = os.environ.get("AUTO_RUNAS", "1") == "1"      # al bloquear tu campeón, poner solas las runas recomendadas
 
 PLAYERS_PER_RUN = _int("PLAYERS_PER_RUN", 250)
 MATCHES_PER_PLAYER = _int("MATCHES_PER_PLAYER", 12)
@@ -73,7 +74,8 @@ RANKED_SOLO_QUEUE = 420
 ROLE_NAMES = {"TOP": "Top", "JUNGLE": "Jungla", "MIDDLE": "Mid", "BOTTOM": "ADC", "UTILITY": "Support"}
 
 EDITABLE = ["RIOT_API_KEY", "MY_RIOT_ID", "PLATFORM", "REGION", "TIERS", "ROLES", "AUTO_UPDATE", "LOL_PATH",
-            "PLAYERS_PER_RUN", "MAX_NEW_MATCHES", "MIN_GAMES", "STATS_SOURCE", "STATS_REPO", "BRACKET", "LAYOUT"]
+            "PLAYERS_PER_RUN", "MAX_NEW_MATCHES", "MIN_GAMES", "STATS_SOURCE", "STATS_REPO", "BRACKET", "LAYOUT",
+            "AUTO_RUNAS"]
 LAYOUT = {}  # orden de los paneles en la vista de partida (lo acomoda cada usuario)
 
 
@@ -108,8 +110,8 @@ def apply_settings(data: dict) -> None:
             v = int(v)
         if k == "LAYOUT" and not isinstance(v, dict):
             continue
-        if k == "AUTO_UPDATE":
-            v = bool(v)
+        if k in ("AUTO_UPDATE", "AUTO_RUNAS"):
+            v = v if isinstance(v, bool) else str(v).lower() in ("1", "true", "si", "sí", "on")
         if k in ("RIOT_API_KEY", "MY_RIOT_ID", "LOL_PATH", "STATS_REPO", "STATS_SOURCE", "BRACKET") and isinstance(v, str):
             v = v.strip()
         if k == "STATS_REPO" and not v and _bundled_repo():

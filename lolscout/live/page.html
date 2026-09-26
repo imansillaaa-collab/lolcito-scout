@@ -200,7 +200,8 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
   border:1px solid var(--gold-lo);background:var(--panel);position:relative;overflow:hidden;min-height:104px}
 .dh{display:flex;align-items:center;gap:14px;padding:12px 18px;position:relative;z-index:1;min-width:0}
 .dh.r{flex-direction:row-reverse;text-align:right}
-.dh .lbl{font:700 10px var(--title);letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.dh .lbl{font:700 10px var(--title);letter-spacing:1.4px;text-transform:uppercase;color:var(--gold-hi);display:inline-block;
+  padding:2px 7px;margin-bottom:3px;background:rgba(1,10,19,.72);border:1px solid rgba(200,170,110,.35);text-shadow:0 1px 2px #000}
 .dh .nm{font:700 24px var(--display);color:var(--gold-hi);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dh .nm.na{color:var(--muted);font-size:17px}
 .dhx{font:700 26px var(--display);color:var(--gold);z-index:1;padding:0 4px}
@@ -336,6 +337,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dpick .sp1 img{width:28px;height:28px}
 .why .duo,.cr-why .duo{color:var(--hex)}
 .why div.duo::before{color:var(--hex)}
+.autor{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);margin:0 0 8px;cursor:pointer;user-select:none}
+.autor input{accent-color:var(--gold);width:15px;height:15px;margin:0}
+.autormsg{font-size:11.5px;color:var(--ok);margin:-4px 0 8px}
 .situ{font-size:13px;color:var(--text);border-left:2px solid var(--gold-lo);padding:2px 0 2px 10px;margin:0 0 10px}
 .mios{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .mios b{color:var(--gold);font:700 11px var(--title);letter-spacing:1px;text-transform:uppercase}
@@ -547,10 +551,12 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .pghead>*{position:relative;z-index:1}
 .pghead::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(90deg,rgba(200,170,110,.14),transparent 45%)}
 /* banda del campeón entre el resultado y tus números: splash con fundido a los dos lados y el nombre */
-.pgchamp{position:relative;align-self:stretch;justify-self:center;width:100%;max-width:440px;margin:-18px 0;min-width:220px;display:flex;flex-direction:column;
+.pgchamp{position:relative;z-index:0!important;align-self:stretch;min-width:220px;margin:-18px 0;display:flex;flex-direction:column;
   align-items:center;justify-content:flex-end;padding-bottom:14px}
-.pgchamp .spw{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;
-  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 28%,#000 72%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 28%,#000 72%,transparent 100%)}
+.pgchamp .spw{position:absolute;top:0;bottom:0;left:-170px;right:-170px;overflow:hidden;pointer-events:none;z-index:0;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.18) 12%,rgba(0,0,0,.55) 24%,#000 38%,#000 62%,rgba(0,0,0,.55) 76%,rgba(0,0,0,.18) 88%,transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.18) 12%,rgba(0,0,0,.55) 24%,#000 38%,#000 62%,rgba(0,0,0,.55) 76%,rgba(0,0,0,.18) 88%,transparent 100%)}
+.pghead .pgres,.pghead .pgme{z-index:2}
 .pgchamp .spg{position:absolute;height:auto;max-width:none}
 .pgchamp .spw::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(1,10,19,.85) 0,rgba(1,10,19,.2) 45%,transparent 70%)}
 .pgchamp .cn{position:relative;z-index:1;font:700 30px var(--display);letter-spacing:2px;text-transform:uppercase;color:var(--gold-hi);
@@ -690,6 +696,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
           <label class="f" style="margin-top:14px"><span>Estadísticas de qué rango</span>
             <select class="sel" id="bracket"><option value="auto">Automático (según tu rango)</option><option value="bajo">Hierro – Plata</option><option value="medio">Oro – Platino</option><option value="alto">Esmeralda – Maestro</option></select></label>
           <label class="f"><span>Tu rol principal (para partidas sin rol asignado)</span><div class="checks" id="roles"></div></label>
+          <label class="autor" style="margin-top:4px"><input type="checkbox" id="autoRunasCfg"> Poner las runas recomendadas solas cuando bloqueo mi campeón</label>
           <div class="row"><button class="btn" onclick="saveCfg()">Guardar</button><span class="small" id="saved"></span></div>
         </div>
         <div class="panel">
@@ -778,6 +785,7 @@ function runeCard(o,i,champ,locked){
     <button class="rbtn" id="rb-${o.id}" onclick="ponerRunas('${o.id}')" ${locked?'':'disabled title="Elegí tu campeón primero"'}>Ponerlas en el LoL</button>
   </div>`;
 }
+async function autoRunas(on){ await api('/api/auto-runas',{on}); refresh(); }
 async function ponerRunas(id){
   const b=document.getElementById('rb-'+id); if(!b) return;
   const antes=b.textContent; b.disabled=true; b.textContent='Mandando…'; b.className='rbtn';
@@ -799,6 +807,9 @@ function runesPanel(s){
   const sp=s.spells?`<div class="spells" style="margin-top:8px" title="${esc(s.spells.why+(alts?'\n\nOtras opciones:\n'+alts:''))}"><span class="small" style="color:var(--gold)">Hechizos</span>${s.spells.par.map(x=>`<span class="sp1"><img src="${x.img}" alt=""><b>${esc(x.name)}</b></span>`).join('')}</div>`:'';
   return `<div class="panel tight"><h2>Runas${c.name?' para '+esc(c.name):''}</h2>
       ${locked?'':'<div class="situ" title="En cuanto elijas, se actualizan y se pueden mandar al juego.">Todavía no elegiste: son las de tu primera opción.</div>'}
+      <label class="autor" title="Cuando bloqueás tu campeón (o lo cambiás), Lolcito pone solo la página recomendada. Si después la cambiás a mano, no la pisa.">
+        <input type="checkbox" ${s.autoRunas?'checked':''} onchange="autoRunas(this.checked)"> Ponerlas solas cuando bloqueo mi campeón</label>
+      ${s.autoRunasMsg?`<div class="autormsg">${esc(s.autoRunasMsg)}</div>`:''}
       <div class="runas">${s.runes.map((o,i)=>runeFold(o,i,locked)).join('')}</div>
       ${sp}
     </div>`;
@@ -1373,7 +1384,7 @@ function statsText(inf){
 async function loadCfg(){
   const c=await api('/api/settings');
   $('#k').value=c.RIOT_API_KEY||''; $('#lolp').value=c.LOL_PATH||''; $('#repo').value=c.STATS_REPO||'';
-  $('#source').value=c.STATS_SOURCE||'online'; $('#bracket').value=c.BRACKET||'auto';
+  $('#source').value=c.STATS_SOURCE||'online'; $('#bracket').value=c.BRACKET||'auto'; $('#autoRunasCfg').checked=!!c.AUTO_RUNAS;
   checks('#tiers',TIERS,c.TIERS.split(',')); checks('#roles',ROLES,c.ROLES.split(','));
   $('#dataDir').textContent='Tus datos se guardan en: '+c.dataDir;
   const a=c.account;
@@ -1383,7 +1394,7 @@ async function loadCfg(){
 }
 async function saveCfg(){
   const body={RIOT_API_KEY:$('#k').value,LOL_PATH:$('#lolp').value,STATS_REPO:$('#repo').value,STATS_SOURCE:$('#source').value,
-              BRACKET:$('#bracket').value,TIERS:picked('#tiers')||'PLATINUM,EMERALD',ROLES:picked('#roles')||'BOTTOM,UTILITY'};
+              BRACKET:$('#bracket').value,AUTO_RUNAS:$('#autoRunasCfg').checked,TIERS:picked('#tiers')||'PLATINUM,EMERALD',ROLES:picked('#roles')||'BOTTOM,UTILITY'};
   await api('/api/settings',body); $('#saved').textContent='Guardado ✓'; setTimeout(()=>$('#saved').textContent='',2500); loadCfg();
 }
 async function refreshOnline(){ $('#statsBox').innerHTML='Descargando…'; const inf=await api('/api/stats',{}); $('#statsBox').innerHTML=statsText(inf); if($('#statsFrame').src) reloadStats(); }

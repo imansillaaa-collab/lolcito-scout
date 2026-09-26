@@ -65,10 +65,24 @@ def load(bracket: str, force: bool = False):
             err = f"Sin conexión con el servidor de estadísticas ({e.__class__.__name__})."
     if cache.exists():
         try:
-            return json.loads(cache.read_text(encoding="utf-8")), err
+            return normalizar(json.loads(cache.read_text(encoding="utf-8"))), err
         except ValueError:
             pass
     return None, err or "No hay estadísticas descargadas."
+
+
+def normalizar(result: dict) -> dict:
+    """Vuelve a calcular el puntaje y el tier de cada campeón con la regla actual (analyze.PRIOR) y reordena.
+    Así lo que ya estaba publicado con la regla vieja se ve bien sin esperar a la próxima publicación."""
+    from .analyze import adj_wr, tier_of
+    listas = list((result.get("roles") or {}).values()) + list(((result.get("dia") or {}).get("roles") or {}).values())
+    for champs in listas:
+        for c in champs:
+            if c.get("games"):
+                c["adj"] = adj_wr(c["wr"] * c["games"], c["games"])
+                c["tier"] = tier_of(c["adj"])
+        champs.sort(key=lambda c: c.get("adj", 0.5), reverse=True)
+    return result
 
 
 # ---------- «Todas las ligas»: junta los tres niveles en uno (lo usa la pestaña Estadísticas)
