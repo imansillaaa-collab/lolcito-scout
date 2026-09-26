@@ -4,6 +4,10 @@
 # Cada corrida trabaja unas 5 horas seguidas, en tandas de ~35 minutos, y publica al terminar cada tanda.
 # Así no importa si GitHub arranca tarde o se saltea alguna de las programadas: mientras una corre, la
 # siguiente queda en espera y arranca apenas termina.
+#
+# Después de CADA tanda se guardan las partidas acumuladas (caché): si la corrida se corta a la mitad, la
+# próxima sigue desde la última tanda terminada y no desde el principio. Cada tanda es un paso aparte porque
+# el caché solo se puede guardar entre pasos (herramientas/tanda.sh hace el trabajo de cada una).
 name: Estadísticas
 
 on:
@@ -38,40 +42,161 @@ jobs:
           key: stats-db-${{ github.run_id }}
           restore-keys: stats-db-
 
-      - name: Juntar partidas y publicar, tanda tras tanda (unas 5 horas)
+      - name: Hora de cierre (unas 5 horas)
+        run: echo "FIN=$(( $(date +%s) + 290 * 60 ))" >> "$GITHUB_ENV"
+
+      - name: Tanda 1
+        id: t1
         env:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
           DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-        run: |
-          fin=$(( $(date +%s) + 290 * 60 ))
-          tanda=0
-          while :; do
-            tanda=$((tanda + 1))
-            echo "::group::Tanda $tanda"
-            python publicar.py || echo "La tanda $tanda terminó con error: sigo con la próxima"
-            if [ -f publicado/indice.json ]; then
-              (
-                cd publicado
-                rm -rf .git
-                git init -q -b datos
-                git config user.name "lolcito-bot"
-                git config user.email "lolcito-bot@users.noreply.github.com"
-                git add .
-                git commit -qm "Estadísticas $(date -u '+%F %H:%M') (tanda $tanda)"
-                git push -qf "$DESTINO" datos
-              ) || echo "No pude publicar la tanda $tanda: se publica con la próxima"
-            fi
-            echo "::endgroup::"
-            # otra tanda solo si queda tiempo para terminarla (cada una tarda ~35 minutos)
-            if [ $(( fin - $(date +%s) )) -lt $(( 45 * 60 )) ]; then
-              echo "Listo: $tanda tandas."
-              break
-            fi
-          done
-
-      - name: Guardar las partidas acumuladas
-        if: always()
+        run: bash herramientas/tanda.sh 1
+      - name: Guardar partidas (tanda 1)
+        if: always() && steps.t1.outputs.guardar == 'si'
         uses: actions/cache/save@v4
         with:
           path: data
-          key: stats-db-${{ github.run_id }}
+          key: stats-db-${{ github.run_id }}-1
+
+      - name: Tanda 2
+        id: t2
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 2
+      - name: Guardar partidas (tanda 2)
+        if: always() && steps.t2.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-2
+
+      - name: Tanda 3
+        id: t3
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 3
+      - name: Guardar partidas (tanda 3)
+        if: always() && steps.t3.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-3
+
+      - name: Tanda 4
+        id: t4
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 4
+      - name: Guardar partidas (tanda 4)
+        if: always() && steps.t4.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-4
+
+      - name: Tanda 5
+        id: t5
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 5
+      - name: Guardar partidas (tanda 5)
+        if: always() && steps.t5.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-5
+
+      - name: Tanda 6
+        id: t6
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 6
+      - name: Guardar partidas (tanda 6)
+        if: always() && steps.t6.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-6
+
+      - name: Tanda 7
+        id: t7
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 7
+      - name: Guardar partidas (tanda 7)
+        if: always() && steps.t7.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-7
+
+      - name: Tanda 8
+        id: t8
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 8
+      - name: Guardar partidas (tanda 8)
+        if: always() && steps.t8.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-8
+
+      - name: Tanda 9
+        id: t9
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 9
+      - name: Guardar partidas (tanda 9)
+        if: always() && steps.t9.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-9
+
+      - name: Tanda 10
+        id: t10
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 10
+      - name: Guardar partidas (tanda 10)
+        if: always() && steps.t10.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-10
+
+      - name: Tanda 11
+        id: t11
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 11
+      - name: Guardar partidas (tanda 11)
+        if: always() && steps.t11.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-11
+
+      - name: Tanda 12
+        id: t12
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          DESTINO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: bash herramientas/tanda.sh 12
+      - name: Guardar partidas (tanda 12)
+        if: always() && steps.t12.outputs.guardar == 'si'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: stats-db-${{ github.run_id }}-12
