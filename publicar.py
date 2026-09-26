@@ -73,6 +73,7 @@ def publish_bracket(name, tiers, dd, client, demo=False):
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
         "patches": result.get("patches", []), "matches": result.get("matches", 0),
         "version": result.get("version"), "roles": result.get("roles", {}), "duos": result.get("duos", []),
+        "dia": result.get("dia"),
         "champs": {str(c): v for c, v in (result.get("champs") or {}).items()},
         "dist": dist,
     }

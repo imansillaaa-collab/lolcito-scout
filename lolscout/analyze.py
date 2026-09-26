@@ -1,4 +1,5 @@
 """Convierte las partidas guardadas en estadísticas: tier list, builds, counters y sinergias."""
+import time
 from collections import Counter, defaultdict
 
 from . import config
@@ -32,6 +33,33 @@ def pick_patches(conn, patch: str = None, min_matches: int = 300):
     if counts[ordered[0]] < min_matches and len(ordered) > 1:
         chosen.append(ordered[1])
     return chosen, sum(counts[p] for p in chosen)
+
+
+DIA_MIN_GAMES = 10  # en 24 horas hay menos partidas: alcanza con menos para entrar al top del día
+
+
+def picks_del_dia(conn, patches, horas: int = 24, top: int = 10) -> dict:
+    """Los mejores de cada rol contando solo las partidas de las últimas `horas` (la solapa «Picks del día»)."""
+    desde = int(time.time()) - horas * 3600
+    ph = ",".join("?" * len(patches))
+    rows = conn.execute(
+        f"""SELECT p.position, p.champion_id, p.win FROM participants p JOIN matches m USING(match_id)
+            WHERE m.patch IN ({ph}) AND m.game_start >= ?""",
+        [*patches, desde],
+    ).fetchall()
+    n = conn.execute(f"SELECT COUNT(*) FROM matches WHERE patch IN ({ph}) AND game_start >= ?",
+                     [*patches, desde]).fetchone()[0]
+    stats = defaultdict(lambda: [0, 0])
+    for r in rows:
+        stats[(r["position"], r["champion_id"])][0] += 1
+        stats[(r["position"], r["champion_id"])][1] += r["win"]
+    roles = {}
+    for role in config.ROLES:
+        lista = [{"id": cid, "games": g, "wr": w / g, "adj": adj_wr(w, g), "tier": tier_of(adj_wr(w, g))}
+                 for (pos, cid), (g, w) in stats.items() if pos == role and g >= DIA_MIN_GAMES]
+        lista.sort(key=lambda c: c["adj"], reverse=True)
+        roles[role] = lista[:top]
+    return {"horas": horas, "matches": n, "roles": roles}
 
 
 def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
@@ -143,6 +171,8 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
             })
         champs.sort(key=lambda c: c["adj"], reverse=True)
         result["roles"][role] = champs
+
+    result["dia"] = picks_del_dia(conn, patches)
 
     # Ítems de cada campeón juntando todos los roles: sirve para la build en partida, que necesita
     # saber qué arma ESE campeón aunque no llegue a las partidas que pide la tier list de su rol.

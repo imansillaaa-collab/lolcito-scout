@@ -17,6 +17,8 @@ def _lookup(result: dict, dd) -> dict:
                 spell_ids.update(pair)
     for d in result["duos"]:
         champ_ids.update((d["adc"], d["sup"]))
+    for champs in ((result.get("dia") or {}).get("roles") or {}).values():
+        champ_ids.update(c["id"] for c in champs)
     for m in result.get("me") or []:
         champ_ids.add(m["id"])
     return {
@@ -54,7 +56,7 @@ TEMPLATE = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lolcito Scout · Picks del día</title>
+<title>Lolcito Scout · Mejores picks</title>
 <style>
 /* Tipografía:
    - League (instalada en tu PC): logo, "VS" y números grandes (solo textos sin tildes, porque League no las tiene).
@@ -123,18 +125,36 @@ select{width:100%;background:var(--panel2);color:var(--text);border:1px solid va
 .scroll{overflow-x:auto}
 .empty{color:var(--muted);padding:12px 0}
 footer{margin-top:40px;color:var(--muted);font-size:12px}
+/* Solapas principales: «Parche X · Mejores picks» (la principal) y «Picks del día» */
+.vtabs{display:flex;gap:4px;border-bottom:1px solid #785a28;margin:-8px 0 20px;flex-wrap:wrap}
+.vtab{background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:10px 18px 9px;cursor:pointer;
+  font:700 15px "LS Title",Georgia,serif;letter-spacing:1.2px;text-transform:uppercase}
+.vtab:hover{color:var(--text)}
+.vtab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.vtab small{font:600 11px "LS Body","Segoe UI",sans-serif;letter-spacing:0;text-transform:none;color:var(--muted);margin-left:6px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div>
-      <h1>Lolcito <span>Scout</span> · picks del día</h1>
+      <h1>Lolcito <span>Scout</span></h1>
       <div class="meta" id="sub"></div>
     </div>
     <div class="chips" id="chips"></div>
   </header>
 
+  <nav class="vtabs">
+    <button class="vtab on" data-v="parche" id="tabParche">Mejores picks del parche</button>
+    <button class="vtab" data-v="dia">Picks del día<small>últimas 24 h</small></button>
+  </nav>
+
+  <div id="vDia" hidden>
+    <div class="small" id="diaInfo" style="margin-bottom:12px"></div>
+    <div class="grid2" id="diaTops"></div>
+  </div>
+
+  <div id="vParche">
   <div class="grid2" id="tops"></div>
 
   <h2>¿Qué pickeo? (asistente de draft)</h2>
@@ -159,6 +179,7 @@ footer{margin-top:40px;color:var(--muted);font-size:12px}
   <div class="panel scroll"><table id="duos"></table></div>
 
   <div id="meBox"></div>
+  </div>
 
   <footer>Winrate ajustado: suma 30 partidas “fantasma” al 50% para que los campeones con pocas partidas no aparezcan inflados. Datos: API de Riot Games. Lolcito Scout no está respaldado por Riot Games.</footer>
 </div>
@@ -180,9 +201,34 @@ $('#sub').textContent = `Parche ${D.patches.join(' + ')} · ${D.platform} ${D.ti
 $('#chips').innerHTML = `<span class="chip"><b>${D.matches.toLocaleString('es-AR')}</b> partidas analizadas</span>` +
   roles.map(r=>`<span class="chip"><b>${D.roles[r].length}</b> ${RN(r)}</span>`).join('');
 
-// Top 5 por rol
+// Solapas: la del parche es la principal (abre siempre primero)
+const PARCHE = D.patches.length ? 'Parche ' + D.patches.join(' + ') : 'Parche';
+$('#tabParche').textContent = `${PARCHE} · Mejores picks`;
+document.querySelectorAll('.vtab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.vtab').forEach(x=>x.classList.toggle('on',x===b));
+  $('#vParche').hidden = b.dataset.v!=='parche';
+  $('#vDia').hidden = b.dataset.v!=='dia';
+});
+
+// Picks del día: solo las partidas de las últimas 24 horas
+const DIA = D.dia;
+if(!DIA || !DIA.roles){
+  $('#diaInfo').textContent = 'Todavía no hay picks del día: aparecen con la próxima publicación de estadísticas.';
+}else{
+  $('#diaInfo').textContent = `${DIA.matches.toLocaleString('es-AR')} partidas de las últimas ${DIA.horas} horas. `+
+    'Con menos partidas cambia más de un día para el otro: para decidir, fijate primero en la solapa del parche.';
+  $('#diaTops').innerHTML = roles.map(r => `
+    <div class="panel"><h3>${RN(r)} · hoy</h3><div class="top">
+    ${(DIA.roles[r]||[]).slice(0,5).map((c,i)=>`
+      <div class="toprow"><span class="rank">${i+1}</span>${cimg(c.id)}
+        <span class="name">${cname(c.id)}</span>${tier(c.tier)}
+        <span class="num small">${c.games} p.</span>${wrc(c.wr)}</div>`).join('') || '<div class="empty">Pocas partidas hoy todavía.</div>'}
+    </div></div>`).join('');
+}
+
+// Top 5 por rol del parche
 $('#tops').innerHTML = roles.map(r => `
-  <div class="panel"><h3>Top ${RN(r)} del día</h3><div class="top">
+  <div class="panel"><h3>Mejores ${RN(r)} del parche</h3><div class="top">
   ${D.roles[r].slice(0,5).map((c,i)=>`
     <div class="toprow"><span class="rank">${i+1}</span>${cimg(c.id)}
       <span class="name">${c.name}</span>${tier(c.tier)}
