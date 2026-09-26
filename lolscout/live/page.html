@@ -946,7 +946,7 @@ function fightPanel(f){
   return `${cmpBlock(f.compare)}
     <div class="macro">${f.options.map((o,i)=>`<div class="mo ${i==0?'best':''}"><div class="mt">${i==0?'<span class="tag">lo más razonable ahora</span>':''}<b>${esc(o.title)}</b></div>
       <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div>`).join('')}</div>
-    <div class="note">No hay objetivos en juego. Son opciones según cómo viene la partida: vos decidís.</div>`;
+    <div class="note">${f.etapa?`${esc(f.etapa)}. `:''}Son opciones según tu rol y cómo viene la partida: vos decidís.</div>`;
 }
 // ---------- orden de los paneles (cada usuario lo acomoda como quiere; se guarda en ajustes.json)
 const COLS=['L','a','b','R'];

@@ -523,9 +523,19 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
         events = tracker.events[-10:][::-1]
     obj = ob.objectives(game, me["team"])
     nxt = build["next"][0] if build["next"] else None
+    lane = next((p for p in enemies if enemy_roles.get(p["cid"]) == my_role or p["position"] == my_role), None)
+    lane_cmp = None
+    if lane:
+        lane_cmp = {"gold": me["gold"] - lane["gold"], "level": me["level"] - lane["level"], "cs": me["cs"] - lane["cs"]}
+    # lo que necesita el consejo «¿Qué conviene ahora?» para saber en qué momento de la partida estás
+    rol_de = lambda p: p["position"] if p["position"] in POSITIONS else enemy_roles.get(p["cid"])  # noqa: E731
+    ctx = {"role": my_role, "me": me, "lane": lane, "laneCmp": lane_cmp,
+           "allies": {p["position"]: p for p in allies if p["position"] in POSITIONS},
+           "enemies": {rol_de(p): p for p in enemies if rol_de(p)},
+           "champName": lambda cid: dd.champ_name(cid)}
     fight = ob.situation(game, me["team"], dd, obj, (sum(p["gold"] for p in allies), sum(p["gold"] for p in enemies)),
                          me["cid"], max(dd.items.get(nxt["id"], {}).get("gold", 0) - gold_now, 0) if nxt else None,
-                         dd.item_name(nxt["id"]) if nxt else None)
+                         dd.item_name(nxt["id"]) if nxt else None, ctx=ctx)
     quest = ob.ROLE_QUEST.get(my_role)
 
     def card(iid, extra=None):
@@ -564,10 +574,6 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
     enemy_rows = sorted((row(p) for p in enemies), key=by_role)
     if enemy_rows:
         max(enemy_rows, key=lambda r: r["gold"])["threat"] = True
-    lane = next((p for p in enemies if enemy_roles.get(p["cid"]) == my_role or p["position"] == my_role), None)
-    lane_cmp = None
-    if lane:
-        lane_cmp = {"gold": me["gold"] - lane["gold"], "level": me["level"] - lane["level"], "cs": me["cs"] - lane["cs"]}
     team_kills = [sum(p["k"] for p in allies), sum(p["k"] for p in enemies)]
 
     return {
