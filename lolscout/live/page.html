@@ -313,6 +313,14 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .board.draftb{grid-template-columns:210px minmax(0,1fr) 210px;gap:12px}
 .board.draftb>.team .slot{min-height:54px;padding:5px 4px}
 .board.draftb>.team .slot .por{width:42px;height:42px}
+/* pantalla grande: los equipos del costado igual que en la partida (mismo ancho y campeones del mismo tamaño) */
+@media (min-width:1600px){
+  .board.draftb,.board{grid-template-columns:clamp(292px,19.5vw,560px) minmax(0,1fr) clamp(292px,19.5vw,560px)}
+  .board>.team .slot,.board.draftb>.team .slot{padding:clamp(8px,.5vw,14px) 6px;gap:clamp(11px,.7vw,16px)}
+  .board>.team .slot .por,.board.draftb>.team .slot .por{width:clamp(38px,3.1vw,84px);height:clamp(38px,3.1vw,84px)}
+  .board>.team .slot .name{font-size:clamp(14px,.82vw,21px)}
+  .board>.team .slot .role{font-size:clamp(11px,.6vw,14px)}
+}
 .chgrid.tres{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .dpick .panel.tight{margin-bottom:0}
 .dpick .ch{min-height:0;padding:7px 9px}
@@ -910,7 +918,7 @@ function layoutSplashes(){
     const fx=+img.dataset.fx, fy=+img.dataset.fy, t=+img.dataset.t||0.33;
     const derecha=box.classList.contains('r');
     let w=2.1*bh/(t*0.59);
-    w=Math.max(bw*0.85, Math.min(bw*2.4, w)); const h=w*0.59;
+    w=Math.max(bw, bh/0.59, Math.min(bw*2.4, w)); const h=w*0.59;   // siempre cubre todo el recuadro (sin franjas negras)
     const ancla=box.classList.contains('c')?0.5:derecha?0.72:0.28;
     let left=ancla*bw-fx*w; left=Math.min(0,Math.max(bw-w,left));
     let top=bh/2-fy*h; top=Math.min(0,Math.max(bh-h,top));
