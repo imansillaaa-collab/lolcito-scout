@@ -243,11 +243,11 @@ class Assistant:
         self.recorder = new
 
     def runas_solas(self, ses, st):
-        """Con «Runas automáticas» prendido: cuando tu campeón queda bloqueado (o lo cambiás por un intercambio),
+        """Con el switch «Runas automáticas» prendido: cuando tu campeón queda bloqueado (o lo cambiás por un intercambio),
         pone la página recomendada. Una sola vez por campeón: si después la cambiás a mano, no la pisa."""
-        st["autoRunas"] = bool(config.AUTO_RUNAS)
+        st["autoRunas"] = bool(config.RUNAS_SOLAS)
         st["autoRunasMsg"] = getattr(self, "_runas_msg", None)
-        if not config.AUTO_RUNAS or self.simulated or not hasattr(self.lcu, "apply_runes"):
+        if not config.RUNAS_SOLAS or self.simulated or not hasattr(self.lcu, "apply_runes"):
             return
         local = ses.get("localPlayerCellId")
         mis_picks = [a for g in ses.get("actions", []) for a in g if a.get("actorCellId") == local and a.get("type") == "pick"]
@@ -577,8 +577,8 @@ class App:
         if path == "/api/state":
             return self.assistant.get_state()
         if path == "/api/auto-runas" and method == "POST":
-            config.save_settings({"AUTO_RUNAS": bool(body.get("on"))})
-            return {"ok": True, "on": config.AUTO_RUNAS}
+            config.save_settings({"RUNAS_SOLAS": bool(body.get("on"))})   # queda guardado en ajustes.json
+            return {"ok": True, "on": config.RUNAS_SOLAS}
         if path == "/api/settings":
             if method == "POST":
                 config.save_settings(body)

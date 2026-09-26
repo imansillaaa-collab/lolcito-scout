@@ -337,8 +337,16 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dpick .sp1 img{width:28px;height:28px}
 .why .duo,.cr-why .duo{color:var(--hex)}
 .why div.duo::before{color:var(--hex)}
-.autor{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);margin:0 0 8px;cursor:pointer;user-select:none}
-.autor input{accent-color:var(--gold);width:15px;height:15px;margin:0}
+/* switch «Runas automáticas» */
+.sw{display:flex;align-items:center;gap:9px;margin:0 0 9px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--text)}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw-tr{position:relative;width:38px;height:20px;border-radius:10px;background:#1e2d3d;border:1px solid var(--line);flex:none;transition:background .2s,border-color .2s}
+.sw-kn{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:left .2s,background .2s}
+.sw input:checked+.sw-tr{background:rgba(10,200,185,.25);border-color:var(--hex)}
+.sw input:checked+.sw-tr .sw-kn{left:20px;background:var(--hex)}
+.sw input:focus-visible+.sw-tr{outline:1px solid var(--gold)}
+.sw-es{font:700 10px var(--title);letter-spacing:1px;color:var(--muted)}
+.sw input:checked~.sw-es{color:var(--hex)}
 .autormsg{font-size:11.5px;color:var(--ok);margin:-4px 0 8px}
 .situ{font-size:13px;color:var(--text);border-left:2px solid var(--gold-lo);padding:2px 0 2px 10px;margin:0 0 10px}
 .mios{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -696,7 +704,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
           <label class="f" style="margin-top:14px"><span>Estadísticas de qué rango</span>
             <select class="sel" id="bracket"><option value="auto">Automático (según tu rango)</option><option value="bajo">Hierro – Plata</option><option value="medio">Oro – Platino</option><option value="alto">Esmeralda – Maestro</option></select></label>
           <label class="f"><span>Tu rol principal (para partidas sin rol asignado)</span><div class="checks" id="roles"></div></label>
-          <label class="autor" style="margin-top:4px"><input type="checkbox" id="autoRunasCfg"> Poner las runas recomendadas solas cuando bloqueo mi campeón</label>
+          <div id="swCfg" style="margin-top:6px"></div>
           <div class="row"><button class="btn" onclick="saveCfg()">Guardar</button><span class="small" id="saved"></span></div>
         </div>
         <div class="panel">
@@ -785,7 +793,15 @@ function runeCard(o,i,champ,locked){
     <button class="rbtn" id="rb-${o.id}" onclick="ponerRunas('${o.id}')" ${locked?'':'disabled title="Elegí tu campeón primero"'}>Ponerlas en el LoL</button>
   </div>`;
 }
-async function autoRunas(on){ await api('/api/auto-runas',{on}); refresh(); }
+// el switch se guarda apenas lo tocás (no hace falta «Guardar») y queda así aunque cierres Lolcito
+function switchRunas(on){ return `<label class="sw" title="Cuando bloqueás tu campeón (o lo cambiás), Lolcito pone solo la página recomendada. Si después la cambiás a mano, no la pisa. Queda guardado aunque cierres Lolcito.">
+        <input type="checkbox" ${on?'checked':''} onchange="autoRunas(this.checked)"><span class="sw-tr"><span class="sw-kn"></span></span>
+        <span class="sw-tx">Runas automáticas</span><b class="sw-es">${on?'ON':'OFF'}</b></label>`; }
+async function autoRunas(on){
+  document.querySelectorAll('.sw-es').forEach(e=>e.textContent=on?'ON':'OFF');
+  await api('/api/auto-runas',{on});
+  if(view==='cfg') loadCfg(); else refresh();
+}
 async function ponerRunas(id){
   const b=document.getElementById('rb-'+id); if(!b) return;
   const antes=b.textContent; b.disabled=true; b.textContent='Mandando…'; b.className='rbtn';
@@ -807,8 +823,9 @@ function runesPanel(s){
   const sp=s.spells?`<div class="spells" style="margin-top:8px" title="${esc(s.spells.why+(alts?'\n\nOtras opciones:\n'+alts:''))}"><span class="small" style="color:var(--gold)">Hechizos</span>${s.spells.par.map(x=>`<span class="sp1"><img src="${x.img}" alt=""><b>${esc(x.name)}</b></span>`).join('')}</div>`:'';
   return `<div class="panel tight"><h2>Runas${c.name?' para '+esc(c.name):''}</h2>
       ${locked?'':'<div class="situ" title="En cuanto elijas, se actualizan y se pueden mandar al juego.">Todavía no elegiste: son las de tu primera opción.</div>'}
-      <label class="autor" title="Cuando bloqueás tu campeón (o lo cambiás), Lolcito pone solo la página recomendada. Si después la cambiás a mano, no la pisa.">
-        <input type="checkbox" ${s.autoRunas?'checked':''} onchange="autoRunas(this.checked)"> Ponerlas solas cuando bloqueo mi campeón</label>
+      <label class="sw" title="Cuando bloqueás tu campeón (o lo cambiás), Lolcito pone solo la página recomendada. Si después la cambiás a mano, no la pisa. Queda guardado aunque cierres Lolcito.">
+        <input type="checkbox" ${s.autoRunas?'checked':''} onchange="autoRunas(this.checked)"><span class="sw-tr"><span class="sw-kn"></span></span>
+        <span class="sw-tx">Runas automáticas</span><b class="sw-es">${s.autoRunas?'ON':'OFF'}</b></label>
       ${s.autoRunasMsg?`<div class="autormsg">${esc(s.autoRunasMsg)}</div>`:''}
       <div class="runas">${s.runes.map((o,i)=>runeFold(o,i,locked)).join('')}</div>
       ${sp}
@@ -1384,7 +1401,7 @@ function statsText(inf){
 async function loadCfg(){
   const c=await api('/api/settings');
   $('#k').value=c.RIOT_API_KEY||''; $('#lolp').value=c.LOL_PATH||''; $('#repo').value=c.STATS_REPO||'';
-  $('#source').value=c.STATS_SOURCE||'online'; $('#bracket').value=c.BRACKET||'auto'; $('#autoRunasCfg').checked=!!c.AUTO_RUNAS;
+  $('#source').value=c.STATS_SOURCE||'online'; $('#bracket').value=c.BRACKET||'auto'; $('#swCfg').innerHTML=switchRunas(!!c.RUNAS_SOLAS);
   checks('#tiers',TIERS,c.TIERS.split(',')); checks('#roles',ROLES,c.ROLES.split(','));
   $('#dataDir').textContent='Tus datos se guardan en: '+c.dataDir;
   const a=c.account;
@@ -1394,7 +1411,7 @@ async function loadCfg(){
 }
 async function saveCfg(){
   const body={RIOT_API_KEY:$('#k').value,LOL_PATH:$('#lolp').value,STATS_REPO:$('#repo').value,STATS_SOURCE:$('#source').value,
-              BRACKET:$('#bracket').value,AUTO_RUNAS:$('#autoRunasCfg').checked,TIERS:picked('#tiers')||'PLATINUM,EMERALD',ROLES:picked('#roles')||'BOTTOM,UTILITY'};
+              BRACKET:$('#bracket').value,TIERS:picked('#tiers')||'PLATINUM,EMERALD',ROLES:picked('#roles')||'BOTTOM,UTILITY'};
   await api('/api/settings',body); $('#saved').textContent='Guardado ✓'; setTimeout(()=>$('#saved').textContent='',2500); loadCfg();
 }
 async function refreshOnline(){ $('#statsBox').innerHTML='Descargando…'; const inf=await api('/api/stats',{}); $('#statsBox').innerHTML=statsText(inf); if($('#statsFrame').src) reloadStats(); }
