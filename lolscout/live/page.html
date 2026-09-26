@@ -543,14 +543,20 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .pb:disabled{opacity:.25;cursor:default}
 .panel.min{padding-bottom:4px}.panel.min h2{margin-bottom:6px}
 /* Resumen de fin de partida */
-.pghead{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:28px;padding:18px 24px;overflow:hidden}
+.pghead{display:grid;grid-template-columns:auto minmax(220px,1fr) auto auto auto;align-items:center;gap:28px;padding:18px 24px;overflow:hidden}
 .pghead>*{position:relative;z-index:1}
 .pghead::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(90deg,rgba(200,170,110,.14),transparent 45%)}
-.pghead>.spw.pgsp{position:absolute;top:0;bottom:0;left:0;right:0;z-index:0;overflow:hidden;pointer-events:none;
-  -webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,.25) 0,#000 22%,#000 42%,rgba(0,0,0,.45) 70%,rgba(0,0,0,.3) 100%);mask-image:linear-gradient(90deg,rgba(0,0,0,.25) 0,#000 22%,#000 42%,rgba(0,0,0,.45) 70%,rgba(0,0,0,.3) 100%)}
-.pghead>.spw.pgsp .spg{position:absolute;height:auto;max-width:none;filter:brightness(.8)}
-.pghead>.spw.pgsp::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(1,10,19,.35) 0,transparent 20%,transparent 36%,rgba(1,10,19,.6) 52%,rgba(1,10,19,.8))}
-.pghead .pgme{grid-column:3;text-shadow:0 1px 4px #000}
+/* banda del campeón entre el resultado y tus números: splash con fundido a los dos lados y el nombre */
+.pgchamp{position:relative;align-self:stretch;justify-self:center;width:100%;max-width:440px;margin:-18px 0;min-width:220px;display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-end;padding-bottom:14px}
+.pgchamp .spw{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 28%,#000 72%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 28%,#000 72%,transparent 100%)}
+.pgchamp .spg{position:absolute;height:auto;max-width:none}
+.pgchamp .spw::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(1,10,19,.85) 0,rgba(1,10,19,.2) 45%,transparent 70%)}
+.pgchamp .cn{position:relative;z-index:1;font:700 30px var(--display);letter-spacing:2px;text-transform:uppercase;color:var(--gold-hi);
+  text-shadow:0 2px 8px #000,0 0 2px #000;line-height:1;text-align:center}
+.pgchamp .cr{position:relative;z-index:1;font:700 11px var(--title);letter-spacing:1.5px;text-transform:uppercase;color:var(--body);margin-top:4px;text-shadow:0 1px 3px #000}
+.pghead .pgme{text-shadow:0 1px 4px #000}
 .lpd{font:700 26px var(--display);margin-top:6px;line-height:1}
 .lpd.up{color:#7fe8dd}.lpd.down{color:#ff8a8c}
 .lpr{font-size:12px;color:var(--body);margin-top:3px}.lpr b{color:var(--gold-hi)}
@@ -852,7 +858,7 @@ function layoutSplashes(){
     const derecha=box.classList.contains('r');
     let w=2.1*bh/(t*0.59);
     w=Math.max(bw*0.85, Math.min(bw*2.4, w)); const h=w*0.59;
-    const ancla=derecha?0.72:0.28;
+    const ancla=box.classList.contains('c')?0.5:derecha?0.72:0.28;
     let left=ancla*bw-fx*w; left=Math.min(0,Math.max(bw-w,left));
     let top=bh/2-fy*h; top=Math.min(0,Math.max(bh-h,top));
     Object.assign(img.style,{width:w+'px',left:left+'px',top:top+'px'});
@@ -1311,11 +1317,11 @@ function postgame(s,fromHist){
   const objs=`<div class="pgobj"><span class="a h">Tu equipo</span><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><span class="e h">Rival</span>${PG_OBJ.map(([key,label,img])=>`<b class="a">${o.mine[key]}</b><i></i><i class="poi">${img?`<img src="/static/obj/${img}.png" alt="">`:`<span class="pod">${key==='towers'?'♜':'◆'}</span>`}</i><span class="pol">${label}</span><i></i><i></i><b class="e">${o.theirs[key]}</b>`).join('')}</div>`;
   return `${fromHist?'':simBanner(s)}
   <div class="panel pghead ${win?'win':loss?'loss':''}">
-    ${chSplash(m,'l pgsp')}
     <div class="pgres"><div class="rt">${esc(s.resultText)}</div>
       ${s.lp?`<div class="lpd ${s.lp.delta>=0?'up':'down'}">${esc(s.lp.text)}</div><div class="lpr">${s.lp.cambio?`<b>${esc(s.lp.cambio)}</b> · `:''}${esc(s.lp.rango)}</div>`:''}
       <div class="small">${esc(s.queue||'Partida')} · ${esc(s.durationText)} · ${s.created?esc(fmtWhen(s.created)):'terminó '+esc(s.finishedAt||'')}</div></div>
-    <div class="pgme"><div><div class="name">${esc(m.name)} <span class="small">${esc(m.roleEs)}</span></div>
+    <div class="pgchamp">${chSplash(m,'c')}<div class="cn">${esc(m.name)}</div><div class="cr">${esc(m.roleEs)}</div></div>
+    <div class="pgme"><div>
       <div class="kdabig">${m.k} / <span class="dd">${m.d}</span> / ${m.a}</div>
       <div class="kdacap">Asesinatos / Muertes / Asistencias · <b>KDA de esta partida: ${Number(m.kda).toFixed(2)}</b></div>
       <div class="small">${m.kp}% de participación · <img class="mn" src="/static/minions.png" alt=""> ${m.cs} súbditos · ${k(m.gold)} de oro</div>
