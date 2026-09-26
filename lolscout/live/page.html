@@ -429,6 +429,18 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .objhead>*{position:relative}
 .dk img{width:16px;height:16px;vertical-align:-4px;margin-right:4px;border-radius:2px}
 /* Vista de partida horizontal: 4 columnas en pantallas de PC */
+/* franja de arriba en partida: misma que la selección de campeones, con marcador y reloj en el medio */
+.gmid{min-width:330px;gap:6px}
+.gsc{display:flex;align-items:center;gap:16px;line-height:1}
+.gsc b{font:700 30px var(--display);min-width:44px}
+.gsc .ka{color:var(--ally);text-align:right}.gsc .ke{color:var(--enemy);text-align:left}
+.gclock{font:700 21px var(--display);color:var(--gold-hi);padding:3px 12px;border:1px solid var(--gold-lo);background:rgba(1,10,19,.65)}
+.gbar2{display:flex;align-items:center;gap:8px;width:100%;font-size:11px;color:var(--body);white-space:nowrap}
+.gbar2 .bar{flex:1;margin:0}
+.gmid .lanecmp{margin-top:0;font-size:11px;gap:5px}
+.gmid .lanecmp span{padding:0 6px}
+.dh .sub{font-size:12px;color:var(--body);margin-top:3px;white-space:nowrap;text-shadow:0 1px 3px #000}
+.dh .sub .muerto{color:#ff8a8a;font-weight:600}
 .gtop{display:grid;grid-template-columns:auto 1fr auto auto;grid-template-areas:"kl lane clock kr" "bar bar bar bar";align-items:center;gap:6px 22px;padding:10px 16px}
 .gtop .gk.l{grid-area:kl;color:var(--ally)}.gtop .gk.r{grid-area:kr;color:var(--enemy);text-align:right}
 .gtop .gk .big{font:700 30px var(--display);line-height:1}.gtop .gk .small{color:inherit;opacity:.85}
@@ -938,10 +950,28 @@ function player(p,isMe,enemy){
       <div class="items">${p.items.map(i=>iimg(i)).join('')}</div></div></div>`;
 }
 const sign=n=>(n>0?'+':'')+n;
-function laneChips(c,lo){
+function laneChips(c,lo,corto){
   if(!c||!lo) return '';
   const cls=n=>n>0?'up':n<0?'down':'';
-  return `<div class="lanecmp"><span class="${cls(c.gold)}">${sign(c.gold)} oro en ítems</span><span class="${cls(c.level)}">${sign(c.level)} nivel</span><span class="${cls(c.cs)}">${sign(c.cs)} cs</span><span class="small">vs ${esc(lo.name)}</span></div>`;
+  return `<div class="lanecmp" title="Vos contra ${esc(lo.name)}"><span class="${cls(c.gold)}">${sign(c.gold)} oro en ítems</span><span class="${cls(c.level)}">${sign(c.level)} nivel</span><span class="${cls(c.cs)}">${sign(c.cs)} cs</span>${corto?'':`<span class="small">vs ${esc(lo.name)}</span>`}</div>`;
+}
+// Franja de arriba en partida: vos y tu rival de línea con sus splash, y en el medio marcador, reloj y oro
+function gameHead(s){
+  const me=s.me, lo=s.laneOpponent, [ga,ge]=s.teamGold, tot=(ga+ge)||1;
+  const sub=p=>`${p.k}/${p.d}/${p.a} · ${k(p.gold)} en ítems · ${p.cs} cs${p.dead?` · <span class="muerto">vuelve en ${p.respawn} s</span>`:''}`;
+  return `<div class="dhead ghead">
+    ${chSplash(me,'l')}
+    ${lo?chSplash(lo,'r'):'<div class="spw r"></div>'}
+    <div class="dh"><div><div class="lbl">Vos · ${esc(s.myRoleEs)}</div>
+      <div class="nm">${esc(me.name)}</div><div class="sub">${sub(me)}</div></div></div>
+    <div class="dmid gmid">
+      <div class="gsc"><b class="ka" title="Kills de tu equipo">${s.teamKills[0]}</b><span class="gclock">${mmss(s.time||0)}</span><b class="ke" title="Kills del rival">${s.teamKills[1]}</b></div>
+      <div class="gbar2" title="Oro en ítems de cada equipo"><span>${k(ga)}</span><div class="bar"><div class="a" style="width:${ga/tot*100}%"></div><div class="e" style="width:${ge/tot*100}%"></div></div><span>${k(ge)}</span></div>
+      ${laneChips(s.laneCmp,lo,true)}
+    </div>
+    <div class="dh r"><div><div class="lbl">Rival de línea</div>
+      <div class="nm ${lo?'':'na'}">${lo?esc(lo.name):'Todavía no se sabe'}</div>${lo?`<div class="sub">${sub(lo)}</div>`:''}</div></div>
+  </div>`;
 }
 const OBJ_ICON={drake:'🜂',elder:'✦',grubs:'◉',herald:'◈',baron:'♛'};
 function objectivesPanel(o){
@@ -1034,9 +1064,6 @@ function game(s){
      ${s.boots?`<div class="ps boots ${s.boots.owned?'own':''} ${changed.has(s.boots.id)?'chg':''}" title="${esc(s.boots.name)}">${iimg(s.boots,'it')}<span>B</span></div>`:''}</div>
      <div class="changes">${s.changes.length?s.changes.map(c=>`<div class="chrow">${iimg(c.add)} <b>${esc(c.add.name)}</b>${c.remove?` <span class="small">en lugar de</span> ${iimg(c.remove)} <s>${esc(c.remove.name)}</s>`:''}<div class="why">${c.reasons.map(r=>`<div>${esc(r)}</div>`).join('')}</div></div>`).join(''):'<div class="small">Esta partida no pide cambios: la build de siempre ya cubre lo que hace falta.</div>'}</div>`;
   const events=s.events.length?s.events.map(e=>`<div class="ev ev-${e.kind}"><span class="t">${e.t}</span>${esc(e.text)}</div>`).join(''):'<div class="small">Acá van apareciendo las compras importantes de los rivales y los cambios en la partida.</div>';
-  const lane = lo?`<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${me.k}/${me.d}/${me.a} · ${k(me.gold)}</span></div>
-      <div class="x">VS</div><div class="gvn r"><b>${esc(lo.name)}</b><span>${lo.k}/${lo.d}/${lo.a} · ${k(lo.gold)}</span></div>${pimg(lo,'por md')}</div>${laneChips(s.laneCmp,lo)}`
-    : `<div class="gvs">${pimg(me,'por md')}<div class="gvn"><b>${esc(me.name)}</b><span>${esc(s.myRoleEs)}</span></div></div>`;
   const P={
     compra:['Próxima compra',`${s.noMeta?'<div class="small" style="margin-bottom:8px">Sin estadísticas del meta todavía: las opciones salen solo de tu campeón y del rival.</div>':''}<div class="cards">${opts}</div>${shop}`],
     build:['Tu build para esta partida',`${s.nItems===6?'<div class="small" style="margin-bottom:8px">6 ítems + botas: con la misión de ADC completa las botas pasan a su propio espacio.</div>':''}${plan}`],
@@ -1050,14 +1077,7 @@ function game(s){
       <div class="pt"><span class="picon">\u{1F456}</span>${esc(s.pants.title)}</div>
       <div class="pw">${s.pants.why.map(w=>`<span>${esc(w)}</span>`).join('')}</div>
       <div class="ptip">${esc(s.pants.tip)}</div></div>`:'';
-  return `${simBanner(s)}${pants}
-  <div class="panel gtop">
-    <div class="gk l"><div class="big">${s.teamKills[0]}</div><div class="small">Tu equipo · ${k(ga)} en ítems</div></div>
-    <div class="glane">${lane}</div>
-    <div class="clock">${mmss(s.time||0)}</div>
-    <div class="gk r"><div class="big">${s.teamKills[1]}</div><div class="small">${k(ge)} en ítems · Rival</div></div>
-    <div class="gbar"><div class="bar"><div class="a" style="width:${ga/tot*100}%"></div><div class="e" style="width:${ge/tot*100}%"></div></div></div>
-  </div>
+  return `${simBanner(s)}${gameHead(s)}${pants}
   <div class="gboard">
     <div class="col-ally gside"><div class="panel team ally"><h2 class="ally">Tu equipo</h2>${s.allies.map(p=>player(p,p.id===me.id,false)).join('')}</div>${layoutCol('L',P)}</div>
     <div class="gcol ga">${layoutCol('a',P)}</div>
