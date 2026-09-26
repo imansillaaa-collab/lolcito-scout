@@ -308,6 +308,32 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .pants .pw span{font-size:12px;color:var(--text);border:1px solid var(--gold-lo);padding:2px 7px}
 .pants .ptip{font-size:13px;color:var(--gold);max-width:420px}
 
+/* selección de campeones (pick): todo entra en la ventana sin bajar */
+.board.draftb{grid-template-columns:210px minmax(0,1fr) 210px;gap:12px}
+.board.draftb>.team .slot{min-height:54px;padding:5px 4px}
+.board.draftb>.team .slot .por{width:42px;height:42px}
+.chgrid.tres{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dpick .panel.tight{margin-bottom:0}
+.dpick .ch{min-height:0;padding:7px 9px}
+.dpick .ch .cht{max-width:100%}
+.dpick .ch .chn{font-size:15px}
+.dpick .ch .why{max-width:100%}
+.dpick .ch .spw{width:75%}
+.dpick .ch .chpie{max-width:100%}
+.dpick .masop{margin-top:8px}
+.dpick .masop h3{margin:2px 0 4px}
+.dpick .chrow2{padding:3px 6px;margin-bottom:3px;gap:8px}
+.dpick .chrow2 .por.sm{width:30px;height:30px}
+.dpick .chrow2 .cr-why{-webkit-line-clamp:1}
+.dpick .mios{margin-top:6px}
+.dpick .situ{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px;font-size:12.5px}
+.dpick .rp{gap:6px;padding:8px 10px}
+.dpick .rp .why div:nth-child(n+3){display:none}
+.dpick .rfold summary{padding:5px 8px}
+.dpick .spells{gap:10px}
+.dpick .sp1 img{width:28px;height:28px}
+.why .duo,.cr-why .duo{color:var(--hex)}
+.why div.duo::before{color:var(--hex)}
 .situ{font-size:13px;color:var(--text);border-left:2px solid var(--gold-lo);padding:2px 0 2px 10px;margin:0 0 10px}
 .mios{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .mios b{color:var(--gold);font:700 11px var(--title);letter-spacing:1px;text-transform:uppercase}
@@ -740,16 +766,13 @@ function runeFold(o,i,locked){
 function runesPanel(s){
   if(!s.runes||!s.runes.length) return '';
   const c=s.runeChamp||{}; const locked=s.runeChampLocked;
-  const sp=s.spells?`<div class="panel tight"><h2>Hechizos de invocador</h2>
-      <div class="spells">${s.spells.par.map(x=>`<span class="sp1"><img src="${x.img}" alt=""><b>${esc(x.name)}</b></span>`).join('')}
-        <span class="small">${esc(s.spells.why)}</span></div>
-      ${s.spells.alts.map(a=>`<div class="spalt"><img src="${a.img}" alt=""><span><b>${esc(a.name)}</b> — ${esc(a.why)}</span></div>`).join('')}
-    </div>`:'';
+  const alts=s.spells?s.spells.alts.map(a=>`${a.name}: ${a.why}`).join('\n'):'';
+  const sp=s.spells?`<div class="spells" style="margin-top:8px" title="${esc(s.spells.why+(alts?'\n\nOtras opciones:\n'+alts:''))}"><span class="small" style="color:var(--gold)">Hechizos</span>${s.spells.par.map(x=>`<span class="sp1"><img src="${x.img}" alt=""><b>${esc(x.name)}</b></span>`).join('')}</div>`:'';
   return `<div class="panel tight"><h2>Runas${c.name?' para '+esc(c.name):''}</h2>
-      ${locked?'':'<div class="situ">Todavía no elegiste campeón: te muestro las runas de la primera opción. En cuanto elijas, se actualizan y se pueden mandar al juego.</div>'}
+      ${locked?'':'<div class="situ" title="En cuanto elijas, se actualizan y se pueden mandar al juego.">Todavía no elegiste: son las de tu primera opción.</div>'}
       <div class="runas">${s.runes.map((o,i)=>runeFold(o,i,locked)).join('')}</div>
-      <div class="note">El botón crea en tu cliente una página llamada «Lolcito runas para ${esc(c.name||'tu campeón')}» y la deja seleccionada. Reemplaza la anterior de Lolcito; tus páginas propias no se tocan.</div>
-    </div>${sp}`;
+      ${sp}
+    </div>`;
 }
 // --- acciones sobre la selección de campeones (marcar / bloquear)
 // La pantalla se redibuja cada segundo, así que el estado de los botones («tocá otra vez», «bloqueando…»,
@@ -787,13 +810,10 @@ function draftBtns(cid, s, que){
       <button class="rbtn lock ${armado?'arm':''} ${fl?fl.cls:''}" ${disL} onclick="draftLock(${cid},'${que}')">${esc(txtL)}</button>
     </div>`;
 }
-function partnerPanel(s){
-  const p=s.allyPartner, l=s.partnerPicks||[];
-  if(!p||!l.length) return '';
-  return `<div class="panel tight"><h2>Combina con ${esc(p.name)}<span class="turno ${s.partnerLocked?'':'no'}">${s.partnerLocked?'ya lo bloqueó':'lo tiene marcado'}</span></h2>
-      <div class="chgrid">${l.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>
-      <div class="note">Mezcla cómo le va a cada dupla en tu rango (cuando hay partidas suficientes) con cómo encajan los estilos: un ADC de pelea corta con un support que engancha, uno que escala con uno que lo proteja, uno de rango con uno que pegue de lejos.</div>
-    </div>`;
+// Con quién vas en el bot: la combinación ya está dentro de cada campeón de «Qué pickear»
+function partnerTag(s){
+  const p=s.allyPartner; if(!p) return '';
+  return `<span class="turno ${s.partnerLocked?'':'no'}" title="Los campeones de abajo ya tienen en cuenta cómo combinan con ${esc(p.name)}">con ${esc(p.name)} · ${s.partnerLocked?'ya lo bloqueó':'lo tiene marcado'}</span>`;
 }
 function chAlias(o){ return ((o&&o.img)||'').split('/').pop().replace('.png',''); }
 function chSplash(o, cls){
@@ -820,10 +840,18 @@ window.addEventListener('resize',layoutSplashes);
 function chTags(o, kind){
   return `${tier(o.tier)}${o.counters?`<span class="tag">${kind==='ban'?'te contra a vos':'contra este rival'}</span>`:''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}${o.combo?'<span class="tag mio">combo conocido</span>':''}${o.sinergia?'<span class="tag mio">combina con tu equipo</span>':''}`;
 }
+// Motivos que hablan de tu compañero de bot («Con Thresh: …»): se muestran primero y resaltados
+function duoWhy(o, s){
+  const p=s&&s.allyPartner; if(!p) return [[], o.why];
+  const es=w=>w.startsWith('Con '+p.name);
+  return [o.why.filter(es), o.why.filter(w=>!es(w))];
+}
 function champRow(o, kind, s){
+  const [duo, resto]=duoWhy(o, s);
+  const txt=duo.length?`<span class="duo">${esc(duo[0])}</span>${resto.length?' · '+crWhy({...o,why:resto}):''}`:crWhy(o);
   return `<div class="chrow2 ${kind}" title="${esc(o.why.join(' · '))}">${pimg(o,'por sm')}
     <div class="cr-main"><div class="cr-top"><b>${esc(o.name)}</b>${chTags(o,kind)}</div>
-      <div class="cr-why">${crWhy(o)}</div></div>${draftBtns(o.id,s,kind)}</div>`;
+      <div class="cr-why">${txt}</div></div>${draftBtns(o.id,s,kind)}</div>`;
 }
 // en la fila: primero lo que cambia la decisión (sinergias, rival de línea) y el winrate del meta chiquito al final
 function crWhy(o){
@@ -836,10 +864,12 @@ function masOpciones(list, kind, s, titulo){
 }
 function champCard(o, kind, s, best){
   const tags=chTags(o,kind);
-  const why=o.why.slice(0,3), resto=o.why.length-why.length;
+  const [duo, otros]=duoWhy(o, s);
+  const why=[...duo.slice(0,1).map(w=>[w,'duo']), ...otros.slice(0,duo.length?1:(kind==='pick'?2:3)).map(w=>[w,''])];
+  const resto=o.why.length-why.length;
   return `<div class="ch ${kind} ${best?'best':''}" title="${esc(o.why.join(' · '))}">${chSplash(o,'r')}
     <div class="cht"><span class="chn">${esc(o.name)}</span>${tags}</div>
-    <div class="why">${why.map(w=>`<div>${esc(w)}</div>`).join('')}${resto>0?`<div class="mas">+${resto} motivo${resto>1?'s':''} más</div>`:''}</div>
+    <div class="why">${why.map(([w,c])=>`<div class="${c}">${esc(w)}</div>`).join('')}${resto>0?`<div class="mas">+${resto} motivo${resto>1?'s':''} más</div>`:''}</div>
     <div class="chpie">${kind==='pick'?build(o):''}${draftBtns(o.id,s,kind)}</div></div>`;
 }
 function bansPanel(s){
@@ -881,16 +911,15 @@ function draft(s){
     centro = bansPanel(s);
   }else{
     const opts = s.options.length
-      ? `<div class="chgrid">${s.options.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>${masOpciones(s.options.slice(3),'pick',s,'Más opciones')}`
+      ? `<div class="chgrid tres">${s.options.slice(0,3).map((o,i)=>champCard(o,'pick',s,i===0)).join('')}</div>${masOpciones(s.options.slice(3,7),'pick',s,'Más opciones')}`
       : '<div class="small">Sin estadísticas del meta todavía: cargá tu API key en Configuración y tocá «Actualizar ahora».</div>';
-    centro = `<div class="dsplit">
-      <div>${partnerPanel(s)}<div class="panel tight"><h2>Qué pickear</h2>
-        ${s.situation?`<div class="situ">${esc(s.situation)}</div>`:''}${opts}${mios}
-        <div class="note">Ordenadas por lo que le va bien a tu rival de línea y al resto del equipo rival, más el winrate en tu rango. Vos elegís.</div></div></div>
+    centro = `<div class="dsplit dpick">
+      <div><div class="panel tight"><h2>Qué pickear${partnerTag(s)}</h2>
+        ${s.situation?`<div class="situ" title="${esc(s.situation)} Ordenadas por lo que le va bien a tu rival de línea y al resto del equipo rival, más el winrate en tu rango.">${esc(s.situation)}</div>`:''}${opts}${mios}</div></div>
       <div>${runesPanel(s)}</div>
     </div>`;
   }
-  return `${simBanner(s)}${draftHead(s)}<div class="board">
+  return `${simBanner(s)}${draftHead(s)}<div class="board ${s.step==='ban'?'':'draftb'}">
     <div class="col-ally panel team ally"><h2 class="ally">Tu equipo</h2>${team}</div>
     <div class="col-center">${centro}</div>
     <div class="col-enemy panel team enemy"><h2 class="enemy">Equipo rival</h2>${foes}</div>

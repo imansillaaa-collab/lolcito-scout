@@ -9,7 +9,7 @@ from collections import defaultdict
 from itertools import permutations
 
 from ..analyze import adj_wr, tier_of
-from .duos import partner_picks, synergy as duo_synergy
+from .duos import COMBOS as DUO_COMBOS, _alias as _duo_alias, partner_picks, synergy as duo_synergy
 from .sinergias import ally_synergy
 
 POSITIONS = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
@@ -348,6 +348,10 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         options.append({**_champ_card(dd, c["id"]), "tier": c["tier"], "score": score, "why": why,
                         "games": c["games"], "thin": c["games"] < 40, "counters": counters, "mine": mine,
                         "sinergia": sinergia,
+                        # combo clásico con tu compañero de bot (el panel «Combina con…» ya no existe: va acá)
+                        "combo": bool(ally_partner and my_role in BOT_PARTNER and (
+                            (_duo_alias(dd, c["id"]), _duo_alias(dd, ally_partner)) if my_role == "BOTTOM"
+                            else (_duo_alias(dd, ally_partner), _duo_alias(dd, c["id"]))) in DUO_COMBOS),
                         "build": [_item_card(dd, i["id"]) for i in c["items"][:3]],
                         "boots": _item_card(dd, c["boots"][0]["id"]) if c["boots"] else None,
                         "keystone": {"name": dd.rune_name(c["keystones"][0]["id"]),
