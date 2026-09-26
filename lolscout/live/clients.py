@@ -220,6 +220,23 @@ class LCU:
             self.pagina_borrada = vieja.get("name")
         return ok, res
 
+    # --- Dúos: los 10 jugadores de la partida y sus últimas partidas (historial público del cliente) ---
+    def jugadores_partida(self):
+        """[(puuid, championId, equipo 1 o 2), ...] de la partida en curso, o [] si no hay."""
+        gd = (self.get("/lol-gameflow/v1/session", timeout=5) or {}).get("gameData") or {}
+        out = []
+        for n, equipo in ((1, gd.get("teamOne") or []), (2, gd.get("teamTwo") or [])):
+            for p in equipo:
+                if p.get("puuid") and p.get("championId"):
+                    out.append((p["puuid"], int(p["championId"]), n))
+        return gd.get("gameId"), out
+
+    def ids_partidas(self, puuid: str, n: int = 20) -> set:
+        """Números de las últimas partidas de un jugador (las que muestra su perfil en el cliente)."""
+        data = self.get(f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={n}", timeout=20)
+        games = ((data or {}).get("games") or {}).get("games") if isinstance(data, dict) else None
+        return {g.get("gameId") for g in games or [] if g.get("gameId")}
+
     def match_list(self, count: int = 20, puuid: str = None):
         """Últimas partidas de la cuenta logueada (el cliente las pide a Riot, puede tardar unos segundos)."""
         paths = [f"/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex={count}"]

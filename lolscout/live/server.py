@@ -171,6 +171,7 @@ class Assistant:
                 st = game_advice(game, self.meta, self.dist, self.dd, self.role_memory, self.tracker,
                                  champs=self.champs)
                 self.recorder.update(game, st, self.lcu)
+                st["duos"] = self.duos_partida()
                 if ended:  # pantalla de victoria/derrota: ya muestro el resumen
                     self.finish_game()
                     st = self.show_postgame()
@@ -217,6 +218,7 @@ class Assistant:
 
     # ---------- fin de partida
     def finish_game(self):
+        self._duos = None          # la próxima partida se vuelven a buscar
         rec = self.recorder
         if rec.game is None:
             return
@@ -417,6 +419,62 @@ class Assistant:
                     self.postgame = pg.summarize(self.dd, None, mh=mh, timeline=tl, puuid=(self.account or {}).get("puuid"))
         self.postgame_hidden = False
         return bool(self.postgame)
+
+    # ---------- dúos (grupos que juegan juntos) en la partida
+    DUO_COLORES = ["#f5a623", "#b36bff", "#3fd0ff", "#7ddc5a"]
+
+    def duos_partida(self):
+        """{championId: {"g": grupo, "color": ..., "juntos": n}}. Se calcula una vez por partida, en segundo plano:
+        dos del mismo equipo que jugaron juntos 2+ de sus últimas 20 partidas casi seguro están en dúo."""
+        if self.simulated:   # para ver cómo queda: dúos inventados
+            ids = lambda *a: [self.dd.champ_by_alias[x.lower()] for x in a]  # noqa: E731
+            out = {}
+            for g, grupo in enumerate([ids("Jinx", "Thresh"), ids("Kaisa", "Soraka"), ids("Evelynn", "Vladimir")]):
+                for cid in grupo:
+                    out[cid] = {"g": g, "color": self.DUO_COLORES[g], "juntos": 5 - g}
+            return out
+        d = getattr(self, "_duos", None)
+        if d is None or (d.get("hasta") and time.time() > d["hasta"] and not d.get("map")):
+            self._duos = {"estado": "buscando", "map": {}, "hasta": time.time() + 120}
+            threading.Thread(target=self._buscar_duos, daemon=True).start()
+            return {}
+        return d.get("map", {})
+
+    def _buscar_duos(self):
+        try:
+            gid, jugadores = self.lcu.jugadores_partida() if hasattr(self.lcu, "jugadores_partida") else (None, [])
+            if not jugadores:
+                return
+            hist = {pu: self.lcu.ids_partidas(pu) - {gid} for pu, _, _ in jugadores}
+            padre = {pu: pu for pu, _, _ in jugadores}
+
+            def raiz(x):
+                while padre[x] != x:
+                    x = padre[x]
+                return x
+            juntos = {}
+            for i, (a, _, ta) in enumerate(jugadores):
+                for b, _, tb in jugadores[i + 1:]:
+                    n = len(hist[a] & hist[b])
+                    if ta == tb and n >= 2:
+                        padre[raiz(b)] = raiz(a)
+                        juntos[a] = max(juntos.get(a, 0), n)
+                        juntos[b] = max(juntos.get(b, 0), n)
+            grupos = {}
+            for pu, _, _ in jugadores:
+                grupos.setdefault(raiz(pu), []).append(pu)
+            out, g = {}, 0
+            cid_de = {pu: cid for pu, cid, _ in jugadores}
+            for miembros in grupos.values():
+                if len(miembros) < 2:
+                    continue
+                for pu in miembros:
+                    out[cid_de[pu]] = {"g": g, "color": self.DUO_COLORES[g % len(self.DUO_COLORES)], "juntos": juntos.get(pu, 0)}
+                g += 1
+            self._duos = {"estado": "listo", "map": out, "gid": gid}
+            print(f"[duos] {g} grupo(s) en la partida {gid}", flush=True)
+        except Exception as e:
+            print(f"[duos] no pude buscar: {e}", flush=True)
 
     def show_postgame(self, phase=None):
         st = {k: v for k, v in self.postgame.items() if not k.startswith("_")}

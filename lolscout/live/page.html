@@ -467,6 +467,20 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .gboard{display:grid;grid-template-columns:292px minmax(0,1fr) minmax(0,1.2fr) 292px;grid-template-areas:"ally a b enemy";gap:12px;align-items:start}
 .gboard .col-ally{grid-area:ally}.gboard .col-enemy{grid-area:enemy}.gboard .ga{grid-area:a}.gboard .gb{grid-area:b}
 .gcol .panel{margin-bottom:12px}
+/* dúos: etiqueta y borde del color de su grupo (dos dúos distintos = dos colores) */
+.duob{display:inline-block;font:700 10px var(--title);letter-spacing:1px;padding:1px 6px;margin-left:4px;vertical-align:1px;
+  color:#010a13;background:var(--dc);box-shadow:0 0 8px color-mix(in srgb,var(--dc) 55%,transparent)}
+.gboard .slot.enduo{box-shadow:inset 3px 0 0 var(--dc)}
+.gboard .team.enemy .slot.enduo{box-shadow:inset -3px 0 0 var(--dc)}
+/* pantalla grande: las columnas de los equipos se ensanchan y los campeones crecen */
+@media (min-width:1600px){
+  .gboard{grid-template-columns:clamp(292px,19vw,400px) minmax(0,1fr) minmax(0,1.2fr) clamp(292px,19vw,400px)}
+  .gboard .slot{padding:8px 4px;gap:11px}
+  .gboard .slot .por{width:clamp(38px,3vw,60px);height:clamp(38px,3vw,60px)}
+  .gboard .slot .name{font-size:clamp(14px,.8vw,16px)}
+  .gboard .slot .stat{font-size:clamp(11.5px,.66vw,13px)}
+  .gboard .slot .items img{width:clamp(22px,1.45vw,28px);height:clamp(22px,1.45vw,28px)}
+}
 .gboard .panel.team{padding:10px}
 .gboard .slot{padding:5px 2px;gap:8px}
 .gboard .alerts{grid-template-columns:1fr 1fr}
@@ -996,10 +1010,12 @@ function draft(s){
 // ---------- partida en curso (recuperado: se había perdido en la versión de la tarde del 23/9)
 function player(p,isMe,enemy){
   const badge = p.dmg?`<span class="dmg d${p.dmg}">${p.dmg}</span>`:'';
+  const duo = ((lastState&&lastState.duos)||{})[p.id];
+  const duob = duo?`<span class="duob" style="--dc:${duo.color}" title="Jugaron juntos ${duo.juntos} de sus últimas 20 partidas: casi seguro están en dúo. Mismo color = mismo grupo.">DÚO</span>`:'';
   const def = enemy&&p.armor!=null?`<div class="stat" title="Armadura y resistencia mágica estimadas">${p.armor} armadura · ${p.mr} res. mágica</div>`:'';
   const flags = (p.flags||[]).map(f=>`<span class="flag f-${f.replace(/[^a-z]/g,'')}">${esc(f)}</span>`).join('');
-  return `<div class="slot ${isMe?'me':''} ${p.threat?'threat':''} ${p.dead?'dead':''}">${pimg(p,'por sm')}
-    <div class="who"><div class="name">${esc(p.name)} ${badge}${p.threat?'<span class="badge">más fuerte</span>':''}${p.dead?`<span class="deadb">muerto · ${p.respawn} s</span>`:''}</div>
+  return `<div class="slot ${isMe?'me':''} ${p.threat?'threat':''} ${p.dead?'dead':''} ${duo?'enduo':''}" ${duo?`style="--dc:${duo.color}"`:''}>${pimg(p,'por sm')}
+    <div class="who"><div class="name">${esc(p.name)} ${duob}${badge}${p.threat?'<span class="badge">más fuerte</span>':''}${p.dead?`<span class="deadb">muerto · ${p.respawn} s</span>`:''}</div>
       <div class="stat">${esc(p.role)} · nv ${p.level} · ${p.k}/${p.d}/${p.a} · ${p.cs} cs · <span class="gold">${k(p.gold)}</span></div>${def}
       ${flags?`<div class="flags">${flags}</div>`:''}
       <div class="items">${p.items.map(i=>iimg(i)).join('')}</div></div></div>`;
