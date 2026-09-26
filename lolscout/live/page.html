@@ -618,7 +618,10 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
   <section class="view" id="v-stats">
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
       <div class="small" id="statsInfo"></div>
-      <div class="row"><button class="btn sec" onclick="reloadStats()">Recargar</button><button class="btn" onclick="refreshOnline().then(reloadStats)">Descargar ahora</button></div>
+      <div class="row"><select class="sel" id="statsNivel" onchange="guardarNivel();reloadStats()" title="De qué ligas son las estadísticas">
+        <option value="todas">Todas las ligas</option><option value="">Tu liga (la que usa el draft)</option>
+        <option value="bajo">Hierro – Plata</option><option value="medio">Oro – Platino</option><option value="alto">Esmeralda – Maestro</option></select>
+        <button class="btn sec" onclick="reloadStats()">Recargar</button><button class="btn" onclick="refreshOnline().then(reloadStats)">Descargar ahora</button></div>
     </div>
     <iframe id="statsFrame" title="Estadísticas"></iframe>
   </section>
@@ -1273,7 +1276,17 @@ async function simulate(mode){ resetHist(); await api('/api/simulate',{mode}); d
 async function realMode(){ resetHist(); await api('/api/real',{}); refresh(); }
 
 // ---------- estadísticas
-function reloadStats(){ $('#statsFrame').src='/reporte?t='+Date.now(); api('/api/settings').then(c=>$('#statsInfo').innerHTML=statsText(c.info)); }
+// De qué ligas mostrar las estadísticas (se recuerda en esta compu). «Todas las ligas» es la de arranque.
+try{ const n=localStorage.getItem('statsNivel'); if(n!==null) $('#statsNivel').value=n; }catch(e){}
+function guardarNivel(){ try{ localStorage.setItem('statsNivel',$('#statsNivel').value); }catch(e){} }
+function reloadStats(){
+  const sel=$('#statsNivel'), nivel=sel.value;
+  $('#statsFrame').src='/reporte?nivel='+encodeURIComponent(nivel)+'&t='+Date.now();
+  api('/api/settings').then(c=>{ const inf=c.info||{};
+    // otra liga que la del draft: el total de partidas y la fecha ya los muestra el reporte de abajo
+    $('#statsInfo').innerHTML = nivel&&nivel!==inf.bracket&&inf.source==='online'
+      ? `Servidor online · ${esc(sel.options[sel.selectedIndex].text)}` : statsText(inf); });
+}
 
 // ---------- configuración
 const TIERS=[['IRON','Hierro'],['BRONZE','Bronce'],['SILVER','Plata'],['GOLD','Oro'],['PLATINUM','Platino'],['EMERALD','Esmeralda'],['DIAMOND','Diamante'],['MASTER','Maestro']];

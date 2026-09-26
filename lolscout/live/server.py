@@ -441,9 +441,14 @@ class Updater:
             self.running = False
 
 
-def build_report_html(dd, assistant) -> str:
+def build_report_html(dd, assistant, nivel: str = None) -> str:
+    """nivel: «todas», «bajo», «medio», «alto» o nada (el de tu rango, el mismo que usa el draft)."""
     from ..report import TEMPLATE, _lookup
-    result = assistant.result
+    result, bracket = assistant.result, assistant.bracket
+    online_src = assistant.info.get("source") == "online"
+    if online_src and nivel and nivel != bracket and (nivel == online.TODAS or nivel in online.BRACKETS):
+        result, _ = online.load_todas() if nivel == online.TODAS else online.load(nivel)
+        bracket = nivel
     if not result or not result.get("matches"):
         return None
     result = {**result, "roles": {r: result["roles"][r] for r in ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
@@ -453,8 +458,10 @@ def build_report_html(dd, assistant) -> str:
         role = next((k for k, v in config.ROLE_NAMES.items() if v == p["role"]), "")
         me.append({"role": role, "id": p["id"], "games": p["games"], "wr": p["wr"], "tier": p["tier"]})
     result["me"] = me or None
-    tiers = online.BRACKETS.get(assistant.bracket or "", config.TIERS) if assistant.info.get("source") == "online" else config.TIERS
+    tiers = online.BRACKETS.get(bracket or "", config.TIERS) if online_src else config.TIERS
     tiers = [online.TIER_ES.get(t, t) for t in tiers]
+    if online_src and bracket == online.TODAS:
+        tiers = [online.TODAS_NOMBRE]
     payload = {**result, "lookup": _lookup(result, dd), "generated": datetime.now().strftime("%d/%m/%Y %H:%M"),
                "tiers": tiers, "platform": config.PLATFORM.upper(), "roleNames": config.ROLE_NAMES}
     return TEMPLATE.replace("__DATA__", json.dumps(payload, ensure_ascii=False).replace("</", "<\\/"))
@@ -619,7 +626,7 @@ class App:
                     return self._send(200, json.dumps(res, ensure_ascii=False, default=list).encode(),
                                       "application/json; charset=utf-8")
                 if path == "/reporte":
-                    html = build_report_html(app.dd, app.assistant)
+                    html = build_report_html(app.dd, app.assistant, body.get("nivel"))
                     if html is None:
                         html = ("<body style='background:#010a13;color:#a09b8c;font-family:sans-serif;"
                                 "padding:40px'>Todavía no hay estadísticas descargadas. Revisá tu conexión a internet "

@@ -199,7 +199,7 @@ const RN = r => D.roleNames[r] || r;
 
 $('#sub').textContent = `Parche ${D.patches.join(' + ')} · ${D.platform} ${D.tiers.map(t=>t[0]+t.slice(1).toLowerCase()).join('–')} · actualizado ${D.generated}`;
 $('#chips').innerHTML = `<span class="chip"><b>${D.matches.toLocaleString('es-AR')}</b> partidas analizadas</span>` +
-  roles.map(r=>`<span class="chip"><b>${D.roles[r].length}</b> ${RN(r)}</span>`).join('');
+  roles.map(r=>`<span class="chip" title="Campeones con ${D.minGames||20} partidas o más en ${RN(r)}"><b>${D.roles[r].length}</b> campeones ${RN(r)}</span>`).join('');
 
 // Solapas: la del parche es la principal (abre siempre primero)
 const PARCHE = D.patches.length ? 'Parche ' + D.patches.join(' + ') : 'Parche';
