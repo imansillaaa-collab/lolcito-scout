@@ -217,11 +217,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .dstate{font:700 11px var(--title);letter-spacing:1.2px;text-transform:uppercase;padding:3px 10px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
 .dstate.on{border-color:var(--gold);color:var(--gold-hi);background:rgba(200,170,110,.12);animation:pulso 1.6s ease-in-out infinite}
 @keyframes pulso{0%,100%{box-shadow:0 0 0 rgba(200,170,110,0)}50%{box-shadow:0 0 14px rgba(200,170,110,.45)}}
-.dbans{display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:270px}
+.dbans{display:flex;gap:5px;align-items:center;flex-wrap:nowrap;justify-content:center}
 .dbans .bx{position:relative;line-height:0}
-.dbans img{width:26px;height:26px;border:1px solid var(--line);filter:grayscale(1) brightness(.55)}
-.dbans .bx::after{content:"";position:absolute;inset:0;background:
-  linear-gradient(45deg,transparent 45%,var(--enemy) 45%,var(--enemy) 55%,transparent 55%)}
+.dbans img{width:clamp(30px,2.9vw,56px);height:clamp(30px,2.9vw,56px);border:1px solid rgba(200,170,110,.35);filter:grayscale(1) brightness(.8) contrast(1.05)}
 .dbans .none{font-size:11px;color:var(--muted)}
 
 /* Tarjetas grandes con el arte del campeón */
@@ -553,6 +551,18 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .pb{background:#010a13;border:1px solid var(--gold-lo);color:var(--gold);width:20px;height:20px;padding:0;font-size:9px;line-height:18px;cursor:pointer}
 .pb:hover:not(:disabled){border-color:var(--gold);color:var(--gold-hi)}
 .pb:disabled{opacity:.25;cursor:default}
+.ph.drag{cursor:grab}
+.ph.drag h2::before{content:"⠿";color:var(--gold-lo);margin-right:7px;font-size:13px;letter-spacing:0}
+.panel.arrastrando{opacity:.35}
+.ghostp{position:fixed;z-index:3000;pointer-events:none;background:#010a13;border:1px solid var(--gold);color:var(--gold-hi);
+  font:700 12px var(--title);letter-spacing:1.2px;text-transform:uppercase;padding:6px 12px;box-shadow:0 6px 18px rgba(0,0,0,.6)}
+.pcol{min-height:40px}
+.pcol.sobre{outline:1px dashed var(--gold-lo);outline-offset:3px}
+.panel.drop-antes{box-shadow:0 -3px 0 var(--gold)}
+.panel.drop-despues{box-shadow:0 3px 0 var(--gold)}
+.ocultos{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.ocultos button{background:#010a13;border:1px solid var(--gold-lo);color:var(--gold-hi);font-size:11.5px;padding:3px 9px;cursor:pointer}
+.ocultos button:hover{border-color:var(--gold)}
 .panel.min{padding-bottom:4px}.panel.min h2{margin-bottom:6px}
 /* Resumen de fin de partida */
 .pghead{display:grid;grid-template-columns:auto minmax(220px,1fr) auto auto auto;align-items:center;gap:28px;padding:18px 24px;overflow:hidden}
@@ -1054,23 +1064,77 @@ function fightPanel(f){
 }
 // ---------- orden de los paneles (cada usuario lo acomoda como quiere; se guarda en ajustes.json)
 const COLS=['L','a','b','R'];
-const DEFAULT_LAYOUT={L:['novedades'],a:['compra','build','rival'],b:['pelea','obj'],R:['mision'],min:[]};
+const DEFAULT_LAYOUT={L:['novedades'],a:['compra','build','rival'],b:['pelea','obj'],R:['mision'],min:[],hid:[]};
 let LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), lastState=null;
 function fixLayout(l){
-  const out={L:[],a:[],b:[],R:[],min:Array.isArray(l&&l.min)?l.min.filter(x=>typeof x==='string'):[]}, seen=new Set();
+  const lista=k=>Array.isArray(l&&l[k])?l[k].filter(x=>typeof x==='string'):[];
+  const out={L:[],a:[],b:[],R:[],min:lista('min'),hid:lista('hid')}, seen=new Set();
   for(const c of COLS) for(const id of ((l&&l[c])||[])) if(DEFAULT_LAYOUT[c]!==undefined&&!seen.has(id)&&COLS.some(k=>DEFAULT_LAYOUT[k].includes(id))){out[c].push(id);seen.add(id);}
   for(const c of COLS) for(const id of DEFAULT_LAYOUT[c]) if(!seen.has(id)){out[c].push(id);seen.add(id);}
   return out;
 }
+// Cada columna de paneles: se arrastran desde el título (⠿) y se sueltan arriba/abajo de otro o en otra columna
 function layoutCol(c,P){
-  return LAYOUT[c].filter(id=>P[id]).map((id,i,arr)=>{
-    const [title,body,cls]=P[id], min=LAYOUT.min.includes(id), ci=COLS.indexOf(c);
-    const b=(act,sym,tip,off)=>`<button class="pb" ${off?'disabled':''} title="${tip}" onclick="movePanel('${id}','${act}')">${sym}</button>`;
-    return `<div class="panel ${cls||''} ${min?'min':''}" data-p="${id}"><div class="ph"><h2>${esc(title)}</h2><span class="pctl">
-      ${b('up','▲','Subir',i===0)}${b('down','▼','Bajar',i===arr.length-1)}${b('left','◀','Pasar a la columna de la izquierda',ci===0)}${b('right','▶','Pasar a la columna de la derecha',ci===COLS.length-1)}${b('min',min?'+':'–',min?'Mostrar':'Achicar')}</span></div>${min?'':body}</div>`;
+  const paneles=LAYOUT[c].filter(id=>P[id]&&!LAYOUT.hid.includes(id)).map(id=>{
+    const [title,body,cls]=P[id], min=LAYOUT.min.includes(id);
+    const b=(act,sym,tip)=>`<button class="pb" title="${tip}" onclick="movePanel('${id}','${act}')">${sym}</button>`;
+    return `<div class="panel ${cls||''} ${min?'min':''}" data-p="${id}"><div class="ph drag" title="Arrastralo para moverlo"><h2>${esc(title)}</h2><span class="pctl">
+      ${b('min',min?'+':'–',min?'Mostrar':'Achicar')}${b('hid','✕','Sacar este panel (lo volvés a poner desde «Paneles ocultos», abajo)')}</span></div>${min?'':body}</div>`;
   }).join('');
+  return `<div class="pcol" data-col="${c}">${paneles}</div>`;
 }
+function ocultosBar(P){
+  const h=LAYOUT.hid.filter(id=>P[id]);
+  return h.length?`<div class="ocultos">Paneles ocultos:${h.map(id=>`<button onclick="movePanel('${id}','show')" title="Volver a mostrarlo">+ ${esc(P[id][0])}</button>`).join('')}</div>`:'';
+}
+// --- arrastrar paneles con el mouse: apretás en el título, movés y soltás arriba/abajo de otro panel o en
+// otra columna. Mientras arrastrás no se redibuja la pantalla (si no, el panel se escapa). Esc cancela.
+let ARRASTRE=null, _arr=null;
+function limpiarMarcas(){ document.querySelectorAll('.drop-antes,.drop-despues,.sobre').forEach(x=>x.classList.remove('drop-antes','drop-despues','sobre')); }
+function destinoEn(x,y){
+  const el=document.elementFromPoint(x,y); if(!el) return null;
+  const col=el.closest('.pcol'); if(!col) return null;
+  const panel=el.closest('.panel[data-p]');
+  if(panel&&panel.dataset.p!==ARRASTRE){ const r=panel.getBoundingClientRect(); return {col,panel,antes:y<r.top+r.height/2}; }
+  return {col,panel:null};
+}
+function terminarArrastre(soltar,x,y){
+  const a=_arr; _arr=null; if(!a) return;
+  if(a.ghost) a.ghost.remove();
+  a.panel.classList.remove('arrastrando'); document.body.style.userSelect='';
+  const d=soltar&&ARRASTRE?destinoEn(x,y):null, id=ARRASTRE; ARRASTRE=null; limpiarMarcas();
+  if(d){
+    const c=d.col.dataset.col;
+    for(const k of COLS) LAYOUT[k]=LAYOUT[k].filter(v=>v!==id);
+    let i=LAYOUT[c].length;
+    if(d.panel){ i=LAYOUT[c].indexOf(d.panel.dataset.p); if(i<0) i=LAYOUT[c].length; else if(!d.antes) i++; }
+    LAYOUT[c].splice(i,0,id);
+    api('/api/layout',{layout:LAYOUT});
+  }
+  render();
+}
+document.addEventListener('mousedown',e=>{
+  if(e.button!==0) return;
+  const ph=e.target.closest&&e.target.closest('.ph.drag'); if(!ph||e.target.closest('button')) return;
+  const panel=ph.closest('.panel[data-p]'); if(!panel) return;
+  _arr={panel, x0:e.clientX, y0:e.clientY, ghost:null}; e.preventDefault();
+});
+document.addEventListener('mousemove',e=>{
+  if(!_arr) return;
+  if(!ARRASTRE){
+    if(Math.hypot(e.clientX-_arr.x0,e.clientY-_arr.y0)<6) return;   // un clic no es arrastrar
+    ARRASTRE=_arr.panel.dataset.p; _arr.panel.classList.add('arrastrando'); document.body.style.userSelect='none';
+    const g=document.createElement('div'); g.className='ghostp'; g.textContent=_arr.panel.querySelector('h2').textContent;
+    document.body.appendChild(g); _arr.ghost=g;
+  }
+  _arr.ghost.style.left=(e.clientX+14)+'px'; _arr.ghost.style.top=(e.clientY+10)+'px';
+  limpiarMarcas(); const d=destinoEn(e.clientX,e.clientY);
+  if(d){ if(d.panel) d.panel.classList.add(d.antes?'drop-antes':'drop-despues'); else d.col.classList.add('sobre'); }
+});
+document.addEventListener('mouseup',e=>{ if(_arr) terminarArrastre(true,e.clientX,e.clientY); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&_arr) terminarArrastre(false); });
 function movePanel(id,act){
+  if(act==='show'){ LAYOUT.hid=LAYOUT.hid.filter(x=>x!==id); api('/api/layout',{layout:LAYOUT}); render(); return; }
   const c=COLS.find(k=>LAYOUT[k].includes(id)); if(!c) return;
   const col=LAYOUT[c], i=col.indexOf(id);
   if(act==='up'&&i>0) [col[i-1],col[i]]=[col[i],col[i-1]];
@@ -1079,6 +1143,7 @@ function movePanel(id,act){
     const ci=COLS.indexOf(c)+(act==='left'?-1:1); if(ci<0||ci>=COLS.length) return;
     col.splice(i,1); LAYOUT[COLS[ci]].splice(Math.min(i,LAYOUT[COLS[ci]].length),0,id);
   } else if(act==='min') LAYOUT.min=LAYOUT.min.includes(id)?LAYOUT.min.filter(x=>x!==id):[...LAYOUT.min,id];
+  else if(act==='hid') LAYOUT.hid=[...LAYOUT.hid.filter(x=>x!==id),id];
   api('/api/layout',{layout:LAYOUT}); render();
 }
 function resetLayout(){ LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)); api('/api/layout',{layout:LAYOUT}); render(); }
@@ -1130,7 +1195,8 @@ function game(s){
     <div class="col-enemy gside"><div class="panel team enemy"><h2 class="enemy">Rivales</h2>${s.enemies.map(p=>player(p,false,true)).join('')}</div>${layoutCol('R',P)}</div>
   </div>
   <div class="note">Solo usa lo que el juego muestra en el marcador (Tab). Todo son sugerencias: la decisión es tuya.
-    Podés acomodar los paneles con las flechas de cada título (se guarda solo) · <a href="#" onclick="resetLayout();return false">Volver al orden original</a></div>`;
+    Arrastrá los paneles desde el título para moverlos y sacá los que no quieras con la ✕ (se guarda solo) · <a href="#" onclick="resetLayout();return false">Volver al orden original</a></div>
+  ${ocultosBar(P)}`;
 }
 
 async function refresh(){
@@ -1170,6 +1236,7 @@ document.addEventListener('pointerdown',()=>{ apretado=true; });
 document.addEventListener('pointerup',()=>{ apretado=false; setTimeout(render,60); });
 function render(){
   const s=lastState; if(!s||view!=='vivo') return;
+  if(ARRASTRE) return;   // estás arrastrando un panel
   if(s.phase!=='idle') H.detail=null;
   if(apretado && s.phase==='draft') return;   // si redibujo entre que apretás y soltás, el clic se pierde
   const html = s.phase==='draft'?draft(s):s.phase==='game'?game(s):s.phase==='postgame'?postgame(s):H.detail?postgame(H.detail,true):home(s);
