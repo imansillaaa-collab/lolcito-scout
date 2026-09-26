@@ -27,9 +27,25 @@ RAMA = "descargas"
 CADA = 20 * 60           # cada cuánto vuelve a mirar si hay versión nueva (con Lolcito abierto)
 
 
-def _base():
+def _base(fijo=False):
+    """Dirección de los archivos de la rama «descargas».
+
+    fijo=True: la del último commit exacto de la rama (pregunta a la API de GitHub cuál es). La dirección
+    por nombre de rama pasa por una copia guardada de GitHub que tarda ~5 minutos en enterarse de una
+    versión nueva: si Lolcito se abría en ese rato, decía «al día» con una versión vieja.
+    """
     repo = (config.STATS_REPO or "").strip().strip("/")
-    return f"https://raw.githubusercontent.com/{repo}/{RAMA}" if repo else None
+    if not repo:
+        return None
+    if fijo:
+        try:
+            r = requests.get(f"https://api.github.com/repos/{repo}/branches/{RAMA}", timeout=6,
+                             headers={"Accept": "application/vnd.github+json"})
+            if r.status_code == 200:
+                return f"https://raw.githubusercontent.com/{repo}/{r.json()['commit']['sha']}"
+        except (requests.RequestException, ValueError, KeyError):
+            pass  # sin API (límite de pedidos, etc.): uso la dirección por nombre de rama
+    return f"https://raw.githubusercontent.com/{repo}/{RAMA}"
 
 
 class Actualizador:
@@ -59,14 +75,15 @@ class Actualizador:
             return self.vista()
         self._t = time.time()
         try:
-            r = requests.get(f"{_base()}/version.json", timeout=6, headers={"Cache-Control": "no-cache"})
+            base = _base(fijo=True)
+            r = requests.get(f"{base}/version.json", timeout=6, headers={"Cache-Control": "no-cache"})
             if r.status_code == 404:          # todavía no se publicó ninguna versión
                 self.estado, self.nueva = "al-dia", None
                 return self.vista()
             r.raise_for_status()
             info = r.json()
             if str(info.get("version", "")) > VERSION and info.get("sha256"):
-                self.nueva, self.estado = info, "hay"
+                self.nueva, self.estado = {**info, "_base": base}, "hay"   # el .exe se baja de ese mismo commit
             else:
                 self.nueva, self.estado = None, "al-dia"
         except Exception as e:  # sin internet, GitHub caído, etc.: se reintenta en la próxima vuelta
@@ -108,7 +125,7 @@ class Actualizador:
             nuevo = carpeta / "LolcitoScout-nuevo.exe"
             total = int(self.nueva.get("bytes") or 0)
             h, bajados = hashlib.sha256(), 0
-            with requests.get(f"{_base()}/LolcitoScout.exe", stream=True, timeout=30) as r:
+            with requests.get(f"{self.nueva.get('_base') or _base()}/LolcitoScout.exe", stream=True, timeout=30) as r:
                 r.raise_for_status()
                 with open(nuevo, "wb") as f:
                     for trozo in r.iter_content(1 << 16):
