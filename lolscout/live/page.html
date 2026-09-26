@@ -728,7 +728,7 @@ async function ponerRunas(id){
   const antes=b.textContent; b.disabled=true; b.textContent='Mandando…'; b.className='rbtn';
   try{
     const r=await api('/api/runas',{id});
-    if(r.ok){ b.className='rbtn ok'; b.textContent='Listo: '+(r.name||'runas puestas'); }
+    if(r.ok){ b.className='rbtn ok'; b.textContent='Listo: '+(r.name||'runas puestas')+(r.borrada?` (borré «${r.borrada}» para hacer lugar)`:''); }
     else { b.className='rbtn err'; b.textContent=r.error||'No pude'; b.title=r.error||''; }
   }catch(e){ b.className='rbtn err'; b.textContent='No pude conectarme'; }
   setTimeout(()=>{ b.disabled=false; b.className='rbtn'; b.textContent=antes; b.title=''; }, 6000);

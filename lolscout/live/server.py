@@ -341,11 +341,12 @@ class Assistant:
             return {"ok": True, "name": nombre, "simulated": True}
         if not hasattr(self.lcu, "apply_runes"):
             return {"ok": False, "error": "No encuentro el cliente de League of Legends."}
+        self.lcu.pagina_borrada = None
         ok, res = self.lcu.apply_runes(nombre, elegida["primary"], elegida["sub"],
                                        elegida["perks"], elegida["shards"])
         if not ok:
             return {"ok": False, "error": str(res)}
-        return {"ok": True, "name": nombre}
+        return {"ok": True, "name": nombre, "borrada": getattr(self.lcu, "pagina_borrada", None)}
 
     def open_last_game(self):
         """Botón «Ver tu última partida»: la guardada, o la última del historial del cliente."""

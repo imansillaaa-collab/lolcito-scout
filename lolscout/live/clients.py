@@ -113,15 +113,32 @@ class LCU:
     def draft_action(self, action_id, champion_id, lock=False):
         """Marca el campeón en tu casillero (reversible) y, si lock, lo confirma."""
         path = f"/lol-champ-select/v1/session/actions/{int(action_id)}"
-        ok, res = self._send("PATCH", path, {"championId": int(champion_id)})
+        cid = int(champion_id)
+        ok, res = self._send("PATCH", path, {"championId": cid})
         if not ok or not lock:
             return ok, res
-        ok, res = self._send("POST", path + "/complete", {})
-        if ok or self.action_done(action_id, champion_id, wait=1.5):
-            return True, res
-        # algunos clientes no aceptan /complete: el mismo PATCH con "completed" también bloquea
-        ok2, res2 = self._send("PATCH", path, {"championId": int(champion_id), "completed": True})
-        return (True, res2) if ok2 else (False, res)
+
+        def accion_entera():
+            """La acción tal como la tiene el cliente, con el campeón y «completed»: hay clientes que solo
+            bloquean si el PATCH trae la acción completa (actorCellId, type, isAllyAction...)."""
+            ses = self.champ_select() or {}
+            a = next((a for g in ses.get("actions", []) for a in g if a.get("id") == int(action_id)), {})
+            return {**a, "championId": cid, "completed": True}
+
+        # El cliente a veces contesta «ok» y no bloquea: pruebo cada forma y verifico en la sesión
+        intentos = [("POST", path + "/complete", lambda: {}),
+                    ("PATCH", path, lambda: {"championId": cid, "completed": True}),
+                    ("PATCH", path, accion_entera)]
+        error = None
+        for n, (metodo, p, cuerpo) in enumerate(intentos, 1):
+            ok, res = self._send(metodo, p, cuerpo())
+            print(f"[draft] bloqueo forma {n} ({metodo} {p.rsplit('/', 1)[-1]}): {'ok' if ok else res}", flush=True)
+            if not ok:
+                error = res
+            if self.action_done(action_id, cid, wait=2.0 if ok else 0.6):
+                return True, res
+        return False, (f"El LoL no confirmó el bloqueo ({error}). Bloquealo a mano en el cliente." if error
+                       else "El LoL no confirmó el bloqueo. Bloquealo a mano en el cliente.")
 
     def action_done(self, action_id, champion_id=None, wait: float = 4.0) -> bool:
         """¿El cliente ya tiene esa acción como bloqueada? Espera un poco a que se actualice.
@@ -132,7 +149,14 @@ class LCU:
         fin = time.time() + wait
         ultimo = None
         while True:
-            ses = self.get("/lol-champ-select/v1/session", timeout=3) or {}
+            ses = self.get("/lol-champ-select/v1/session", timeout=3)
+            if ses is None:
+                # sin respuesta: solo cuenta como bloqueado si de verdad ya no estamos en la selección
+                # (antes un pedido lento se tomaba como «ya empezó la partida» y decía «ok» sin bloquear)
+                fase = self.phase()
+                if fase and fase != "ChampSelect":
+                    return True
+                ses = {"_sin_respuesta": True}
             local = ses.get("localPlayerCellId")
             for group in ses.get("actions", []):
                 for a in group:
@@ -149,8 +173,6 @@ class LCU:
                 bans = ses.get("bans") or {}
                 if int(champion_id) in (bans.get("myTeamBans") or []) + (bans.get("theirTeamBans") or []):
                     return True
-            if not ses:          # ya no hay selección (empezó la carga de la partida): el bloqueo pasó
-                return True
             if time.time() >= fin:
                 print(f"[draft] sin confirmar la acción {action_id}: {ultimo}", flush=True)
                 return False
@@ -179,10 +201,23 @@ class LCU:
         body = {"name": name, "primaryStyleId": int(primary), "subStyleId": int(sub),
                 "selectedPerkIds": [int(x) for x in list(perks) + list(shards)], "current": True}
         ok, res = self._send("POST", "/lol-perks/v1/pages", body)
-        if not ok and "max" in str(res).lower():
-            editables = [p for p in pages if p.get("isDeletable", True) and p.get("isEditable", True)]
-            return False, ("No te queda lugar para otra página de runas. Borrá una en el cliente "
-                           f"(tenés {len(editables)} que se pueden borrar) y probá de nuevo.")
+        if ok or "max" not in str(res).lower():
+            return ok, res
+        # No hay lugar: borro la página tuya que hace más tiempo que no tocás (nunca la que tenés elegida
+        # ahora) y creo la de Lolcito en su lugar.
+        editables = [p for p in pages if p.get("isDeletable", True) and p.get("isEditable", True)
+                     and not str(p.get("name", "")).startswith(self.PAGE_PREFIX)]
+        if not editables:
+            return False, "No te queda lugar para otra página de runas y no hay ninguna que se pueda borrar."
+        editables.sort(key=lambda p: (bool(p.get("current")), p.get("lastModified") or 0))
+        vieja = editables[0]
+        ok_b, res_b = self._send("DELETE", f"/lol-perks/v1/pages/{vieja['id']}")
+        print(f"[runas] sin lugar: borro «{vieja.get('name')}» → {'ok' if ok_b else res_b}", flush=True)
+        if not ok_b:
+            return False, f"No te queda lugar para otra página de runas y no pude borrar una ({res_b})."
+        ok, res = self._send("POST", "/lol-perks/v1/pages", body)
+        if ok:
+            self.pagina_borrada = vieja.get("name")
         return ok, res
 
     def match_list(self, count: int = 20, puuid: str = None):

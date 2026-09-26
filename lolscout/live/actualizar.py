@@ -24,7 +24,7 @@ from .. import config
 from ..version import VERSION
 
 RAMA = "descargas"
-CADA = 3 * 3600          # cada cuánto vuelve a mirar si hay versión nueva
+CADA = 20 * 60           # cada cuánto vuelve a mirar si hay versión nueva (con Lolcito abierto)
 
 
 def _base():
