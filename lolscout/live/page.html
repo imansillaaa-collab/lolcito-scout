@@ -237,6 +237,30 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .ch .why{font-size:11.5px;color:var(--body);line-height:1.4;text-shadow:0 1px 3px #000}
 .ch .why div{margin-top:2px}
 .ch .why .mas{color:var(--muted);font-size:11px}
+.ch .why .ext{display:none}
+/* selección en pantalla grande y alta: todo llena la altura */
+.board.alto .ch .why .ext{display:block}
+.board.alto .ch .why .mas{display:none}
+.board.alto>.team .slot .por,.board.draftb.alto>.team .slot .por{width:clamp(42px,min(3.8vw,9.5vh),124px);height:clamp(42px,min(3.8vw,9.5vh),124px)}
+.board.alto>.team .slot .name{font-size:clamp(15px,1.05vw,24px)}
+.board.alto>.team .slot .role{font-size:clamp(11px,.62vw,14px)}
+.board.alto .col-center{display:flex;flex-direction:column}
+.board.alto .col-center>.panel{flex:1}
+.board.alto .dpick{flex:1;align-items:stretch}
+.board.alto .dpick>div{display:flex;flex-direction:column}
+.board.alto .dpick .panel.tight{flex:1;display:flex;flex-direction:column}
+.board.alto .dpick .chgrid.tres{flex:1.6}
+.board.alto .dpick .ch{padding:12px 14px;gap:7px}
+.board.alto .dpick .ch .chn{font-size:clamp(15px,1.1vw,24px)}
+.board.alto .dpick .ch .why{font-size:clamp(11.5px,.68vw,14px)}
+.board.alto .dpick .ch .spw{width:62%}
+.board.alto .dpick .masop{flex:1;display:flex;flex-direction:column}
+.board.alto .dpick .masop .chrow2{flex:1;padding:6px 10px}
+.board.alto .dpick .chrow2 .por.sm{width:clamp(30px,2.3vw,48px);height:clamp(30px,2.3vw,48px)}
+.board.alto .dpick .chrow2 .cr-top b{font-size:clamp(13px,.85vw,18px)}
+.board.alto .dpick .chrow2 .cr-why{-webkit-line-clamp:2;font-size:clamp(11.5px,.66vw,14px)}
+.board.alto .dpick .rp{padding:12px 14px}
+.board.alto .dpick .rp .why div:nth-child(n+3){display:block}
 .ch.pick{border-left:3px solid var(--gold-lo)}
 .ch.pick.best{border-color:var(--gold);box-shadow:inset 0 0 26px rgba(200,170,110,.14)}
 .ch.ban{border-left:3px solid rgba(224,72,75,.6)}
@@ -858,7 +882,8 @@ async function ponerRunas(id){
   setTimeout(()=>{ b.disabled=false; b.className='rbtn'; b.textContent=antes; b.title=''; }, 6000);
 }
 function runeFold(o,i,locked){
-  return `<details class="rfold" ${i===0?'open':''}><summary><img src="${o.keystone.img}" alt=""><b>${esc(o.title)}</b>
+  const todas=innerWidth>=1600&&innerHeight>=1000;   // pantalla grande y alta: hay lugar para todas abiertas
+  return `<details class="rfold" ${i===0||todas?'open':''}><summary><img src="${o.keystone.img}" alt=""><b>${esc(o.title)}</b>
       <span>${esc(o.primaryName)} + ${esc(o.subName)}</span></summary>${runeCard(o,i,null,locked)}</details>`;
 }
 function runesPanel(s){
@@ -923,6 +948,15 @@ function chSplash(o, cls){
   const [fx,fy,t]=CARAS[a]||[0.5,0.25,0.33];
   return `<div class="spw ${cls||''}"><img class="spg" src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${a}_0.jpg" alt="" data-fx="${fx}" data-fy="${fy}" data-t="${t}"></div>`;
 }
+// Pantalla grande: la selección de campeones llena toda la altura (equipos más grandes, centro más alto)
+function altoSeleccion(){
+  const b=document.querySelector('#app .board'); if(!b) return;
+  b.style.minHeight=''; b.classList.remove('alto');
+  if(innerWidth<1600) return;
+  const h=Math.floor(innerHeight-b.getBoundingClientRect().top-34);
+  if(h>b.offsetHeight+40){ b.style.minHeight=h+'px'; b.classList.add('alto'); }
+}
+window.addEventListener('resize',()=>{ altoSeleccion(); layoutSplashes(); });
 // coloca los splash de las tarjetas (la cara, centrada verticalmente y hacia la izquierda)
 function layoutSplashes(){
   document.querySelectorAll('.spw .spg').forEach(img=>{
@@ -967,8 +1001,9 @@ function masOpciones(list, kind, s, titulo){
 function champCard(o, kind, s, best){
   const tags=chTags(o,kind);
   const [duo, otros]=duoWhy(o, s);
-  const why=[...duo.slice(0,1).map(w=>[w,'duo']), ...otros.slice(0,duo.length?1:(kind==='pick'?2:3)).map(w=>[w,''])];
-  const resto=o.why.length-why.length;
+  const base=duo.length?2:(kind==='pick'?2:3);
+  const why=[...duo.slice(0,1).map(w=>[w,'duo']), ...otros.map(w=>[w,''])].slice(0,6).map((x,i)=>i<base?x:[x[0],x[1]+' ext']);
+  const resto=o.why.length-Math.min(base,why.length);
   return `<div class="ch ${kind} ${best?'best':''}" title="${esc(o.why.join(' · '))}">${chSplash(o,'r')}
     <div class="cht"><span class="chn">${esc(o.name)}</span>${tags}</div>
     <div class="why">${why.map(([w,c])=>`<div class="${c}">${esc(w)}</div>`).join('')}${resto>0?`<div class="mas">+${resto} motivo${resto>1?'s':''} más</div>`:''}</div>
@@ -1297,6 +1332,7 @@ function render(){
   [300,1200,3000].forEach(ms=>setTimeout(reigualar,ms));
   window.scrollTo(0,y);
   layoutBanners();
+  altoSeleccion();
   layoutSplashes();
 }
 // ---------- inicio: cuentas e historial de partidas
