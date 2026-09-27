@@ -37,6 +37,9 @@ class Assistant:
         self.recorder = pg.GameRecorder()
         self.history = History(config.DATA_DIR / "cuentas")
         self.importer = Importer(self.history, dd, on_games=self.set_pool)
+        from .highlights import Highlights
+        self.highlights = Highlights()   # clips de tus mejores momentos
+        self.highlights.preparar()
         self.postgame = None          # resumen de la última partida
         self.postgame_hidden = False  # el usuario lo cerró
         self._pg_fetch = None         # (gameId, hasta cuándo seguir buscando el detalle en el historial)
@@ -172,12 +175,18 @@ class Assistant:
                                  champs=self.champs)
                 self.recorder.update(game, st, self.lcu)
                 st["duos"] = self.duos_partida()
+                if not self.simulated:
+                    self.highlights.en_partida(game, st.get("me"))
                 if ended:  # pantalla de victoria/derrota: ya muestro el resumen
+                    self.highlights.fin_partida()
                     self.finish_game()
                     st = self.show_postgame()
         else:
             if self.recorder.game is not None:  # se cerró la partida
+                self.highlights.fin_partida()
                 self.finish_game()
+            elif self.highlights.grabando:      # por las dudas: sin partida no se graba
+                self.highlights.fin_partida()
             phase = self.lcu.phase()
             if phase is not None:
                 self.refresh_account()
@@ -634,6 +643,17 @@ class App:
             return {"app": "lolscout"}
         if path == "/api/state":
             return self.assistant.get_state()
+        if path == "/api/highlights":
+            h = self.assistant.highlights
+            if method == "POST":
+                acc = body.get("accion")
+                if acc in ("on", "off"):
+                    config.save_settings({"HIGHLIGHTS": acc == "on"})
+                    if acc == "on":
+                        h.preparar()
+                elif acc == "borrar":
+                    h.borrar(body.get("id"))
+            return h.vista()
         if path == "/api/auto-runas" and method == "POST":
             config.save_settings({"RUNAS_SOLAS": bool(body.get("on"))})   # queda guardado en ajustes.json
             return {"ok": True, "on": config.RUNAS_SOLAS}
@@ -745,6 +765,40 @@ class App:
                 except OSError:
                     pass  # la ventana canceló la carga (por ejemplo al recargar): no es un error
 
+            def _archivo(self, f):
+                """Manda un archivo respetando «Range» (el video se puede adelantar y retroceder)."""
+                tam = f.stat().st_size
+                ctype = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
+                rng = self.headers.get("Range", "")
+                ini, fin = 0, tam - 1
+                if rng.startswith("bytes="):
+                    a, _, b = rng[6:].split(",")[0].partition("-")
+                    if a:
+                        ini = int(a)
+                        fin = int(b) if b else fin
+                    elif b:
+                        ini = max(0, tam - int(b))
+                fin = min(fin, tam - 1)
+                try:
+                    self.send_response(206 if rng else 200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Accept-Ranges", "bytes")
+                    self.send_header("Content-Length", str(fin - ini + 1))
+                    if rng:
+                        self.send_header("Content-Range", f"bytes {ini}-{fin}/{tam}")
+                    self.end_headers()
+                    with open(f, "rb") as fh:
+                        fh.seek(ini)
+                        falta = fin - ini + 1
+                        while falta > 0:
+                            trozo = fh.read(min(1 << 16, falta))
+                            if not trozo:
+                                break
+                            self.wfile.write(trozo)
+                            falta -= len(trozo)
+                except OSError:
+                    pass
+
             def _route(self, method):
                 app.last_ping = time.time()   # cualquier pedido significa que la ventana sigue abierta
                 path, _, query = self.path.partition("?")
@@ -773,6 +827,11 @@ class App:
                                 "padding:40px'>Todavía no hay estadísticas descargadas. Revisá tu conexión a internet "
                                 "y tocá «Descargar ahora» en Configuración.</body>")
                     return self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+                if path.startswith("/hl/"):
+                    f = app.assistant.highlights.archivo(path[4:])
+                    if not f:
+                        return self._send(404, b"", "text/plain")
+                    return self._archivo(f)
                 if path.startswith("/static/"):
                     f = (STATIC / path[len("/static/"):]).resolve()
                     if STATIC.resolve() in f.parents and f.is_file():

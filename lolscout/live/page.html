@@ -532,6 +532,18 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .gboard .obj{padding:4px 8px}
 .gboard .fight .flabel{font-size:16px;margin-bottom:6px}
 .panel.quest{margin-top:0}.panel.quest h2{margin-bottom:6px}
+/* Highlights */
+#v-hl{padding-bottom:20px}
+.hlhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.hlrec{color:#ff5a5a;font-weight:700;animation:pulso 1.6s ease-in-out infinite}
+.hlgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.hlc{border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.hlc.top{border-color:var(--gold)}
+.hlc video{width:100%;aspect-ratio:16/9;background:#000;display:block}
+.hli{display:flex;align-items:center;gap:10px;padding:8px 10px}
+.hli img{width:38px;height:38px;border:1px solid var(--gold-lo)}
+.hli b{color:var(--gold-hi);font:700 14px var(--title);letter-spacing:.5px}
+.hli>div{flex:1;min-width:0}
 .apoyo{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .apest{font-size:12px;color:var(--body)}
 .apest.ya{color:var(--hex);font-weight:600;animation:pulso 1.6s ease-in-out infinite;padding:4px 8px;border:1px solid var(--hex)}
@@ -744,6 +756,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
   <nav>
     <button data-v="vivo" class="on">En vivo</button>
     <button data-v="stats">Estadísticas</button>
+    <button data-v="hl">Highlights</button>
     <button data-v="cfg">Configuración</button>
   </nav>
   <div class="status" id="status"></div>
@@ -763,6 +776,8 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
     </div>
     <iframe id="statsFrame" title="Estadísticas"></iframe>
   </section>
+
+  <section class="view" id="v-hl"><div id="hl"><div class="small">Cargando…</div></div></section>
 
   <section class="view" id="v-cfg">
     <div class="form">
@@ -828,6 +843,7 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   if(view==='stats' && !$('#statsFrame').src) reloadStats();
   if(view==='cfg') loadCfg();
   if(view==='vivo') render();
+  if(view==='hl') cargarHL();
 });
 
 // ---------- en vivo
@@ -862,6 +878,42 @@ function runeCard(o,i,champ,locked){
     <button class="rbtn" id="rb-${o.id}" onclick="ponerRunas('${o.id}')" ${locked?'':'disabled title="Elegí tu campeón primero"'}>Ponerlas en el LoL</button>
   </div>`;
 }
+// ---------- Highlights: clips de tus mejores momentos
+let HL=null, hlTimer=null, hlFiltro='todas';
+function hlEstado(h){
+  if(!h.on) return 'Apagado: no se graba nada.';
+  if(h.estado==='bajando') return `Preparando la grabación: bajando el grabador (una sola vez)… <b>${h.progreso}%</b>`;
+  if(h.estado==='probando') return 'Preparando la grabación: probando tu placa de video…';
+  if(h.estado==='error') return `<span style="color:var(--bad)">No pude preparar la grabación: ${esc(h.error)}</span>`;
+  if(h.grabando) return '<span class="hlrec">● Grabando</span> tus momentos de esta partida';
+  if(h.estado==='listo') return `Listo: graba solo cuando estás en partida, con ${esc(h.con||'tu compu')}.`;
+  return 'Se prepara la próxima vez que abras Lolcito.';
+}
+function hlSwitch(on){ return `<label class="sw" title="Graba la pantalla mientras jugás y guarda solo tus mejores momentos. Si notás la compu lenta en partida, apagalo.">
+    <input type="checkbox" ${on?'checked':''} onchange="hlAccion({accion:this.checked?'on':'off'})"><span class="sw-tr"><span class="sw-kn"></span></span>
+    <span class="sw-tx">Grabar highlights</span><b class="sw-es">${on?'ON':'OFF'}</b></label>`; }
+function fmtFecha(ms){ const d=new Date(ms); return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}); }
+function pintarHL(){
+  const h=HL; if(!h) return;
+  const partidas=[...new Set(h.clips.map(c=>c.partida))];
+  let clips=h.clips; if(hlFiltro==='mejores') clips=[...clips].sort((a,b)=>b.puntos-a.puntos);
+  const tarjeta=c=>`<div class="hlc ${c.puntos>=60?'top':''}">
+      <video src="${c.video}" ${c.miniatura?`poster="${c.miniatura}"`:''} controls preload="none"></video>
+      <div class="hli">${c.campeonImg?`<img src="${c.campeonImg}" alt="">`:''}<div><b>${esc(c.tipo)}</b>
+        <div class="small">${esc(c.campeon||'')} · minuto ${esc(c.minuto)} · ${fmtFecha(c.fecha)}</div></div>
+        <button class="pb" title="Borrar este clip" onclick="if(confirm('¿Borrar este clip?'))hlAccion({accion:'borrar',id:'${c.id}'})">✕</button></div></div>`;
+  $('#hl').innerHTML = `<div class="panel hlhead"><div>${hlSwitch(h.on)}<div class="small" style="margin-top:4px">${hlEstado(h)}</div></div>
+      <div class="row">${h.clips.length?`<select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro==='todas'?'selected':''}>Más nuevos primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select>`:''}</div></div>
+    ${clips.length?`<div class="hlgrid">${clips.map(tarjeta).join('')}</div>`
+      :`<div class="panel"><div class="idle" style="padding:30px 10px"><h1>Todavía no hay highlights</h1><p>Jugá una partida con la grabación prendida: cada kill, multikill, first blood, ace o robo de objetivo queda acá como un clip.</p></div></div>`}
+    <div class="note">Los clips se guardan solo en tu compu (${partidas.length} partida${partidas.length===1?'':'s'}, ${h.clips.length} clip${h.clips.length===1?'':'s'}). Se graba en 720p sin sonido; se guardan como mucho 200 clips (los más viejos se borran solos).</div>`;
+}
+async function cargarHL(){
+  clearTimeout(hlTimer);
+  try{ HL=await api('/api/highlights'); pintarHL(); }catch(e){}
+  if(view==='hl' && HL && (HL.estado==='bajando'||HL.estado==='probando'||HL.grabando)) hlTimer=setTimeout(cargarHL,3000);
+}
+async function hlAccion(body){ HL=await api('/api/highlights',body); pintarHL(); cargarHL(); }
 // el switch se guarda apenas lo tocás (no hace falta «Guardar») y queda así aunque cierres Lolcito
 function switchRunas(on){ return `<label class="sw" title="Cuando bloqueás tu campeón (o lo cambiás), Lolcito pone solo la página recomendada. Si después la cambiás a mano, no la pisa. Queda guardado aunque cierres Lolcito.">
         <input type="checkbox" ${on?'checked':''} onchange="autoRunas(this.checked)"><span class="sw-tr"><span class="sw-kn"></span></span>
