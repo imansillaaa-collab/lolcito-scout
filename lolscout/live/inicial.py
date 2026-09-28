@@ -11,6 +11,21 @@ ESCUDO, ESPADA, SORTIJA, SACRIFICAR = 1054, 1055, 1056, 1083
 SELLO, LAGRIMA, ESPADA_LARGA = 1082, 3070, 1036
 RASGAFUEGOS, TROTABRISAS, PISAMUSGO = 1101, 1102, 1103
 
+# Qué da cada inicial (parche 16.19, resumido de la descripción oficial de Data Dragon)
+QUE_DA = {
+    RASGAFUEGOS: "Cada tanto, tu próximo ataque o habilidad quema y ralentiza al rival (al instante al matar monstruos grandes).",
+    TROTABRISAS: "Velocidad de movimiento al entrar a la maleza, que aumenta al matar monstruos grandes.",
+    PISAMUSGO: "Escudo mientras estás fuera de combate y después de matar monstruos grandes.",
+    ESCUDO: "110 de vida · 4 de vida cada 5 s · te cura después de recibir daño de un campeón.",
+    ESPADA: "10 de daño de ataque · 80 de vida · 2,5% de omnivampirismo.",
+    SORTIJA: "18 de poder de habilidad · 90 de vida · regenera maná (más después de pegarle a un campeón).",
+    SACRIFICAR: "7 de daño de ataque · te cura al pegar · +1 de oro por súbdito (350 extra al llegar a 100).",
+    SELLO: "15 de poder de habilidad · 50 de vida · +4 de poder por cada kill o asistencia (hasta 10; perdés 5 al morir).",
+    LAGRIMA: "240 de maná · el maná máximo crece cuando pegás con habilidades (hasta +360).",
+    ESPADA_LARGA: "10 de daño de ataque (con 3 pociones para aguantar más).",
+}
+MASCOTA = "Las tres mascotas potencian tu Castigo y, al crecer, completan tu misión de jungla: cambia la habilidad extra."
+
 
 def _tipo(dd, cid):
     ch = dd.champions.get(cid, {})
@@ -85,5 +100,6 @@ def iniciales(dd, cid, role, rival=None):
         o["mejor"] = i == 0
         o["items"] = [{"id": i_, "name": dd.item_name(i_), "img": dd.item_img(i_)} for i_ in o["items"]]
         o["name"] = o["items"][0]["name"]
+        o["da"] = QUE_DA.get(o["items"][0]["id"], "")
         o["oro"] = sum(dd.items.get(i_["id"], {}).get("gold", 0) for i_ in o["items"])
     return ops

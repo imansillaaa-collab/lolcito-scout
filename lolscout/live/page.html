@@ -541,6 +541,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .inimg{display:flex;gap:2px;flex:none}
 .inimg img{width:26px;height:26px;border:1px solid var(--gold-lo)}
 .inio .small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inio .inida{font-size:11.5px;color:var(--hex);line-height:1.3}
+.inio .inida+.small{display:none}
+.board.alto .inio .inida+.small{display:block}
 /* Highlights */
 #v-hl{padding-bottom:20px}
 .hlhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
@@ -792,7 +795,7 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
     <div class="form">
       <div>
         <div class="panel">
-          <h2>Tu cuenta</h2>
+          <h2>Tu cuenta <span class="small" id="verLolcito" style="float:right;text-transform:none;letter-spacing:0"></span></h2>
           <div id="acctBox" class="small">Abrí el LoL e iniciá sesión: la cuenta se detecta sola, no hace falta cargar nada.</div>
           <label class="f" style="margin-top:14px"><span>Estadísticas de qué rango</span>
             <select class="sel" id="bracket"><option value="auto">Automático (según tu rango)</option><option value="bajo">Hierro – Plata</option><option value="medio">Oro – Platino</option><option value="alto">Esmeralda – Maestro</option></select></label>
@@ -1134,7 +1137,7 @@ function inicialHtml(l){
     <div class="inio ${o.mejor?'best':''}" title="${esc(o.why.join(' · '))}">
       <span class="inimg">${o.items.map(i=>`<img src="${i.img}" title="${esc(i.name)}" alt="">`).join('')}</span>
       <div style="min-width:0"><b>${esc(o.name)}</b>${o.mejor?'<span class="tag">el mejor contra este rival</span>':''}
-        <div class="small">${esc(o.why[0])}</div></div></div>`).join('')}</div>`;
+        ${o.da?`<div class="inida">${esc(o.da)}</div>`:''}<div class="small">${esc(o.why[0])}</div></div></div>`).join('')}</div>`;
 }
 // Misión de Support: las 5 mejoras del ítem, la mejor para esta partida primero; cuando la elegís, se marca
 function apoyoHtml(ap){
@@ -1623,6 +1626,7 @@ function statsText(inf){
   return t;
 }
 async function loadCfg(){
+  api('/api/version').then(v=>{ $('#verLolcito').textContent='Lolcito versión '+v.version; }).catch(()=>{});
   const c=await api('/api/settings');
   $('#k').value=c.RIOT_API_KEY||''; $('#lolp').value=c.LOL_PATH||''; $('#repo').value=c.STATS_REPO||'';
   $('#source').value=c.STATS_SOURCE||'online'; $('#bracket').value=c.BRACKET||'auto'; $('#swCfg').innerHTML=switchRunas(!!c.RUNAS_SOLAS);
