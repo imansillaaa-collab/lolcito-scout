@@ -415,6 +415,7 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         "runes": rune_opts, "spells": spell_info,
         "runeChamp": _champ_card(dd, rune_cid) if rune_cid else None,
         "runeChampLocked": bool(my_champ),
+        "inicial": _inicial(dd, rune_cid, my_role, lane_opp),
         "current": current,
         "laneOpponent": _champ_card(dd, lane_opp) if lane_opp else None,
         "enemyPartner": _champ_card(dd, enemy_partner) if enemy_partner else None,
@@ -487,6 +488,15 @@ def pants(me, allies, enemies, lane_cmp, team_kills, t, role):
     return {"level": 2 if pts >= 5 else 1,
             "title": "Ponete el pantalón largo" if pts >= 5 else "Ponete el pantalón",
             "why": why[:3], "tip": PANTS_TIPS.get(role, "Hacete cargo de la partida: llevala vos.")}
+
+
+def _inicial(dd, cid, role, rival):
+    """Ítems iniciales del rol (menos support), el mejor contra tu rival primero."""
+    from .inicial import iniciales
+    try:
+        return iniciales(dd, cid, role, rival)
+    except Exception:  # noqa: BLE001  un dato raro no tiene que romper la pantalla
+        return []
 
 
 def _apoyo(dd, me, allies, enemies, fight, my_role):
@@ -615,6 +625,7 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
         "fight": fight,
         "quest": quest, "nItems": n_items,
         "apoyo": _apoyo(dd, me, allies, enemies, fight, my_role),
+        "inicial": _inicial(dd, me["cid"], my_role, lane["cid"] if lane else None) if t < 150 else None,
         "enemies": enemy_rows,
         "allies": sorted((row(p) for p in allies), key=by_role),
         "teamGold": [sum(p["gold"] for p in allies), sum(p["gold"] for p in enemies)],

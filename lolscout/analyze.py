@@ -65,6 +65,27 @@ def picks_del_dia(conn, patches, horas: int = 24, top: int = 10) -> dict:
     return {"horas": horas, "matches": n, "roles": roles}
 
 
+def paginas_completas(conn, patches, ph):
+    """Las páginas de runas completas más usadas por campeón y rol: {(rol, campeón): [ {...}, ... ]}."""
+    from .db import pagina_de_texto
+    try:
+        filas = conn.execute(
+            f"""SELECT p.position, p.champion_id, p.pagina, COUNT(*) n, SUM(p.win) w FROM paginas p
+                JOIN matches m USING(match_id) WHERE m.patch IN ({ph}) GROUP BY 1, 2, 3""", patches).fetchall()
+    except Exception:  # base vieja sin la tabla
+        return {}
+    total, por = defaultdict(int), defaultdict(list)
+    for pos, cid, pag, n, w in filas:
+        total[(pos, cid)] += n
+        por[(pos, cid)].append((n, w, pag))
+    out = {}
+    for clave, lista in por.items():
+        lista.sort(reverse=True)
+        out[clave] = [{**pagina_de_texto(pag), "games": n, "wr": w / n, "share": n / total[clave]}
+                      for n, w, pag in lista[:4] if n >= 3]
+    return out
+
+
 def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
     patches, n_matches = pick_patches(conn, patch)
     if not n_matches:
@@ -97,12 +118,14 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
         "me": None,
     }
 
+    paginas = paginas_completas(conn, patches, ph)
     for role in config.ROLES:
         stats = defaultdict(lambda: {"games": 0, "wins": 0, "k": 0, "d": 0, "a": 0,
                                      "items": Counter(), "item_wins": Counter(),
                                      "boots": Counter(), "boot_wins": Counter(),
                                      "keystones": Counter(), "keystone_wins": Counter(),
-                                     "spells": Counter(), "vs": defaultdict(lambda: [0, 0])})
+                                     "spells": Counter(), "vs": defaultdict(lambda: [0, 0]),
+                                     "estilos": defaultdict(lambda: [0, 0])})
         for teams in by_match.values():
             if len(teams) != 2:
                 continue
@@ -131,6 +154,10 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
                 if r["keystone"]:
                     s["keystones"][r["keystone"]] += 1
                     s["keystone_wins"][r["keystone"]] += w
+                if r["keystone"] and r["primary_style"] and r["sub_style"]:
+                    e = s["estilos"][(r["keystone"], r["primary_style"], r["sub_style"])]
+                    e[0] += 1
+                    e[1] += w
                 if r["spell1"] and r["spell2"]:
                     s["spells"][tuple(sorted((r["spell1"], r["spell2"])))] += 1
                 enemy = teams[theirs].get(role)
@@ -168,6 +195,11 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
                 "keystones": [{"id": k, "share": n / g, "wr": s["keystone_wins"][k] / n}
                               for k, n in s["keystones"].most_common(2)],
                 "spells": [list(p) for p, _ in s["spells"].most_common(1)],
+                # combinaciones de runa clave + árbol principal + secundario, las más usadas
+                "estilos": [{"key": k, "primary": pr, "sub": sb, "games": eg, "wr": ew / eg, "share": eg / g}
+                            for (k, pr, sb), (eg, ew) in sorted(s["estilos"].items(), key=lambda kv: -kv[1][0])[:4]
+                            if eg / g >= 0.05],
+                "paginas": paginas.get((role, cid), []),
                 "good_vs": matchups[:5],
                 "bad_vs": matchups[::-1][:5],
                 "vs_all": {str(m["id"]): [m["games"], round(m["wr"], 4)] for m in matchups},

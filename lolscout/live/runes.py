@@ -253,7 +253,7 @@ def adapt(base, shape, role, ranged, tanky, lane_ranged):
         if not tanky and pg["sub"] == VALOR and _swap(pg, FILA_VALOR_3, INQUEBRANTABLE):
             why.append("Inquebrantable suma más tenacidad encima de eso.")
     if len(shape["burst"]) >= 2 and not tanky:
-        if pg["sub"] != VALOR:
+        if pg["sub"] != VALOR and pg["primary"] != VALOR:
             _secundario(pg, VALOR, CORAZA_OSEA, CRECIMIENTO)
             why.append(f"Secundario en Valor (Coraza Ósea + Crecimiento Excesivo): con {' y '.join(shape['burst'][:2])} "
                        "enfrente, lo que te salva es no morir en el primer golpe.")
@@ -263,12 +263,12 @@ def adapt(base, shape, role, ranged, tanky, lane_ranged):
     if poke:
         motivo = ("tu rival de línea pega a distancia y te va a castigar"
                   if lane_ranged else f"el rival tiene {shape['ranged']} campeones a distancia")
-        if pg["sub"] == VALOR:
+        if VALOR in (pg["sub"], pg["primary"]):   # ya tiene Valor: se cambia la runa dentro del árbol
             if _swap(pg, FILA_VALOR_2, SEGUNDO_AIRE):
                 why.append(f"Segundo Aire: {motivo}; esta runa te cura ese daño constante.")
         else:
-            _secundario(pg, VALOR, SEGUNDO_AIRE, CORAZA_OSEA)
-            why.append(f"Secundario en Valor (Segundo Aire + Coraza Ósea): {motivo}, "
+            _secundario(pg, VALOR, SEGUNDO_AIRE, CRECIMIENTO)   # (Segundo Aire y Coraza Ósea comparten fila)
+            why.append(f"Secundario en Valor (Segundo Aire + Crecimiento Excesivo): {motivo}, "
                        "y así aguantás la línea sin volver a base.")
     return pg, why
 
@@ -306,8 +306,156 @@ SHARD_ES = {5008: "Fuerza adaptable", 5005: "Velocidad de ataque", 5007: "Aceler
             5010: "Velocidad de movimiento", 5001: "Vida (escala)", 5011: "Vida", 5013: "Tenacidad"}
 
 
+# ---------------------------------------------------------------- páginas que salen de los datos
+# Runas chicas más comunes para cada runa clave (fila 1, 2, 3 del árbol principal). Solo se usan mientras no
+# hay suficientes páginas completas guardadas de ese campeón: con datos, la página sale tal cual la usan.
+MENORES_CLAVE = {
+    CONQUISTADOR: (TRIUNFO, LEY_CELERIDAD, ULTIMA_BATALLA), TEMPO_LETAL: (ABSORBER, LEY_LINAJE, GOLPE_GRACIA),
+    PIE_LIGERO: (ABSORBER, LEY_LINAJE, GOLPE_GRACIA), GOLPE_OFENSIVO: (TRIUNFO, LEY_CELERIDAD, GOLPE_GRACIA),
+    ELECTROCUTAR: (SABOR_SANGRE, RECUERDOS, CAZA_TESOROS), LLUVIA_ESPADAS: (IMPACTO_SUBITO, RECUERDOS, CAZA_TESOROS),
+    COSECHA: (IMPACTO_SUBITO, RECUERDOS, CAZA_TESOROS),
+    COMETA: (ANILLO_MANA, TRASCENDENCIA, QUEMADURA), AERY: (ANILLO_MANA, TRASCENDENCIA, QUEMADURA),
+    CABALGATORMENTAS: (CAPA_NIMBO, CELERIDAD, CAMINATA), 8992: (ANILLO_MANA, TRASCENDENCIA, QUEMADURA),
+    AGARRE: (DEMOLICION, SEGUNDO_AIRE, CRECIMIENTO), REPLICA: (FUENTE_VIDA, CORAZA_OSEA, INQUEBRANTABLE),
+    GUARDIAN: (FUENTE_VIDA, CORAZA_OSEA, REVITALIZAR),
+    AUMENTO_GLACIAL: (CALZADO, GALLETAS, PERSPICACIA), PRIMER_GOLPE: (CALZADO, TONICO_TRIPLE, PERSPICACIA),
+    8360: (CALZADO, GALLETAS, PERSPICACIA),
+}
+# Las dos del árbol secundario según el estilo del campeón
+MENORES_SUB = {
+    PRECISION: {"ad": (TRIUNFO, LEY_CELERIDAD), "adc": (ABSORBER, LEY_LINAJE), "ap": (CONCENTRACION, LEY_CELERIDAD),
+                "tanque": (TRIUNFO, LEY_CELERIDAD), "enc": (CONCENTRACION, LEY_CELERIDAD)},
+    DOMINACION: {"ad": (SABOR_SANGRE, CAZA_DEFINITIVO), "adc": (SABOR_SANGRE, CAZA_TESOROS),
+                 "ap": (SABOR_SANGRE, CAZA_DEFINITIVO), "tanque": (GOLPE_BAJO, CAZA_DEFINITIVO),
+                 "enc": (SABOR_SANGRE, CAZA_DEFINITIVO)},
+    BRUJERIA: {"ad": (CELERIDAD, TORMENTA), "adc": (TRASCENDENCIA, TORMENTA), "ap": (ANILLO_MANA, TRASCENDENCIA),
+               "tanque": (TRASCENDENCIA, QUEMADURA), "enc": (ANILLO_MANA, TRASCENDENCIA)},
+    VALOR: {"ad": (CORAZA_OSEA, CRECIMIENTO), "adc": (CORAZA_OSEA, CRECIMIENTO), "ap": (SEGUNDO_AIRE, CRECIMIENTO),
+            "tanque": (SEGUNDO_AIRE, CRECIMIENTO), "enc": (FUENTE_VIDA, REVITALIZAR)},
+    INSPIRACION: {"ad": (CALZADO, PERSPICACIA), "adc": (CALZADO, PERSPICACIA), "ap": (CALZADO, PERSPICACIA),
+                  "tanque": (CALZADO, PERSPICACIA), "enc": (GALLETAS, PERSPICACIA)},
+}
+
+
+def _estilo(arq, key):
+    """ad / adc / ap / tanque / enc: define las runas del secundario y los fragmentos."""
+    if arq.startswith("tirador"):
+        return "adc"
+    if arq == "encantador":
+        return "enc"
+    if key in (COMETA, AERY, 8992, 8360):
+        return "ap"
+    if arq.startswith("tanque"):
+        return "tanque"
+    if arq in ("mago", "mago_burst", "mago_ataque", "peleador_ap", "asesino_ap"):
+        return "ap"
+    return "ad"
+
+
+def _fragmentos(estilo, key):
+    if estilo == "adc" or key in (TEMPO_LETAL, PIE_LIGERO):
+        f1 = AT_VEL
+    elif estilo in ("tanque", "enc"):
+        f1 = HASTE
+    else:
+        f1 = ADAPTATIVO
+    f2 = VIDA_ESC if estilo == "tanque" else ADAPTATIVO
+    return [f1, f2, VIDA]
+
+
+def armar(dd, key, primary, sub, arq):
+    """Página completa a partir de la runa clave y los dos árboles (lo que tenemos en las estadísticas)."""
+    slots = dd.rune_slots.get(primary)
+    if not slots or not dd.rune_slots.get(sub):
+        return None
+    menores = list(MENORES_CLAVE.get(key, ()))
+    if len(menores) != 3 or any(menores[i] not in slots[i + 1] for i in range(3)):
+        menores = [slots[i][0] for i in range(1, 4)]
+    estilo = _estilo(arq, key)
+    s1, s2 = MENORES_SUB.get(sub, {}).get(estilo, (None, None))
+    filas_sub = dd.rune_slots[sub]
+    if not s1 or not any(s1 in f for f in filas_sub[1:]) or not any(s2 in f for f in filas_sub[1:]):
+        s1, s2 = filas_sub[1][0], filas_sub[3][0]
+    return {"primary": primary, "sub": sub, "perks": [key, *menores, s1, s2], "shards": _fragmentos(estilo, key)}
+
+
+def _pct(x):
+    return f"{x * 100:.0f}%"
+
+
+def paginas_de_datos(dd, cid, arq, champ_meta):
+    """Páginas ordenadas por lo que más se usa en tu rango: completas si las tenemos guardadas; si no,
+    la runa clave + los dos árboles que se usan, completados con las runas chicas más comunes."""
+    nombre = dd.champ_name(cid)
+    out, vistas = [], set()
+    for p in (champ_meta or {}).get("paginas") or []:
+        if p.get("games", 0) < 8:
+            continue
+        pg = {"primary": p["primary"], "sub": p["sub"], "perks": list(p["perks"]), "shards": list(p["shards"])}
+        clave = (pg["perks"][0], pg["primary"], pg["sub"])
+        if clave in vistas or not _valid(dd, pg):
+            continue
+        vistas.add(clave)
+        out.append({"pg": pg, "games": p["games"], "wr": p["wr"], "share": p["share"],
+                    "why": [f"Es la página exacta que usa el {_pct(p['share'])} de los {nombre} en tu rango "
+                            f"({p['games']} partidas) y gana el {_pct(p['wr'])}."]})
+    for e in (champ_meta or {}).get("estilos") or []:
+        clave = (e["key"], e["primary"], e["sub"])
+        if clave in vistas or e.get("games", 0) < 8:
+            continue
+        pg = armar(dd, e["key"], e["primary"], e["sub"], arq)
+        if not pg or not _valid(dd, pg):
+            continue
+        vistas.add(clave)
+        out.append({"pg": pg, "games": e["games"], "wr": e["wr"], "share": e["share"],
+                    "why": [f"{dd.rune_name(e['key'])} con {dd.rune_name(e['sub'])} de secundario: la usa el "
+                            f"{_pct(e['share'])} de los {nombre} en tu rango ({e['games']} partidas) y gana el "
+                            f"{_pct(e['wr'])}.", "Las runas chicas son las más comunes con esa runa clave."]})
+    return out
+
+
 def options(dd, cid, role, shape, champ_meta=None, lane_opp=None):
-    """Las 2 o 3 páginas que se le muestran al jugador, ya validadas."""
+    """Las 2 o 3 páginas que se le muestran al jugador, ya validadas.
+
+    Con estadísticas del campeón en ese rol: la más usada en tu rango, la que más gana (si es otra) y, si el
+    equipo rival lo pide, la más usada retocada «para este rival». Sin estadísticas: por tipo de campeón."""
+    from ..analyze import adj_wr
+    arq = builds.archetype(dd, cid) or "peleador"
+    ch = dd.champions.get(cid, {})
+    ranged = bool(ch.get("ranged"))
+    tanky = arq.startswith("tanque") or arq in ("coloso", "peleador")
+    lane_ranged = bool(lane_opp and dd.champions.get(lane_opp, {}).get("ranged"))
+    datos = paginas_de_datos(dd, cid, arq, champ_meta)
+    if not datos:
+        return opciones_por_tipo(dd, cid, role, shape, champ_meta, lane_opp)
+
+    puntaje = lambda d: adj_wr(d["wr"] * d["games"], d["games"], 60)  # noqa: E731
+    opciones = []
+    mas_usada = datos[0]
+    adaptada, motivos = adapt(mas_usada["pg"], shape, role, ranged, tanky, lane_ranged)
+    if motivos and _valid(dd, adaptada) and adaptada != mas_usada["pg"]:
+        opciones.append({"id": "rival", "title": "Para este rival",
+                         "why": motivos + [f"Parte de la más usada ({dd.rune_name(mas_usada['pg']['perks'][0])})."],
+                         **_view(dd, adaptada)})
+    opciones.append({"id": "meta", "title": "La más usada", "why": mas_usada["why"], **_view(dd, mas_usada["pg"])})
+    resto = [d for d in datos[1:] if d["games"] >= 20]
+    if resto:
+        mejor = max(resto, key=puntaje)
+        if puntaje(mejor) > puntaje(mas_usada):
+            opciones.append({"id": "gana", "title": "La que más gana", "why": mejor["why"], **_view(dd, mejor["pg"])})
+    for d in datos[1:]:
+        if len(opciones) >= 3:
+            break
+        if any(o["perks"][0] == d["pg"]["perks"][0] and o["sub"] == d["pg"]["sub"] and o["primary"] == d["pg"]["primary"]
+               for o in opciones):
+            continue
+        opciones.append({"id": f"alt{len(opciones)}", "title": f"Con {dd.rune_name(d['pg']['perks'][0])}",
+                         "why": d["why"], **_view(dd, d["pg"])})
+    return opciones[:3]
+
+
+def opciones_por_tipo(dd, cid, role, shape, champ_meta=None, lane_opp=None):
+    """Sin estadísticas del campeón: páginas por tipo de campeón (cómo funcionaba antes)."""
     arq = builds.archetype(dd, cid) or "peleador"
     tabla = PAGES.get(arq, DEFAULT)
     ch = dd.champions.get(cid, {})

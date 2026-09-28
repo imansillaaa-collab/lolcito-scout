@@ -532,6 +532,15 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .gboard .obj{padding:4px 8px}
 .gboard .fight .flabel{font-size:16px;margin-bottom:6px}
 .panel.quest{margin-top:0}.panel.quest h2{margin-bottom:6px}
+/* Ítem inicial */
+.inic{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.inio{display:flex;align-items:center;gap:8px;padding:4px 7px;border:1px solid var(--line);background:rgba(1,10,19,.45);font-size:12.5px}
+.inio.best{border-color:var(--gold)}
+.inio b{color:var(--gold-hi);font-weight:600}
+.inio .tag{margin-left:6px}
+.inimg{display:flex;gap:2px;flex:none}
+.inimg img{width:26px;height:26px;border:1px solid var(--gold-lo)}
+.inio .small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Highlights */
 #v-hl{padding-bottom:20px}
 .hlhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
@@ -884,7 +893,8 @@ function hlEstado(h){
   if(!h.on) return 'Apagado: no se graba nada.';
   if(h.estado==='bajando') return `Preparando la grabación: bajando el grabador (una sola vez)… <b>${h.progreso}%</b>`;
   if(h.estado==='probando') return 'Preparando la grabación: probando tu placa de video…';
-  if(h.estado==='error') return `<span style="color:var(--bad)">No pude preparar la grabación: ${esc(h.error)}</span>`;
+  if(h.estado==='error') return `<span style="color:var(--bad)">No se puede grabar en esta compu: ${esc(h.error)}</span><br>Tocá «Probar grabación»; si sigue igual, sacale una captura a este mensaje y mandásela a Iñaki.`;
+  if(h.estado==='probando' && h.error) return `${esc(h.error)}`;
   if(h.grabando) return '<span class="hlrec">● Grabando</span> tus momentos de esta partida';
   if(h.estado==='listo') return `Listo: graba solo cuando estás en partida, con ${esc(h.con||'tu compu')}.`;
   return 'Se prepara la próxima vez que abras Lolcito.';
@@ -903,7 +913,7 @@ function pintarHL(){
         <div class="small">${esc(c.campeon||'')} · minuto ${esc(c.minuto)} · ${fmtFecha(c.fecha)}</div></div>
         <button class="pb" title="Borrar este clip" onclick="if(confirm('¿Borrar este clip?'))hlAccion({accion:'borrar',id:'${c.id}'})">✕</button></div></div>`;
   $('#hl').innerHTML = `<div class="panel hlhead"><div>${hlSwitch(h.on)}<div class="small" style="margin-top:4px">${hlEstado(h)}</div></div>
-      <div class="row">${h.clips.length?`<select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro==='todas'?'selected':''}>Más nuevos primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select>`:''}</div></div>
+      <div class="row"><button class="btn sec" onclick="hlAccion({accion:'probar'})" title="Prueba de nuevo qué forma de grabar anda en esta compu (placa NVIDIA, AMD, Intel o el procesador)">Probar grabación</button>${h.clips.length?`<select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro==='todas'?'selected':''}>Más nuevos primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select>`:''}</div></div>
     ${clips.length?`<div class="hlgrid">${clips.map(tarjeta).join('')}</div>`
       :`<div class="panel"><div class="idle" style="padding:30px 10px"><h1>Todavía no hay highlights</h1><p>Jugá una partida con la grabación prendida: cada kill, multikill, first blood, ace o robo de objetivo queda acá como un clip.</p></div></div>`}
     <div class="note">Los clips se guardan solo en tu compu (${partidas.length} partida${partidas.length===1?'':'s'}, ${h.clips.length} clip${h.clips.length===1?'':'s'}). Se graba en 720p sin sonido; se guardan como mucho 200 clips (los más viejos se borran solos).</div>`;
@@ -911,7 +921,7 @@ function pintarHL(){
 async function cargarHL(){
   clearTimeout(hlTimer);
   try{ HL=await api('/api/highlights'); pintarHL(); }catch(e){}
-  if(view==='hl' && HL && (HL.estado==='bajando'||HL.estado==='probando'||HL.grabando)) hlTimer=setTimeout(cargarHL,3000);
+  if(view==='hl' && HL && (HL.estado==='bajando'||HL.estado==='probando'||HL.grabando)) hlTimer=setTimeout(cargarHL,2000);
 }
 async function hlAccion(body){ HL=await api('/api/highlights',body); pintarHL(); cargarHL(); }
 // el switch se guarda apenas lo tocás (no hace falta «Guardar») y queda así aunque cierres Lolcito
@@ -951,6 +961,7 @@ function runesPanel(s){
       ${s.autoRunasMsg?`<div class="autormsg">${esc(s.autoRunasMsg)}</div>`:''}
       <div class="runas">${s.runes.map((o,i)=>runeFold(o,i,locked)).join('')}</div>
       ${sp}
+      ${inicialHtml(s.inicial)}
     </div>`;
 }
 // --- acciones sobre la selección de campeones (marcar / bloquear)
@@ -1116,6 +1127,15 @@ function draft(s){
 }
 
 // ---------- partida en curso (recuperado: se había perdido en la versión de la tarde del 23/9)
+// Ítem inicial: todos los del rol, el que más conviene contra tu rival primero
+function inicialHtml(l){
+  if(!l||!l.length) return '';
+  return `<div class="inic"><div class="small" style="color:var(--gold);margin-bottom:4px">Ítem inicial</div>${l.map(o=>`
+    <div class="inio ${o.mejor?'best':''}" title="${esc(o.why.join(' · '))}">
+      <span class="inimg">${o.items.map(i=>`<img src="${i.img}" title="${esc(i.name)}" alt="">`).join('')}</span>
+      <div style="min-width:0"><b>${esc(o.name)}</b>${o.mejor?'<span class="tag">el mejor contra este rival</span>':''}
+        <div class="small">${esc(o.why[0])}</div></div></div>`).join('')}</div>`;
+}
 // Misión de Support: las 5 mejoras del ítem, la mejor para esta partida primero; cuando la elegís, se marca
 function apoyoHtml(ap){
   if(!ap) return '';
@@ -1311,7 +1331,7 @@ function game(s){
      <div class="changes">${s.changes.length?s.changes.map(c=>`<div class="chrow">${iimg(c.add)} <b>${esc(c.add.name)}</b>${c.remove?` <span class="small">en lugar de</span> ${iimg(c.remove)} <s>${esc(c.remove.name)}</s>`:''}<div class="why">${c.reasons.map(r=>`<div>${esc(r)}</div>`).join('')}</div></div>`).join(''):'<div class="small">Esta partida no pide cambios: la build de siempre ya cubre lo que hace falta.</div>'}</div>`;
   const events=s.events.length?s.events.map(e=>`<div class="ev ev-${e.kind}"><span class="t">${e.t}</span>${esc(e.text)}</div>`).join(''):'<div class="small">Acá van apareciendo las compras importantes de los rivales y los cambios en la partida.</div>';
   const P={
-    compra:['Próxima compra',`${s.noMeta?'<div class="small" style="margin-bottom:8px">Sin estadísticas del meta todavía: las opciones salen solo de tu campeón y del rival.</div>':''}<div class="cards">${opts}</div>${shop}`],
+    compra:['Próxima compra',`${s.inicial&&s.inicial.length?`<div style="margin-bottom:10px">${inicialHtml(s.inicial)}</div>`:''}${s.noMeta?'<div class="small" style="margin-bottom:8px">Sin estadísticas del meta todavía: las opciones salen solo de tu campeón y del rival.</div>':''}<div class="cards">${opts}</div>${shop}`],
     build:['Tu build para esta partida',`${s.nItems===6?'<div class="small" style="margin-bottom:8px">6 ítems + botas: con la misión de ADC completa las botas pasan a su propio espacio.</div>':''}${plan}`],
     rival:['Cómo viene el equipo rival',alerts],
     obj:['Objetivos',objectivesPanel(s.objectives)],

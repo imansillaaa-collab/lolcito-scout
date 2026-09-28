@@ -118,6 +118,19 @@ def _sumar_lista(listas, top, minimo=0.0, con_wr=True):
             for i in ids]
 
 
+def _sumar_runas(listas, claves, total):
+    """Suma combinaciones/páginas de runas de varios niveles (juntando partidas y victorias)."""
+    acc = {}
+    for lista in listas:
+        for x in lista:
+            k = tuple(tuple(x[c]) if isinstance(x[c], list) else x[c] for c in claves)
+            a = acc.setdefault(k, [0, 0.0, x])
+            a[0] += x["games"]
+            a[1] += x["games"] * x["wr"]
+    out = [{**x, "games": g, "wr": w / g, "share": g / max(total, 1)} for g, w, x in acc.values()]
+    return sorted(out, key=lambda x: -x["games"])[:4]
+
+
 def combinar(partes: list) -> dict:
     """Suma las estadísticas publicadas de varios niveles de liga en una sola."""
     from .analyze import adj_wr, tier_of
@@ -151,6 +164,9 @@ def combinar(partes: list) -> dict:
                 "boots": _sumar_lista([(c.get("boots"), gg) for c, gg in con_g], 4),
                 "keystones": _sumar_lista([(c.get("keystones"), gg) for c, gg in con_g], 2),
                 "spells": max(filas, key=lambda f: f[0]["games"])[0].get("spells", []),
+                "estilos": _sumar_runas([c.get("estilos") or [] for c, _ in filas], ("key", "primary", "sub"), g),
+                "paginas": _sumar_runas([c.get("paginas") or [] for c, _ in filas], ("primary", "sub", "perks", "shards"),
+                                        sum(sum(p["games"] for p in (c.get("paginas") or [])) for c, _ in filas)),
                 "good_vs": matchups[:5], "bad_vs": matchups[::-1][:5],
                 "vs_all": {str(m["id"]): [m["games"], round(m["wr"], 4)] for m in matchups},
             })

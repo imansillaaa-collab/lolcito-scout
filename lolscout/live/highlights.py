@@ -46,6 +46,21 @@ OBJ_ES = {"DragonKill": "el dragón", "BaronKill": "el Barón", "HeraldKill": "e
 _JOB = None
 
 
+def _partes(encoder):
+    """«ddagrab|h264_amf» → (captura, codificador). Los encoder.txt viejos solo tienen el codificador."""
+    captura, _, enc = (encoder or "").rpartition("|")
+    return (captura or "ddagrab"), (enc if enc in ENCODERS else "libx264")
+
+
+def _entrada(captura):
+    """Cómo se captura la pantalla: por la placa de video (liviano) o la captura clásica de Windows."""
+    if captura == "gdigrab":
+        return ["-f", "gdigrab", "-framerate", "30", "-draw_mouse", "0", "-i", "desktop",
+                "-vf", "scale=1280:-2:flags=fast_bilinear,format=nv12"]
+    return ["-f", "lavfi", "-i",
+            "ddagrab=output_idx=0:framerate=30,hwdownload,format=bgra,scale=1280:-2:flags=fast_bilinear,format=nv12"]
+
+
 def _atar_a_lolcito(proc):
     """Mete a ffmpeg en un «Job» de Windows que se cierra con Lolcito: si Lolcito se cierra de golpe (o se
     reinicia para actualizarse), Windows corta la grabación sola en vez de dejarla llenando el disco."""
@@ -155,14 +170,47 @@ class Highlights:
             self.estado, self.error = "error", str(e)[:200]
             print(f"[highlights] no pude preparar ffmpeg: {e}", flush=True)
 
-    def _elegir_encoder(self):
-        for enc, (args, _) in ENCODERS.items():
-            r = subprocess.run([str(self.bin), "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
-                                "nullsrc=s=1280x720:d=0.3", "-pix_fmt", "nv12", *args, "-f", "null", "-"],
-                               capture_output=True, creationflags=SIN_VENTANA, timeout=60)
-            if r.returncode == 0:
-                return enc
-        return "libx264"
+    def _probar(self, captura, enc, segundos=2):
+        """Graba de verdad `segundos` de pantalla con esa captura y ese codificador. Devuelve (anda, error)."""
+        cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", *_entrada(captura), "-t", str(segundos),
+               *ENCODERS[enc][0], "-f", "null", "-"]
+        try:
+            r = subprocess.run(cmd, capture_output=True, creationflags=SIN_VENTANA, timeout=40)
+        except subprocess.TimeoutExpired:
+            return False, "tardó demasiado"
+        err = r.stderr.decode("utf-8", "replace").strip().splitlines()
+        importantes = [x for x in err if "rror" in x or "not" in x.lower() or "fail" in x.lower()]
+        return r.returncode == 0, ((importantes or err)[0] if err else "")[:200]
+
+    def _elegir_encoder(self, excluir=()):
+        """Prueba en serio (graba 2 s) cada forma de capturar y codificar, de la más liviana a la más compatible:
+        captura por la placa de video (ddagrab) y, si no anda, la clásica de Windows (gdigrab)."""
+        errores = []
+        for captura in ("ddagrab", "gdigrab"):
+            for enc in ENCODERS:
+                if f"{captura}|{enc}" in excluir:
+                    continue
+                anda, err = self._probar(captura, enc)
+                if anda:
+                    return f"{captura}|{enc}"
+                errores.append(f"{captura}+{enc}: {err}")
+        self.error = "Ninguna forma de grabar anduvo. " + " / ".join(errores[-2:])
+        raise RuntimeError(self.error)
+
+    def probar_ahora(self):
+        """Botón «Probar grabación»: vuelve a elegir la mejor forma de grabar en esta compu."""
+        if self.estado in ("bajando", "probando") or not self.bin.exists():
+            return self.vista()
+        def correr():
+            try:
+                self.estado, self.error = "probando", ""
+                self.encoder = self._elegir_encoder()
+                (self.dir / "encoder.txt").write_text(self.encoder, encoding="utf-8")
+                self.estado = "listo"
+            except Exception as e:  # noqa: BLE001
+                self.estado, self.error = "error", str(e)[:300]
+        threading.Thread(target=correr, daemon=True).start()
+        return self.vista()
 
     # ---------- grabar
     @property
@@ -172,17 +220,41 @@ class Highlights:
     def _arrancar(self):
         for f in self.buffer.glob("*.ts"):
             f.unlink(missing_ok=True)
-        args = ENCODERS.get(self.encoder or "libx264", ENCODERS["libx264"])[0]
-        cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
-               "ddagrab=output_idx=0:framerate=30,hwdownload,format=bgra,scale=1280:-2:flags=fast_bilinear,format=nv12",
-               *args, "-f", "segment", "-segment_time", str(TRAMO), "-reset_timestamps", "1", "-strftime", "1",
+        captura, enc = _partes(self.encoder)
+        cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", *_entrada(captura), *ENCODERS[enc][0],
+               "-f", "segment", "-segment_time", str(TRAMO), "-reset_timestamps", "1", "-strftime", "1",
                str(self.buffer / "t_%Y%m%d%H%M%S.ts")]
-        self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        self._log = open(self.dir / "ffmpeg.log", "w", encoding="utf-8", errors="replace")
+        self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=self._log,
                                      creationflags=SIN_VENTANA)
+        self._arranque = time.time()
         _atar_a_lolcito(self.proc)
         self._hechos, self._pendientes, self._offset = set(), [], None
         self._partida_t = time.time()
         print(f"[highlights] grabando con {self.encoder}", flush=True)
+
+    def _se_cayo(self):
+        """ffmpeg se cerró solo en plena partida: se anota por qué y se pasa a la próxima forma de grabar."""
+        try:
+            self._log.close()
+            ult = (self.dir / "ffmpeg.log").read_text(encoding="utf-8", errors="replace").strip().splitlines()
+        except Exception:  # noqa: BLE001
+            ult = []
+        importantes = [x for x in ult if "rror" in x or "not" in x.lower() or "fail" in x.lower()]
+        motivo = ((importantes or ult)[0] if ult else f"código {self.proc.returncode}")[:200]
+        malo = self.encoder
+        self.proc = None
+        self._malos = getattr(self, "_malos", set()) | {malo}
+        print(f"[highlights] la grabación con {malo} se cortó: {motivo}", flush=True)
+        self.estado, self.error = "probando", f"La grabación con {malo} se cortó ({motivo}). Probando otra forma…"
+        def reelegir():
+            try:
+                self.encoder = self._elegir_encoder(excluir=self._malos)
+                (self.dir / "encoder.txt").write_text(self.encoder, encoding="utf-8")
+                self.estado = "listo"
+            except Exception as e:  # noqa: BLE001
+                self.estado, self.error = "error", str(e)[:300]
+        threading.Thread(target=reelegir, daemon=True).start()
 
     def _parar(self):
         if not self.proc:
@@ -194,6 +266,10 @@ class Highlights:
         except Exception:  # noqa: BLE001
             self.proc.kill()
         self.proc = None
+        try:
+            self._log.close()
+        except Exception:  # noqa: BLE001
+            pass
 
     def _tramos(self):
         """[(inicio_pared, archivo)] de los tramos grabados, ordenados."""
@@ -266,6 +342,9 @@ class Highlights:
             return
         if self.estado != "listo":
             self.preparar()
+            return
+        if self.proc is not None and self.proc.poll() is not None:   # la grabación se cayó
+            self._se_cayo()
             return
         if not self.grabando:
             self._arrancar()
@@ -357,7 +436,8 @@ class Highlights:
         return {"ok": True}
 
     def vista(self):
-        enc = ENCODERS.get(self.encoder or "", (None, None))[1]
+        captura, e = _partes(self.encoder)
+        enc = (ENCODERS[e][1] + (" (captura clásica de Windows)" if captura == "gdigrab" else "")) if self.encoder else None
         return {"on": bool(config.HIGHLIGHTS), "estado": self.estado, "progreso": self.progreso, "error": self.error,
                 "grabando": self.grabando, "con": enc, "clips": self.listar()}
 

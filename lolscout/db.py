@@ -33,6 +33,14 @@ CREATE TABLE IF NOT EXISTS bans (
 CREATE TABLE IF NOT EXISTS seen_ids (       -- partidas ya descartadas (otra cola, remake...)
     match_id TEXT PRIMARY KEY
 );
+CREATE TABLE IF NOT EXISTS paginas (        -- la página de runas completa de cada jugador
+    match_id    TEXT NOT NULL,
+    position    TEXT,
+    champion_id INTEGER,
+    win         INTEGER,
+    pagina      TEXT        -- "8000:8010,9111,9104,8014|8400:8444,8451|5008,5008,5011"
+);
+CREATE INDEX IF NOT EXISTS idx_pag ON paginas(champion_id, position);
 CREATE INDEX IF NOT EXISTS idx_part_pos ON participants(position, champion_id);
 CREATE INDEX IF NOT EXISTS idx_match_patch ON matches(patch);
 """
@@ -55,6 +63,28 @@ def known_match(conn, match_id: str) -> bool:
 
 def mark_seen(conn, match_id: str):
     conn.execute("INSERT OR IGNORE INTO seen_ids VALUES (?)", (match_id,))
+
+
+def texto_pagina(perks: dict) -> str:
+    """La página de runas de match-v5 en un texto corto: "8000:8010,9111,9104,8014|8400:8444,8451|5008,5008,5011"."""
+    try:
+        s1, s2 = perks["styles"][0], perks["styles"][1]
+        st = perks["statPerks"]
+        a = ",".join(str(x["perk"]) for x in s1["selections"])
+        b = ",".join(str(x["perk"]) for x in s2["selections"])
+        if len(s1["selections"]) != 4 or len(s2["selections"]) != 2:
+            return ""
+        return f"{s1['style']}:{a}|{s2['style']}:{b}|{st['offense']},{st['flex']},{st['defense']}"
+    except (KeyError, IndexError, TypeError):
+        return ""
+
+
+def pagina_de_texto(t: str) -> dict:
+    p1, p2, f = t.split("|")
+    a, ra = p1.split(":")
+    b, rb = p2.split(":")
+    return {"primary": int(a), "sub": int(b), "perks": [int(x) for x in ra.split(",")] + [int(x) for x in rb.split(",")],
+            "shards": [int(x) for x in f.split(",")]}
 
 
 def save_match(conn, match: dict) -> bool:
@@ -84,6 +114,10 @@ def save_match(conn, match: dict) -> bool:
                 p.get("summoner1Id"), p.get("summoner2Id"),
             ),
         )
+        pagina = texto_pagina(p.get("perks") or {})
+        if pagina:
+            conn.execute("INSERT INTO paginas VALUES (?,?,?,?,?)",
+                         (mid, p.get("teamPosition") or "NONE", p["championId"], int(p["win"]), pagina))
     for team in info.get("teams", []):
         for b in team.get("bans", []):
             if b.get("championId", -1) > 0:
@@ -101,7 +135,7 @@ def prune(conn, keep_patches: int = 2) -> None:
         for i in range(0, len(ids), 500):
             chunk = ids[i:i + 500]
             ph = ",".join("?" * len(chunk))
-            for table in ("participants", "bans", "matches"):
+            for table in ("participants", "bans", "paginas", "matches"):
                 conn.execute(f"DELETE FROM {table} WHERE match_id IN ({ph})", chunk)
     if old:
         conn.commit()

@@ -653,6 +653,8 @@ class App:
                         h.preparar()
                 elif acc == "borrar":
                     h.borrar(body.get("id"))
+                elif acc == "probar":
+                    return h.probar_ahora()
             return h.vista()
         if path == "/api/auto-runas" and method == "POST":
             config.save_settings({"RUNAS_SOLAS": bool(body.get("on"))})   # queda guardado en ajustes.json
