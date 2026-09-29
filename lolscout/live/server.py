@@ -147,6 +147,16 @@ class Assistant:
                 "bracket": self.current_bracket(), "bracketName": online.BRACKET_NAMES.get(self.current_bracket(), ""),
                 "pool": self.pool_view()}
 
+    def cuenta_hl(self):
+        """Para los highlights: de qué cuenta es el clip y qué liga tenía al jugar la partida."""
+        if not self.account:
+            return None
+        v = self.account_view() or {}
+        nombre = self.account.get("name") or ""
+        if self.account.get("tag"):
+            nombre += f"#{self.account['tag']}"
+        return {"puuid": self.account.get("puuid"), "nombre": nombre, "liga": v.get("rank")}
+
     def main_role(self, cid):
         d = self.dist.get(cid) or {}
         return max(d, key=d.get) if d else None
@@ -176,7 +186,7 @@ class Assistant:
                 self.recorder.update(game, st, self.lcu)
                 st["duos"] = self.duos_partida()
                 if not self.simulated:
-                    self.highlights.en_partida(game, st.get("me"))
+                    self.highlights.en_partida(game, st.get("me"), self.cuenta_hl())
                 if ended:  # pantalla de victoria/derrota: ya muestro el resumen
                     self.highlights.fin_partida()
                     self.finish_game()
@@ -295,6 +305,7 @@ class Assistant:
             return                          # todavía no contó la partida
         self.rank, self._lp = nuevo, None
         self.postgame["lp"] = lp_cambio(antes, nuevo)
+        self.highlights.anotar_lp(self.postgame["lp"]["text"])
         puuid = (self.account or {}).get("puuid")
         self.history.save(puuid, {k: v for k, v in self.postgame.items() if not k.startswith("_")})
         pg.save({k: v for k, v in self.postgame.items() if not k.startswith("_")})
@@ -655,7 +666,7 @@ class App:
                     h.borrar(body.get("id"))
                 elif acc == "probar":
                     return h.probar_ahora()
-            return h.vista()
+            return h.vista(self.assistant.cuenta_hl())
         if path == "/api/auto-runas" and method == "POST":
             config.save_settings({"RUNAS_SOLAS": bool(body.get("on"))})   # queda guardado en ajustes.json
             return {"ok": True, "on": config.RUNAS_SOLAS}

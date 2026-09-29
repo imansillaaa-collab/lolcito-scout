@@ -556,6 +556,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .hli img{width:38px;height:38px;border:1px solid var(--gold-lo)}
 .hli b{color:var(--gold-hi);font:700 14px var(--title);letter-spacing:.5px}
 .hli>div{flex:1;min-width:0}
+.hlcta{margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hlcta span{color:var(--text)}
+.hlcta b{font:600 12px inherit;letter-spacing:0}.hlcta b.good{color:var(--good)}.hlcta b.bad{color:var(--bad)}
 .apoyo{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .apest{font-size:12px;color:var(--body)}
 .apest.ya{color:var(--hex);font-weight:600;animation:pulso 1.6s ease-in-out infinite;padding:4px 8px;border:1px solid var(--hex)}
@@ -891,7 +894,7 @@ function runeCard(o,i,champ,locked){
   </div>`;
 }
 // ---------- Highlights: clips de tus mejores momentos
-let HL=null, hlTimer=null, hlFiltro='todas';
+let HL=null, hlTimer=null, hlFiltro='todas', hlCuenta=null;
 function hlEstado(h){
   if(!h.on) return 'Apagado: no se graba nada.';
   if(h.estado==='bajando') return `Preparando la grabación: bajando el grabador (una sola vez)… <b>${h.progreso}%</b>`;
@@ -909,14 +912,22 @@ function fmtFecha(ms){ const d=new Date(ms); return d.toLocaleDateString('es-AR'
 function pintarHL(){
   const h=HL; if(!h) return;
   const partidas=[...new Set(h.clips.map(c=>c.partida))];
-  let clips=h.clips; if(hlFiltro==='mejores') clips=[...clips].sort((a,b)=>b.puntos-a.puntos);
+  // cuentas con clips: por defecto se ven los de la cuenta conectada al LoL (si está cerrado, todos)
+  const cuentas=[...new Map(h.clips.filter(c=>c.puuid).map(c=>[c.puuid,c.cuenta||'Cuenta'])).entries()];
+  if(hlCuenta===null || (hlCuenta!=='todas' && !cuentas.some(([p])=>p===hlCuenta)))
+    hlCuenta = h.cuenta && cuentas.some(([p])=>p===h.cuenta) ? h.cuenta : 'todas';
+  let clips=hlCuenta==='todas'?h.clips:h.clips.filter(c=>c.puuid===hlCuenta);
+  if(hlFiltro==='mejores') clips=[...clips].sort((a,b)=>b.puntos-a.puntos);
+  const selCuenta=cuentas.length>1||(cuentas.length===1&&h.clips.some(c=>!c.puuid))
+    ?`<select class="sel" onchange="hlCuenta=this.value;pintarHL()"><option value="todas" ${hlCuenta==='todas'?'selected':''}>Todas las cuentas</option>${cuentas.map(([p,n])=>`<option value="${esc(p)}" ${hlCuenta===p?'selected':''}>${esc(n)}${p===h.cuenta?' (conectada)':''}</option>`).join('')}</select>`:'';
   const tarjeta=c=>`<div class="hlc ${c.puntos>=60?'top':''}">
       <video src="${c.video}" ${c.miniatura?`poster="${c.miniatura}"`:''} controls preload="none"></video>
       <div class="hli">${c.campeonImg?`<img src="${c.campeonImg}" alt="">`:''}<div><b>${esc(c.tipo)}</b>
-        <div class="small">${esc(c.campeon||'')} · minuto ${esc(c.minuto)} · ${fmtFecha(c.fecha)}</div></div>
+        <div class="small">${esc(c.campeon||'')} · minuto ${esc(c.minuto)} · ${fmtFecha(c.fecha)}</div>
+        ${c.cuenta||c.liga?`<div class="small hlcta">${c.cuenta?`<span>${esc(c.cuenta)}</span>`:''}${c.liga?` · ${esc(c.liga)}`:''}${c.lp?` · <b class="${c.lp.startsWith('+')?'good':'bad'}">${esc(c.lp)}</b>`:''}</div>`:''}</div>
         <button class="pb" title="Borrar este clip" onclick="if(confirm('¿Borrar este clip?'))hlAccion({accion:'borrar',id:'${c.id}'})">✕</button></div></div>`;
   $('#hl').innerHTML = `<div class="panel hlhead"><div>${hlSwitch(h.on)}<div class="small" style="margin-top:4px">${hlEstado(h)}</div></div>
-      <div class="row"><button class="btn sec" onclick="hlAccion({accion:'probar'})" title="Prueba de nuevo qué forma de grabar anda en esta compu (placa NVIDIA, AMD, Intel o el procesador)">Probar grabación</button>${h.clips.length?`<select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro==='todas'?'selected':''}>Más nuevos primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select>`:''}</div></div>
+      <div class="row"><button class="btn sec" onclick="hlAccion({accion:'probar'})" title="Prueba de nuevo qué forma de grabar anda en esta compu (placa NVIDIA, AMD, Intel o el procesador)">Probar grabación</button>${selCuenta}${h.clips.length?`<select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro==='todas'?'selected':''}>Más nuevos primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select>`:''}</div></div>
     ${clips.length?`<div class="hlgrid">${clips.map(tarjeta).join('')}</div>`
       :`<div class="panel"><div class="idle" style="padding:30px 10px"><h1>Todavía no hay highlights</h1><p>Jugá una partida con la grabación prendida: cada kill, multikill, first blood, ace o robo de objetivo queda acá como un clip.</p></div></div>`}
     <div class="note">Los clips se guardan solo en tu compu (${partidas.length} partida${partidas.length===1?'':'s'}, ${h.clips.length} clip${h.clips.length===1?'':'s'}). Se graba en 720p sin sonido; se guardan como mucho 200 clips (los más viejos se borran solos).</div>`;

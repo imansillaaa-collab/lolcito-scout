@@ -108,6 +108,7 @@ class Highlights:
         self.bin = self.dir / "ffmpeg.exe"
         for d in (self.clips, self.buffer):
             d.mkdir(parents=True, exist_ok=True)
+        self._limpiar_viejos_sin_cuenta()
         self.proc = None
         self.encoder = self._leer_encoder()
         self.estado = "listo" if self.bin.exists() and self.encoder else "falta"
@@ -117,6 +118,19 @@ class Highlights:
         self._pendientes = []        # (desde_pared, hasta_pared, info)
         self._lock = threading.Lock()
         self._partida_t = None
+        self._ultima = None          # clave de la última partida grabada (para anotarle los LP al final)
+
+    def _limpiar_viejos_sin_cuenta(self):
+        """Una sola vez: borra los clips de antes de que se guardara la cuenta y la liga (arrancamos en limpio)."""
+        marca = self.dir / "clips-con-cuenta.txt"
+        if marca.exists():
+            return
+        for f in self.clips.iterdir():
+            try:
+                f.unlink()
+            except OSError:
+                pass
+        marca.write_text("Desde acá cada clip guarda la cuenta y la liga.\n", encoding="utf-8")
 
     # ---------- preparar ffmpeg
     def _leer_encoder(self):
@@ -334,8 +348,8 @@ class Highlights:
             out.append((d, h, round(puntos), texto))
         return out
 
-    def en_partida(self, game, me):
-        """Se llama en cada vuelta mientras hay partida."""
+    def en_partida(self, game, me, cuenta=None):
+        """Se llama en cada vuelta mientras hay partida. cuenta: {puuid, nombre, liga} de la cuenta conectada."""
         if not config.HIGHLIGHTS or os.name != "nt":
             if self.grabando:
                 self._parar()
@@ -361,6 +375,9 @@ class Highlights:
                     "campeon": (me or {}).get("name"), "campeonImg": (me or {}).get("img"),
                     "kda": f"{(me or {}).get('k', 0)}/{(me or {}).get('d', 0)}/{(me or {}).get('a', 0)}",
                     "partida": int(self._partida_t * 1000)}
+            if cuenta:
+                info.update({"puuid": cuenta.get("puuid"), "cuenta": cuenta.get("nombre"), "liga": cuenta.get("liga")})
+            self._ultima = info["partida"]
             self._pendientes.append((self._offset + d, self._offset + h, info))
         self._procesar_pendientes()
         self._limpiar_buffer()
@@ -416,6 +433,24 @@ class Highlights:
                         f.unlink(missing_ok=True)
         threading.Thread(target=cerrar, daemon=True).start()
 
+    def anotar_lp(self, texto):
+        """Cuando Riot actualiza el rango después de la partida: le anota a sus clips los LP que ganaste o perdiste."""
+        partida, self._ultima = self._ultima, None
+        if not partida or not texto:
+            return
+        def anotar():
+            time.sleep(40)                       # que terminen de cortarse los últimos clips
+            with self._lock:
+                for f in self.clips.glob("*.json"):
+                    try:
+                        info = json.loads(f.read_text(encoding="utf-8"))
+                        if info.get("partida") == partida:
+                            info["lp"] = texto
+                            f.write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
+                    except (OSError, ValueError):
+                        pass
+        threading.Thread(target=anotar, daemon=True).start()
+
     # ---------- solapa Highlights
     def listar(self):
         out = []
@@ -435,11 +470,12 @@ class Highlights:
                 pass
         return {"ok": True}
 
-    def vista(self):
+    def vista(self, cuenta=None):
         captura, e = _partes(self.encoder)
         enc = (ENCODERS[e][1] + (" (captura clásica de Windows)" if captura == "gdigrab" else "")) if self.encoder else None
         return {"on": bool(config.HIGHLIGHTS), "estado": self.estado, "progreso": self.progreso, "error": self.error,
-                "grabando": self.grabando, "con": enc, "clips": self.listar()}
+                "grabando": self.grabando, "con": enc, "clips": self.listar(),
+                "cuenta": (cuenta or {}).get("puuid")}
 
     def archivo(self, nombre):
         f = (self.clips / nombre).resolve()
