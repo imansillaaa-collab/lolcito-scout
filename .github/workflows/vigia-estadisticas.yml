@@ -1,0 +1,52 @@
+# Segunda red de seguridad para el workflow «Estadísticas»: a veces GitHub demora o directamente
+# se saltea el disparo programado (cron) de un workflow, sobre todo si el repo no tiene mucha
+# actividad. El propio workflow «Estadísticas» ya encadena su próxima corrida al terminar, pero
+# eso no ayuda si nunca llegó a arrancar una primera vez. Este vigía corre cada 15 minutos, es
+# rapidísimo, y si ve que no hay ninguna corrida de «Estadísticas» activa ni en cola, y que la
+# última terminó hace más de 20 minutos, la reactiva.
+name: Vigía de Estadísticas
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reactivar Estadísticas si quedó parado
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          api() { curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$1"; }
+
+          activas=$(api "https://api.github.com/repos/$REPO/actions/workflows/estadisticas.yml/runs?status=in_progress&per_page=1" | jq '.total_count')
+          en_cola=$(api "https://api.github.com/repos/$REPO/actions/workflows/estadisticas.yml/runs?status=queued&per_page=1" | jq '.total_count')
+          if [ "$activas" -gt 0 ] || [ "$en_cola" -gt 0 ]; then
+            echo "Ya hay una corrida activa o en cola (activas=$activas, en_cola=$en_cola). No hago nada."
+            exit 0
+          fi
+
+          ultima=$(api "https://api.github.com/repos/$REPO/actions/workflows/estadisticas.yml/runs?status=completed&per_page=1")
+          fin=$(echo "$ultima" | jq -r '.workflow_runs[0].updated_at // empty')
+          if [ -z "$fin" ]; then
+            echo "No encontré corridas anteriores completadas. No hago nada."
+            exit 0
+          fi
+
+          minutos=$(( ( $(date -u +%s) - $(date -u -d "$fin" +%s) ) / 60 ))
+          echo "La última corrida terminó hace $minutos minutos (a las $fin)."
+          if [ "$minutos" -ge 20 ]; then
+            echo "Pasaron 20 minutos o más sin ninguna corrida nueva: reactivando."
+            curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/actions/workflows/estadisticas.yml/dispatches" \
+              -d '{"ref":"main"}'
+          else
+            echo "Todavía no pasaron 20 minutos, no hace falta reactivar."
+          fi
