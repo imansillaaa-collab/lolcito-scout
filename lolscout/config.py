@@ -66,6 +66,7 @@ RUNAS_SOLAS = os.environ.get("RUNAS_SOLAS", "0") == "1"    # switch «Runas auto
 PLAYERS_PER_RUN = _int("PLAYERS_PER_RUN", 250)
 MATCHES_PER_PLAYER = _int("MATCHES_PER_PLAYER", 12)
 MAX_NEW_MATCHES = _int("MAX_NEW_MATCHES", 1500)
+TIMELINES = _int("TIMELINES", 300)          # cuántas líneas de tiempo bajar por tanda (orden de habilidades)
 DAYS_BACK = _int("DAYS_BACK", 3)
 MIN_GAMES = _int("MIN_GAMES", 20)
 LANGUAGE = os.environ.get("LANGUAGE", "es_AR")

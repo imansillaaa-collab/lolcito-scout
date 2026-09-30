@@ -185,6 +185,7 @@ class Assistant:
                                  champs=self.champs)
                 self.recorder.update(game, st, self.lcu)
                 st["duos"] = self.duos_partida()
+                st["ligas"] = self.ligas_partida(st)
                 if not self.simulated:
                     self.highlights.en_partida(game, st.get("me"), self.cuenta_hl())
                 if ended:  # pantalla de victoria/derrota: ya muestro el resumen
@@ -238,6 +239,7 @@ class Assistant:
     # ---------- fin de partida
     def finish_game(self):
         self._duos = None          # la próxima partida se vuelven a buscar
+        self._ligas = None
         rec = self.recorder
         if rec.game is None:
             return
@@ -460,6 +462,34 @@ class Assistant:
             return {}
         return d.get("map", {})
 
+    def ligas_partida(self, st=None):
+        """{championId: {txt, lp, tier}}: la liga y los LP de cada jugador de la partida (una vez por partida)."""
+        if self.simulated:   # para ver cómo queda: ligas inventadas
+            tiers = ["GOLD", "PLATINUM", "EMERALD", "EMERALD", "DIAMOND", "SILVER", None, "MASTER"]
+            out = {}
+            for i, p in enumerate((st or {}).get("allies", []) + (st or {}).get("enemies", [])):
+                t = tiers[(p["id"] * 7 + i) % len(tiers)]
+                out[p["id"]] = liga_vista({"tier": t, "division": ["I", "II", "III", "IV"][p["id"] % 4], "lp": p["id"] * 13 % 100}
+                                          if t else None)
+            return out
+        d = getattr(self, "_ligas", None)
+        if d is None or (time.time() > d["hasta"] and not d.get("map")):
+            self._ligas = {"map": {}, "hasta": time.time() + 120}
+            threading.Thread(target=self._buscar_ligas, daemon=True).start()
+            return {}
+        return d.get("map", {})
+
+    def _buscar_ligas(self):
+        try:
+            _, jugadores = self.lcu.jugadores_partida() if hasattr(self.lcu, "jugadores_partida") else (None, [])
+            out = {}
+            for pu, cid, _ in jugadores:
+                out[cid] = liga_vista(self.lcu.ranked_de(pu))
+                self._ligas["map"] = dict(out)      # se van mostrando a medida que llegan
+            print(f"[ligas] {len(out)} jugadores", flush=True)
+        except Exception as e:
+            print(f"[ligas] no pude buscar: {e}", flush=True)
+
     def _buscar_duos(self):
         try:
             gid, jugadores = self.lcu.jugadores_partida() if hasattr(self.lcu, "jugadores_partida") else (None, [])
@@ -579,6 +609,15 @@ class Updater:
 
 LP_TIERS = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"]
 LP_DIVS = ["IV", "III", "II", "I"]
+
+
+def liga_vista(r):
+    """{'tier': 'EMERALD', 'division': 'II', 'lp': 45} -> lo que muestra la pantalla de partida."""
+    if not r:
+        return {"txt": "Sin clasificar", "tier": "none"}
+    div = r["division"] if r["tier"] not in LP_TIERS[7:] else ""
+    return {"txt": f"{online.TIER_ES.get(r['tier'], r['tier'].title())} {div}".strip(), "lp": r.get("lp", 0),
+            "tier": r["tier"].lower()}
 
 
 def lp_cambio(antes: dict, despues: dict) -> dict:

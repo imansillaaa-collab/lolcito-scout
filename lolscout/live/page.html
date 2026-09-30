@@ -500,6 +500,23 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .gboard .col-ally{grid-area:ally}.gboard .col-enemy{grid-area:enemy}.gboard .ga{grid-area:a}.gboard .gb{grid-area:b}
 .gcol .panel{margin-bottom:12px}
 /* dúos: etiqueta y borde del color de su grupo (dos dúos distintos = dos colores) */
+.liga{font:600 11.5px var(--body,inherit);color:var(--text-dim,#a09b8c);margin:1px 0}
+.liga b{font-weight:700}
+.liga.t-iron{color:#9a8d88}.liga.t-bronze{color:#c08457}.liga.t-silver{color:#b7c3cc}.liga.t-gold{color:#e0b24f}
+.liga.t-platinum{color:#4fc9b5}.liga.t-emerald{color:#34c77b}.liga.t-diamond{color:#7f9bff}.liga.t-master{color:#c07bff}
+.liga.t-grandmaster{color:#ff6b6b}.liga.t-challenger{color:#f6d96b}.liga.t-none{color:#7c7a72}
+.skord{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.skk{position:relative;display:inline-flex}.skk img{width:34px;height:34px;border:1px solid var(--gold-lo)}
+.skk b{position:absolute;right:-2px;bottom:-4px;font:700 11px var(--title);color:var(--gold-hi);background:#010a13;padding:0 3px}
+.sksep{color:var(--gold);font-size:18px}
+.skgrid{display:flex;flex-direction:column;gap:2px;overflow-x:auto}
+.skrow{display:flex;gap:2px;align-items:center}
+.skrow .skl{display:inline-flex;align-items:center;gap:3px;width:40px;font:700 11px var(--title);color:var(--gold-hi)}
+.skrow .skl img{width:20px;height:20px}
+.skc{width:20px;height:20px;flex:0 0 20px;display:inline-flex;align-items:center;justify-content:center;background:#0a1620;
+  border:1px solid #1e2d3a;font:600 10px var(--body,inherit);color:#010a13}
+.skc.on{background:var(--gold-lo);color:#f0e6d2}.skc.on.done{background:#3a3326;color:#8c8272}
+.skc.now{outline:1px solid var(--good)}
 .duob{display:inline-block;font:700 10px var(--title);letter-spacing:1px;padding:1px 6px;margin-left:4px;vertical-align:1px;
   color:#010a13;background:var(--dc);box-shadow:0 0 8px color-mix(in srgb,var(--dc) 55%,transparent)}
 .gboard .slot.enduo{box-shadow:inset 3px 0 0 var(--dc)}
@@ -1166,11 +1183,13 @@ function player(p,isMe,enemy){
   const badge = p.dmg?`<span class="dmg d${p.dmg}">${p.dmg}</span>`:'';
   const duo = ((lastState&&lastState.duos)||{})[p.id];
   const duob = duo?`<span class="duob" style="--dc:${duo.color}" title="Jugaron juntos ${duo.juntos} de sus últimas 20 partidas: casi seguro están en dúo. Mismo color = mismo grupo.">DÚO</span>`:'';
+  const lg = ((lastState&&lastState.ligas)||{})[p.id];
+  const liga = lg?`<div class="liga t-${esc(lg.tier)}" title="Su rango en Solo/Dúo, como se ve en su perfil">${esc(lg.txt)}${lg.lp!=null?` · <b>${lg.lp} LP</b>`:''}</div>`:'';
   const def = enemy&&p.armor!=null?`<div class="stat" title="Armadura y resistencia mágica estimadas">${p.armor} armadura · ${p.mr} res. mágica</div>`:'';
   const flags = (p.flags||[]).map(f=>`<span class="flag f-${f.replace(/[^a-z]/g,'')}">${esc(f)}</span>`).join('');
   return `<div class="slot ${isMe?'me':''} ${p.threat?'threat':''} ${p.dead?'dead':''} ${duo?'enduo':''}" ${duo?`style="--dc:${duo.color}"`:''}>${pimg(p,'por sm')}
     <div class="who"><div class="name">${esc(p.name)} ${duob}${badge}${p.threat?'<span class="badge">más fuerte</span>':''}${p.dead?`<span class="deadb">muerto · ${p.respawn} s</span>`:''}</div>
-      <div class="stat">${esc(p.role)} · nv ${p.level} · ${p.k}/${p.d}/${p.a} · ${p.cs} cs · <span class="gold">${k(p.gold)}</span></div>${def}
+      ${liga}<div class="stat">${esc(p.role)} · nv ${p.level} · ${p.k}/${p.d}/${p.a} · ${p.cs} cs · <span class="gold">${k(p.gold)}</span></div>${def}
       ${flags?`<div class="flags">${flags}</div>`:''}
       <div class="items">${p.items.map(i=>iimg(i)).join('')}</div></div></div>`;
 }
@@ -1181,6 +1200,15 @@ function laneChips(c,lo,corto){
   return `<div class="lanecmp" title="Vos contra ${esc(lo.name)}"><span class="${cls(c.gold)}">${sign(c.gold)} oro en ítems</span><span class="${cls(c.level)}">${sign(c.level)} nivel</span><span class="${cls(c.cs)}">${sign(c.cs)} cs</span>${corto?'':`<span class="small">vs ${esc(lo.name)}</span>`}</div>`;
 }
 // Franja de arriba en partida: vos y tu rival de línea con sus splash, y en el medio marcador, reloj y oro
+function habilidadesHtml(h, nivel){
+  if(!h) return '<div class="small">Todavía no hay datos de este campeón: se van juntando con cada tanda de estadísticas.</div>';
+  const ic=kk=>`<span class="skk">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}<b>${kk}</b></span>`;
+  const orden=`<div class="skord">${h.maxeo.map(ic).join('<span class="sksep">›</span>')}<span class="sksep">›</span>${ic('R')}</div>`;
+  const filas=['Q','W','E','R'].map(kk=>`<div class="skrow"><span class="skl">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}${kk}</span>${
+    h.niveles.map((x,i)=>`<span class="skc ${x===kk?'on':''} ${i+1===nivel?'now':''} ${i+1<=nivel&&x===kk?'done':''}">${x===kk?i+1:''}</span>`).join('')}</div>`).join('');
+  const prox=nivel>=1&&nivel<=18?`<div class="small" style="margin-top:6px">Nivel ${nivel}: ${nivel<18?`el próximo punto va a la <b>${h.niveles[nivel]}</b>`:'ya tenés todo'}.</div>`:'';
+  return `${orden}<div class="skgrid">${filas}</div>${prox}<div class="why"><div>${esc(h.why)}</div></div>`;
+}
 function gameHead(s){
   const me=s.me, lo=s.laneOpponent, [ga,ge]=s.teamGold, tot=(ga+ge)||1;
   const sub=p=>`${p.k}/${p.d}/${p.a} · ${k(p.gold)} en ítems · ${p.cs} cs${p.dead?` · <span class="muerto">vuelve en ${p.respawn} s</span>`:''}`;
@@ -1234,7 +1262,7 @@ function fightPanel(f){
 }
 // ---------- orden de los paneles (cada usuario lo acomoda como quiere; se guarda en ajustes.json)
 const COLS=['L','a','b','R'];
-const DEFAULT_LAYOUT={L:['novedades'],a:['compra','build','rival'],b:['pelea','obj'],R:['mision'],min:[],hid:[]};
+const DEFAULT_LAYOUT={L:['novedades'],a:['compra','build','rival'],b:['habilidades','pelea','obj'],R:['mision'],min:[],hid:[]};
 let LAYOUT=JSON.parse(JSON.stringify(DEFAULT_LAYOUT)), lastState=null;
 function fixLayout(l){
   const lista=k=>Array.isArray(l&&l[k])?l[k].filter(x=>typeof x==='string'):[];
@@ -1351,6 +1379,7 @@ function game(s){
     obj:['Objetivos',objectivesPanel(s.objectives)],
     pelea:[s.fight.mode==='objective'?'¿Conviene pelear el objetivo?':'¿Qué conviene ahora?',fightPanel(s.fight)],
     novedades:['Novedades',`<div class="events">${events}</div>`],
+    habilidades:['Orden de habilidades',habilidadesHtml(s.habilidades, me.level)],
     mision:s.quest?[s.quest.name,`<div>${esc(s.quest.reward)}</div><div class="small" style="margin-top:6px">Cómo se completa: ${esc(s.quest.how)}</div>${apoyoHtml(s.apoyo)}`,'quest']:null,
   };
   const pants = s.pants?`<div class="pants lv${s.pants.level}">

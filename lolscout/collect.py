@@ -43,11 +43,18 @@ def collect(client: RiotClient = None, conn=None, log=print) -> int:
 
     # 3) Detalle de cada partida
     log(f"Descargando {len(ids)} partidas (tarda unos minutos por los límites de la API)...")
-    saved = 0
+    saved = lineas = 0
+    # la línea de tiempo (de ahí sale el orden de habilidades) se pide para 1 de cada 4 partidas: con eso
+    # alcanza y no se gasta el doble de pedidos a la API
     for i, mid in enumerate(ids, 1):
         match = client.match(mid)
         if match and db.save_match(conn, match):
             saved += 1
+            if lineas < config.TIMELINES and random.random() < 0.25:
+                lineas += 1
+                tl = client.timeline(mid)
+                if tl:
+                    db.save_habilidades(conn, match, tl)
         elif not match:
             db.mark_seen(conn, mid)
         if i % 25 == 0:
@@ -55,7 +62,8 @@ def collect(client: RiotClient = None, conn=None, log=print) -> int:
             log(f"  {i}/{len(ids)}")
     conn.commit()
     total = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
-    log(f"Listo: {saved} partidas nuevas guardadas ({total} en total). Pedidos a la API: {client.requests_made}")
+    log(f"Listo: {saved} partidas nuevas guardadas ({total} en total), {lineas} con orden de habilidades. "
+        f"Pedidos a la API: {client.requests_made}")
     return saved
 
 

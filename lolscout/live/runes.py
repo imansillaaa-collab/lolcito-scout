@@ -433,11 +433,18 @@ def options(dd, cid, role, shape, champ_meta=None, lane_opp=None):
     opciones = []
     mas_usada = datos[0]
     adaptada, motivos = adapt(mas_usada["pg"], shape, role, ranged, tanky, lane_ranged)
+    base = {"id": "meta", "title": "La más usada", "why": mas_usada["why"], **_view(dd, mas_usada["pg"])}
     if motivos and _valid(dd, adaptada) and adaptada != mas_usada["pg"]:
-        opciones.append({"id": "rival", "title": "Para este rival",
-                         "why": motivos + [f"Parte de la más usada ({dd.rune_name(mas_usada['pg']['perks'][0])})."],
-                         **_view(dd, adaptada)})
-    opciones.append({"id": "meta", "title": "La más usada", "why": mas_usada["why"], **_view(dd, mas_usada["pg"])})
+        otra = (adaptada["primary"] != mas_usada["pg"]["primary"] or adaptada["sub"] != mas_usada["pg"]["sub"]
+                or adaptada["perks"][:4] != mas_usada["pg"]["perks"][:4])
+        if otra:   # cambia un árbol o una runa del principal: es otra página, va aparte
+            opciones.append({"id": "rival", "title": "Para este rival",
+                             "why": motivos + [f"Parte de la más usada ({dd.rune_name(mas_usada['pg']['perks'][0])})."],
+                             **_view(dd, adaptada)})
+        else:      # solo retoca una runa secundaria o un fragmento: no la muestro repetida, la más usada ya viene ajustada
+            base = {"id": "meta", "title": "La más usada, ajustada a este rival",
+                    "why": mas_usada["why"] + motivos, **_view(dd, adaptada)}
+    opciones.append(base)
     resto = [d for d in datos[1:] if d["games"] >= 20]
     if resto:
         mejor = max(resto, key=puntaje)

@@ -40,7 +40,15 @@ CREATE TABLE IF NOT EXISTS paginas (        -- la página de runas completa de c
     win         INTEGER,
     pagina      TEXT        -- "8000:8010,9111,9104,8014|8400:8444,8451|5008,5008,5011"
 );
+CREATE TABLE IF NOT EXISTS habilidades (    -- en qué orden subió las habilidades (sale de la línea de tiempo)
+    match_id    TEXT NOT NULL,
+    position    TEXT,
+    champion_id INTEGER,
+    win         INTEGER,
+    orden       TEXT        -- "QWEQQRQEQQREEWWRWW" (una letra por nivel, hasta el 18)
+);
 CREATE INDEX IF NOT EXISTS idx_pag ON paginas(champion_id, position);
+CREATE INDEX IF NOT EXISTS idx_hab ON habilidades(champion_id, position);
 CREATE INDEX IF NOT EXISTS idx_part_pos ON participants(position, champion_id);
 CREATE INDEX IF NOT EXISTS idx_match_patch ON matches(patch);
 """
@@ -125,6 +133,30 @@ def save_match(conn, match: dict) -> bool:
     return True
 
 
+TECLAS = {1: "Q", 2: "W", 3: "E", 4: "R"}
+
+
+def save_habilidades(conn, match: dict, timeline: dict) -> int:
+    """Guarda en qué orden subió cada jugador sus habilidades (eventos SKILL_LEVEL_UP de la línea de tiempo)."""
+    info, mid = match["info"], match["metadata"]["matchId"]
+    por_id = {p.get("participantId"): p for p in info["participants"]}
+    orden = {}
+    for fr in ((timeline or {}).get("info") or {}).get("frames") or []:
+        for ev in fr.get("events") or []:
+            if ev.get("type") == "SKILL_LEVEL_UP" and ev.get("levelUpType", "NORMAL") == "NORMAL":
+                tecla = TECLAS.get(ev.get("skillSlot"))
+                if tecla:
+                    orden.setdefault(ev.get("participantId"), []).append(tecla)
+    n = 0
+    for pid, seq in orden.items():
+        p = por_id.get(pid)
+        if p and len(seq) >= 6:
+            conn.execute("INSERT INTO habilidades VALUES (?,?,?,?,?)",
+                         (mid, p.get("teamPosition") or "NONE", p["championId"], int(p["win"]), "".join(seq[:18])))
+            n += 1
+    return n
+
+
 def prune(conn, keep_patches: int = 2) -> None:
     """Borra partidas de parches viejos para que la base no crezca sin fin."""
     patches = [r[0] for r in conn.execute("SELECT DISTINCT patch FROM matches")]
@@ -135,7 +167,7 @@ def prune(conn, keep_patches: int = 2) -> None:
         for i in range(0, len(ids), 500):
             chunk = ids[i:i + 500]
             ph = ",".join("?" * len(chunk))
-            for table in ("participants", "bans", "paginas", "matches"):
+            for table in ("participants", "bans", "paginas", "habilidades", "matches"):
                 conn.execute(f"DELETE FROM {table} WHERE match_id IN ({ph})", chunk)
     if old:
         conn.commit()

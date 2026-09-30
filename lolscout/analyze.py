@@ -86,6 +86,50 @@ def paginas_completas(conn, patches, ph):
     return out
 
 
+def _maxeo(orden: str) -> str:
+    """Qué habilidad se sube primero hasta el máximo, cuál después: «QEW». Mira hasta el nivel 13."""
+    s = orden[:13]
+    cuenta = {k: s.count(k) for k in "QWE"}
+
+    def llega(k):   # en qué nivel juntó esos puntos (desempata)
+        n = 0
+        for i, c in enumerate(s):
+            if c == k:
+                n += 1
+                if n == cuenta[k]:
+                    return i
+        return 99
+    return "".join(sorted("QWE", key=lambda k: (-cuenta[k], llega(k))))
+
+
+def habilidades(conn, patches, ph):
+    """Orden de habilidades por campeón y rol: {(rol, campeón): {maxeo, inicio, secuencias}}."""
+    try:
+        filas = conn.execute(
+            f"""SELECT h.position, h.champion_id, h.orden, h.win FROM habilidades h
+                JOIN matches m USING(match_id) WHERE m.patch IN ({ph})""", patches).fetchall()
+    except Exception:  # base vieja sin la tabla
+        return {}
+    acc = defaultdict(lambda: {"maxeo": defaultdict(lambda: [0, 0]), "inicio": defaultdict(lambda: [0, 0]),
+                               "secuencias": defaultdict(lambda: [0, 0])})
+    for pos, cid, orden, win in filas:
+        a = acc[(pos, cid)]
+        for clave, cond, valor in (("maxeo", len(orden) >= 11, lambda: _maxeo(orden)),
+                                   ("inicio", len(orden) >= 3, lambda: orden[:3]),
+                                   ("secuencias", len(orden) >= 15, lambda: orden[:15])):
+            if cond:
+                x = a[clave][valor()]
+                x[0] += 1
+                x[1] += win
+
+    def top(d, n):
+        tot = sum(v[0] for v in d.values()) or 1
+        return [{"o": o, "games": g, "wr": w / g, "share": g / tot}
+                for o, (g, w) in sorted(d.items(), key=lambda kv: -kv[1][0])[:n] if g >= 3]
+    return {k: {c: top(a[c], 3 if c == "maxeo" else 2) for c in ("maxeo", "inicio", "secuencias")}
+            for k, a in acc.items()}
+
+
 def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
     patches, n_matches = pick_patches(conn, patch)
     if not n_matches:
@@ -119,6 +163,7 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
     }
 
     paginas = paginas_completas(conn, patches, ph)
+    habs = habilidades(conn, patches, ph)
     for role in config.ROLES:
         stats = defaultdict(lambda: {"games": 0, "wins": 0, "k": 0, "d": 0, "a": 0,
                                      "items": Counter(), "item_wins": Counter(),
@@ -200,6 +245,7 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
                             for (k, pr, sb), (eg, ew) in sorted(s["estilos"].items(), key=lambda kv: -kv[1][0])[:4]
                             if eg / g >= 0.05],
                 "paginas": paginas.get((role, cid), []),
+                "habilidades": habs.get((role, cid)) or {},
                 "good_vs": matchups[:5],
                 "bad_vs": matchups[::-1][:5],
                 "vs_all": {str(m["id"]): [m["games"], round(m["wr"], 4)] for m in matchups},

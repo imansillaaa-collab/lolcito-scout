@@ -68,6 +68,7 @@ class DDragon:
                 if cid in self.champions:
                     self.champions[cid]["kit"] = self._kit(c)
                     self.champions[cid]["ranged"] = c.get("stats", {}).get("attackrange", 125) >= 300
+                    self.champions[cid]["skills"] = [sp.get("image", {}).get("full") for sp in c.get("spells", [])[:4]]
         except Exception:
             pass
 
@@ -213,6 +214,11 @@ class DDragon:
     def rune_img(self, rid):
         icon = self.runes.get(rid, {}).get("icon")
         return f"{BASE}/cdn/img/{icon}" if icon else ""
+
+    def skill_img(self, cid, i):
+        """Ícono de la habilidad i (0=Q, 1=W, 2=E, 3=R) del campeón."""
+        sk = self.champions.get(cid, {}).get("skills") or []
+        return f"{BASE}/cdn/{self.version}/img/spell/{sk[i]}" if i < len(sk) and sk[i] else ""
 
     def spell_img(self, sid):
         img = self.spells.get(sid, {}).get("img")

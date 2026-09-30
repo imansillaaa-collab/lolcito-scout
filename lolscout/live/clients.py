@@ -270,6 +270,16 @@ class LCU:
         return {"tier": q["tier"], "division": q.get("division", ""), "lp": q.get("leaguePoints", 0),
                 "wins": q.get("wins", 0), "losses": q.get("losses", 0)}
 
+    def ranked_de(self, puuid: str):
+        """Rango en Solo/Dúo de cualquier jugador (lo mismo que se ve en su perfil del cliente), o None."""
+        data = self.get(f"/lol-ranked/v1/ranked-stats/{puuid}", timeout=10) or {}
+        q = (data.get("queueMap") or {}).get("RANKED_SOLO_5x5")
+        if not q:
+            q = next((x for x in data.get("queues", []) if x.get("queueType") == "RANKED_SOLO_5x5"), None)
+        if not q or not q.get("tier") or q.get("tier") in ("NONE", ""):
+            return None
+        return {"tier": q["tier"], "division": q.get("division", ""), "lp": q.get("leaguePoints", 0)}
+
     def my_games(self, count: int = 60):
         """Tus últimas partidas (Grieta del Invocador): lista de (championId, ganó, queueId)."""
         out = []

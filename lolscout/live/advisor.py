@@ -510,6 +510,43 @@ def _apoyo(dd, me, allies, enemies, fight, my_role):
     return r
 
 
+def _niveles(inicio: str, prioridad: str) -> list:
+    """Arma los 18 niveles: los primeros como se empieza, la R en 6, 11 y 16, y el resto subiendo primero la
+    habilidad que se maxea antes (sin pasarse: a nivel N una habilidad puede tener como mucho (N+1)//2 puntos)."""
+    pts, out = {"Q": 0, "W": 0, "E": 0, "R": 0}, []
+    for lvl in range(1, 19):
+        if lvl <= len(inicio):
+            k = inicio[lvl - 1]
+        elif lvl in (6, 11, 16) and pts["R"] < 3:
+            k = "R"
+        else:
+            k = next((x for x in prioridad if pts[x] < 5 and pts[x] < (lvl + 1) // 2), None) \
+                or next((x for x in "QWE" if pts[x] < 5), "R")
+        pts[k] += 1
+        out.append(k)
+    return out
+
+
+def _habilidades(dd, cid, role, champ_meta, meta):
+    """Orden de habilidades que más se usa con este campeón (en tu rol o, si no hay, en cualquiera)."""
+    h = (champ_meta or {}).get("habilidades") or {}
+    if not h.get("maxeo"):
+        h = next((c.get("habilidades") for r in (role, *POSITIONS) for c in meta.get(r, [])
+                  if c["id"] == cid and (c.get("habilidades") or {}).get("maxeo")), None) or {}
+    if not h.get("maxeo"):
+        return None
+    mx = h["maxeo"][0]
+    inicio = (h.get("inicio") or [{}])[0].get("o") or mx["o"]
+    sec = next((s["o"] for s in h.get("secuencias") or [] if s["share"] >= 0.15 and s["o"][:3] == inicio), None)
+    niveles = list(sec) + _niveles(sec, mx["o"])[len(sec):] if sec else _niveles(inicio, mx["o"])
+    nombre = dd.champ_name(cid)
+    orden = " > ".join(mx["o"])
+    return {"maxeo": list(mx["o"]), "niveles": niveles, "inicio": inicio,
+            "img": {k: dd.skill_img(cid, i) for i, k in enumerate("QWER")},
+            "why": f"El {mx['share'] * 100:.0f}% de los {nombre} sube {orden} ({mx['games']} partidas) y gana el "
+                   f"{mx['wr'] * 100:.0f}%. La R siempre que puedas (niveles 6, 11 y 16)."}
+
+
 def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=None, champs=None) -> dict:
     from . import gameplan as gp
     from . import objectives as ob
@@ -626,6 +663,7 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
         "quest": quest, "nItems": n_items,
         "apoyo": _apoyo(dd, me, allies, enemies, fight, my_role),
         "inicial": _inicial(dd, me["cid"], my_role, lane["cid"] if lane else None) if t < 150 else None,
+        "habilidades": _habilidades(dd, me["cid"], my_role, champ_meta, meta),
         "enemies": enemy_rows,
         "allies": sorted((row(p) for p in allies), key=by_role),
         "teamGold": [sum(p["gold"] for p in allies), sum(p["gold"] for p in enemies)],

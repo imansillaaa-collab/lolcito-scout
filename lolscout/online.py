@@ -167,6 +167,10 @@ def combinar(partes: list) -> dict:
                 "estilos": _sumar_runas([c.get("estilos") or [] for c, _ in filas], ("key", "primary", "sub"), g),
                 "paginas": _sumar_runas([c.get("paginas") or [] for c, _ in filas], ("primary", "sub", "perks", "shards"),
                                         sum(sum(p["games"] for p in (c.get("paginas") or [])) for c, _ in filas)),
+                "habilidades": {k: _sumar_runas([(c.get("habilidades") or {}).get(k) or [] for c, _ in filas], ("o",),
+                                                sum(sum(x["games"] for x in ((c.get("habilidades") or {}).get(k) or []))
+                                                    for c, _ in filas))
+                                for k in ("maxeo", "inicio", "secuencias")},
                 "good_vs": matchups[:5], "bad_vs": matchups[::-1][:5],
                 "vs_all": {str(m["id"]): [m["games"], round(m["wr"], 4)] for m in matchups},
             })

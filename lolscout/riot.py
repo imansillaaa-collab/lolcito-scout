@@ -115,6 +115,9 @@ class RiotClient:
     def match(self, match_id: str):
         return self._get(config.REGION, f"/lol/match/v5/matches/{match_id}")
 
+    def timeline(self, match_id: str):
+        return self._get(config.REGION, f"/lol/match/v5/matches/{match_id}/timeline")
+
     def account_by_riot_id(self, game_name: str, tag_line: str):
         return self._get(
             config.REGION,
