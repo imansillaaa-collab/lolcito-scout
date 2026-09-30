@@ -511,12 +511,13 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .sksep{color:var(--gold);font-size:18px}
 .skgrid{display:flex;flex-direction:column;gap:2px;overflow-x:auto}
 .skrow{display:flex;gap:2px;align-items:center}
-.skrow .skl{display:inline-flex;align-items:center;gap:3px;width:40px;font:700 11px var(--title);color:var(--gold-hi)}
-.skrow .skl img{width:20px;height:20px}
-.skc{width:20px;height:20px;flex:0 0 20px;display:inline-flex;align-items:center;justify-content:center;background:#0a1620;
+.skrow .skl{display:inline-flex;align-items:center;gap:4px;width:46px;flex:0 0 46px;font:700 11px var(--title);color:var(--gold-hi)}
+.skrow .skl img{width:22px;height:22px}
+.skc{min-width:18px;height:24px;flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;background:#0a1620;
   border:1px solid #1e2d3a;font:600 10px var(--body,inherit);color:#010a13}
-.skc.on{background:var(--gold-lo);color:#f0e6d2}.skc.on.done{background:#3a3326;color:#8c8272}
-.skc.now{outline:1px solid var(--good)}
+.skc.on{background:var(--gold-lo);color:#f0e6d2}
+.skc.on.done{background:#1d5a47;border-color:#2f8a6c;color:#d8fff1}
+.skc.on.next{background:var(--good);border-color:var(--good);color:#010a13;box-shadow:0 0 8px var(--good);font-weight:800}
 .duob{display:inline-block;font:700 10px var(--title);letter-spacing:1px;padding:1px 6px;margin-left:4px;vertical-align:1px;
   color:#010a13;background:var(--dc);box-shadow:0 0 8px color-mix(in srgb,var(--dc) 55%,transparent)}
 .gboard .slot.enduo{box-shadow:inset 3px 0 0 var(--dc)}
@@ -1205,8 +1206,8 @@ function habilidadesHtml(h, nivel){
   const ic=kk=>`<span class="skk">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}<b>${kk}</b></span>`;
   const orden=`<div class="skord">${h.maxeo.map(ic).join('<span class="sksep">›</span>')}<span class="sksep">›</span>${ic('R')}</div>`;
   const filas=['Q','W','E','R'].map(kk=>`<div class="skrow"><span class="skl">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}${kk}</span>${
-    h.niveles.map((x,i)=>`<span class="skc ${x===kk?'on':''} ${i+1===nivel?'now':''} ${i+1<=nivel&&x===kk?'done':''}">${x===kk?i+1:''}</span>`).join('')}</div>`).join('');
-  const prox=nivel>=1&&nivel<=18?`<div class="small" style="margin-top:6px">Nivel ${nivel}: ${nivel<18?`el próximo punto va a la <b>${h.niveles[nivel]}</b>`:'ya tenés todo'}.</div>`:'';
+    h.niveles.map((x,i)=>`<span class="skc ${x===kk?'on':''} ${i+1<=nivel&&x===kk?'done':''} ${i===nivel&&x===kk?'next':''}" title="Nivel ${i+1}">${x===kk?i+1:''}</span>`).join('')}</div>`).join('');
+  const prox=nivel>=1&&nivel<=18?`<div class="small" style="margin-top:6px">Sos nivel ${nivel}: ${nivel<18?`el próximo punto va a la <b style="color:var(--good)">${h.niveles[nivel]}</b>`:'ya tenés todo'}. <span style="color:#6fd0b0">■</span> ya subidas · <span style="color:var(--gold)">■</span> las que vienen</div>`:'';
   return `${orden}<div class="skgrid">${filas}</div>${prox}<div class="why"><div>${esc(h.why)}</div></div>`;
 }
 function gameHead(s){
