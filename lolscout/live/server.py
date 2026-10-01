@@ -494,8 +494,17 @@ class Assistant:
         try:
             gid, jugadores = self.lcu.jugadores_partida() if hasattr(self.lcu, "jugadores_partida") else (None, [])
             if not jugadores:
+                print("[duos] el cliente no pasó los jugadores de la partida", flush=True)
                 return
-            hist = {pu: self.lcu.ids_partidas(pu) - {gid} for pu, _, _ in jugadores}
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(5) as ex:      # los 10 historiales a la vez de a 5: tarda mucho menos
+                listas = dict(zip([pu for pu, _, _ in jugadores],
+                                  ex.map(lambda j: self.lcu.ids_partidas(j[0]), jugadores)))
+            sin = sum(1 for v in listas.values() if v is None)
+            listas = {pu: [x for x in (v or []) if x != gid] for pu, v in listas.items()}
+            hist = {pu: set(v) for pu, v in listas.items()}
+            recientes = {pu: set(v[:3]) for pu, v in listas.items()}
+            print(f"[duos] partida {gid}: {len(jugadores)} jugadores, {sin} sin historial", flush=True)
             padre = {pu: pu for pu, _, _ in jugadores}
 
             def raiz(x):
@@ -506,10 +515,11 @@ class Assistant:
             for i, (a, _, ta) in enumerate(jugadores):
                 for b, _, tb in jugadores[i + 1:]:
                     n = len(hist[a] & hist[b])
-                    if ta == tb and n >= 2:
+                    # 2+ partidas juntos en las últimas 20, o 1 que es de las últimas 3 de los dos (dúo que recién arranca)
+                    if ta == tb and (n >= 2 or recientes[a] & recientes[b]):
                         padre[raiz(b)] = raiz(a)
-                        juntos[a] = max(juntos.get(a, 0), n)
-                        juntos[b] = max(juntos.get(b, 0), n)
+                        juntos[a] = max(juntos.get(a, 0), max(n, 1))
+                        juntos[b] = max(juntos.get(b, 0), max(n, 1))
             grupos = {}
             for pu, _, _ in jugadores:
                 grupos.setdefault(raiz(pu), []).append(pu)

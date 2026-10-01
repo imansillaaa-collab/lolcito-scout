@@ -16,7 +16,6 @@ import os
 import subprocess
 import threading
 import time
-import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -146,27 +145,47 @@ class Highlights:
             return
         threading.Thread(target=self._preparar, daemon=True).start()
 
+    def _bajar(self, url, destino):
+        """Baja un archivo. Primero con requests (trae sus propios certificados de seguridad); si la compu igual
+        rechaza la conexión segura (antivirus que revisa HTTPS, Windows sin certificados al día...), con curl.exe,
+        que viene en Windows 10/11 y usa los certificados de Windows."""
+        import requests
+        try:
+            with requests.get(url, stream=True, timeout=60, headers={"User-Agent": "LolcitoScout"}) as r, \
+                    open(destino, "wb") as f:
+                r.raise_for_status()
+                total = int(r.headers.get("Content-Length") or 0)
+                bajado = 0
+                for trozo in r.iter_content(1 << 20):
+                    f.write(trozo)
+                    bajado += len(trozo)
+                    if total and destino.suffix == ".zip":
+                        self.progreso = int(bajado * 100 / total)
+            return
+        except Exception as e:  # noqa: BLE001
+            print(f"[highlights] no pude bajar con requests ({e}); pruebo con curl.exe", flush=True)
+        curl = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "curl.exe"
+        if not curl.exists():
+            raise RuntimeError("no pude conectarme de forma segura para bajar el grabador")
+        r = subprocess.run([str(curl), "-L", "-f", "-s", "-S", "--retry", "3", "-o", str(destino), url],
+                           capture_output=True, creationflags=SIN_VENTANA, timeout=1800)
+        if r.returncode != 0:
+            raise RuntimeError(f"no pude bajar el grabador: {r.stderr.decode('utf-8', 'replace').strip()[:150]}")
+
     def _preparar(self):
         try:
             if not self.bin.exists():
                 self.estado, self.progreso, self.error = "bajando", 0, ""
-                zpath = self.dir / "ffmpeg.zip"
-                req = urllib.request.Request(URL_FFMPEG, headers={"User-Agent": "LolcitoScout"})
+                zpath, spath = self.dir / "ffmpeg.zip", self.dir / "sumas.txt"
+                self._bajar(URL_FFMPEG, zpath)
+                self._bajar(URL_SUMAS, spath)
+                self.progreso = 100
                 h = hashlib.sha256()
-                with urllib.request.urlopen(req, timeout=60) as r, open(zpath, "wb") as f:
-                    total = int(r.headers.get("Content-Length") or 0)
-                    bajado = 0
-                    while True:
-                        trozo = r.read(1 << 20)
-                        if not trozo:
-                            break
-                        f.write(trozo)
+                with open(zpath, "rb") as f:
+                    for trozo in iter(lambda: f.read(1 << 20), b""):
                         h.update(trozo)
-                        bajado += len(trozo)
-                        if total:
-                            self.progreso = int(bajado * 100 / total)
-                sumas = urllib.request.urlopen(urllib.request.Request(URL_SUMAS, headers={"User-Agent": "LolcitoScout"}),
-                                               timeout=30).read().decode()
+                sumas = spath.read_text(encoding="utf-8", errors="replace")
+                spath.unlink(missing_ok=True)
                 esperado = next((ln.split()[0] for ln in sumas.splitlines() if ln.strip().endswith(VERSION_FFMPEG)), None)
                 if not esperado or esperado.lower() != h.hexdigest():
                     zpath.unlink(missing_ok=True)

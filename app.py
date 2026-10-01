@@ -13,6 +13,10 @@ from lolscout import config
 
 # Sin consola (.exe con ventana): todo lo que se imprime va a un archivo de registro
 if sys.stdout is None or config.FROZEN:
+    try:   # el de la vez anterior queda como registro-anterior.txt
+        (config.DATA_DIR / "registro.txt").replace(config.DATA_DIR / "registro-anterior.txt")
+    except OSError:
+        pass
     _log = open(config.DATA_DIR / "registro.txt", "w", encoding="utf-8", buffering=1)
     sys.stdout = sys.stderr = _log
 

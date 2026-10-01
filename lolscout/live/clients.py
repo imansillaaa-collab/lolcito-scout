@@ -231,11 +231,15 @@ class LCU:
                     out.append((p["puuid"], int(p["championId"]), n))
         return gd.get("gameId"), out
 
-    def ids_partidas(self, puuid: str, n: int = 20) -> set:
-        """Números de las últimas partidas de un jugador (las que muestra su perfil en el cliente)."""
-        data = self.get(f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={n}", timeout=20)
+    def ids_partidas(self, puuid: str, n: int = 20) -> list | None:
+        """Números de las últimas partidas de un jugador, de la más nueva a la más vieja (las que muestra su perfil
+        en el cliente). None si el cliente no las devolvió."""
+        data = self.get(f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={n}", timeout=25)
         games = ((data or {}).get("games") or {}).get("games") if isinstance(data, dict) else None
-        return {g.get("gameId") for g in games or [] if g.get("gameId")}
+        if games is None:
+            return None
+        games = sorted(games, key=lambda g: g.get("gameCreation") or 0, reverse=True)
+        return [g.get("gameId") for g in games if g.get("gameId")]
 
     def match_list(self, count: int = 20, puuid: str = None):
         """Últimas partidas de la cuenta logueada (el cliente las pide a Riot, puede tardar unos segundos)."""
