@@ -2,8 +2,11 @@
 # y las publica en la rama "datos". La app de cada usuario las descarga de ahí.
 #
 # Cada corrida trabaja unas 5 horas seguidas, en tandas de ~35 minutos, y publica al terminar cada tanda.
-# Así no importa si GitHub arranca tarde o se saltea alguna de las programadas: mientras una corre, la
-# siguiente queda en espera y arranca apenas termina.
+# Al terminar, el último paso ("Encadenar la próxima corrida") dispara ella misma la siguiente corrida.
+# Si por algo esa cadena se corta, el workflow «Vigía de Estadísticas» (corre cada 15 min) la reactiva.
+# No hay disparador por cron acá: uno hourly sin fijarse si ya hay una corrida activa quedaba siempre en
+# cola y terminaba cancelado apenas la cadena disparaba la siguiente (dos corridas peleando por la única
+# cola del grupo de concurrencia). El vigía hace lo mismo pero fijándose antes, así que no cancela nada.
 #
 # Después de CADA tanda se guardan las partidas acumuladas (caché): si la corrida se corta a la mitad, la
 # próxima sigue desde la última tanda terminada y no desde el principio. Cada tanda es un paso aparte porque
@@ -11,9 +14,7 @@
 name: Estadísticas
 
 on:
-  schedule:
-    - cron: "17 * * * *"      # cada hora a los :17: si hay una corriendo, queda en espera y arranca apenas termina
-  workflow_dispatch:          # botón "Run workflow" para correrlo a mano
+  workflow_dispatch:          # botón "Run workflow", y lo que usan la cadena de corridas y el vigía
 
 permissions:
   contents: write
