@@ -65,8 +65,9 @@ def main():
     mal = [r for r in runs if r["status"] == "completed" and r["conclusion"] not in ("success", "skipped")]
     corriendo = [r for r in runs if r["status"] != "completed"]
     huecos = []
-    todas = sorted(leer(f"https://api.github.com/repos/{REPO}/actions/runs?per_page=30")["workflow_runs"],
-                   key=lambda r: r["created_at"])
+    # solo las corridas de «Estadísticas»: antes entraban también las del vigía y daban huecos que no existían
+    todas = sorted(leer(f"https://api.github.com/repos/{REPO}/actions/workflows/estadisticas.yml/runs?per_page=30")
+                   ["workflow_runs"], key=lambda r: r["created_at"])
     for a, b in zip(todas, todas[1:]):
         if b["created_at"] > desde and a["status"] == "completed" and b.get("run_started_at"):
             huecos.append(max(0, int((fecha(b["run_started_at"]) - fecha(a["updated_at"])).total_seconds() // 60)))
@@ -88,6 +89,10 @@ def main():
     if not tandas:
         problemas.append("no hubo tandas nuevas")
     hueco_max = max(huecos) if huecos else 0
+    if todas and all(r["status"] == "completed" for r in todas):   # nada corriendo ni en cola: ¿desde cuándo?
+        parada = int((datetime.now(timezone.utc) - fecha(todas[-1]["updated_at"])).total_seconds() // 60)
+        if parada > 20:
+            problemas.append(f"no hay ninguna corrida andando hace {parada} min")
     if hueco_max > 90:
         problemas.append(f"hubo un hueco de {hueco_max} min entre corridas")
 

@@ -4,12 +4,18 @@
 # eso no ayuda si nunca llegó a arrancar una primera vez. Este vigía corre cada 15 minutos, es
 # rapidísimo, y si ve que no hay ninguna corrida de «Estadísticas» activa ni en cola, y que la
 # última terminó hace más de 20 minutos, la reactiva.
+# Los minutos 7/22/37/52 (y no 0/15/30/45) son a propósito: GitHub demora o saltea más los disparos
+# programados en los minutos redondos, que es cuando los usa todo el mundo. También corre cuando se
+# sube un cambio a los workflows, así un arreglo reactiva la cadena enseguida.
 name: Vigía de Estadísticas
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/**"]
 
 permissions:
   actions: write
