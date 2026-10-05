@@ -241,6 +241,21 @@ MIN_ROL = 0.2          # y que ese rol sea de verdad uno de los suyos (al menos 
 CONF_PARTIDAS = 300    # recién con tantas partidas se le cree del todo su winrate
 
 
+NICHO = 0.05          # se elige en menos del 5% de las partidas: lo juegan sobre todo sus mains
+
+
+def piso(c):
+    """Lo que como mínimo gana el campeón (con 95% de seguridad), en vez del winrate a secas: con pocas partidas
+    el margen de error es grande y el piso baja. Encima, a los de nicho los juegan sobre todo sus mains (que los
+    dominan), así que su winrate dice menos de lo que ganarías vos: se les descuenta hasta 2 puntos más."""
+    n, p = max(c.get("games", 0), 1), c.get("wr", 0.5)
+    lo = p - 1.96 * (p * (1 - p) / n) ** 0.5
+    pk = c.get("pick", 0)
+    if pk < NICHO:
+        lo -= 0.02 * (1 - pk / NICHO)
+    return lo
+
+
 def jugable(c, role, dist, dd):
     return c.get("pick", 0) >= MIN_PICK and _role_prob(c["id"], role, dist, dd) >= MIN_ROL
 
@@ -283,11 +298,11 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     my_cids = [a["cid"] for a in allies if a["cid"]]
 
     def evaluate(c):
-        # 1) el meta del parche, pero creyéndole menos a los campeones con pocas partidas
-        conf = min(c["games"] / CONF_PARTIDAS, 1.0)
-        score = 0.5 + (c["adj"] - 0.5) * conf
-        score += 0.02 * min(c.get("pick", 0) / 0.08, 1.0)  # lo que de verdad se juega en tu rango pesa más
-        why = [f"Meta: {c['wr']*100:.1f}% en {c['games']} partidas" + ("" if conf >= 1 else " (pocas partidas todavía)")]
+        # 1) el meta del parche, mirando lo que como mínimo gana (ver piso): pocas partidas o de nicho bajan solos
+        score = piso(c)
+        nicho = c.get("pick", 0) < NICHO and c.get("games", 0) > 0
+        why = [f"Meta: {c['wr']*100:.1f}% en {c['games']} partidas"
+               + (" (de nicho: lo juegan sobre todo sus mains)" if nicho else "")]
         # 2) contra el campeón que te tocó en tu línea
         if lane_opp and str(lane_opp) in c["vs_all"]:
             g, w = c["vs_all"][str(lane_opp)]
