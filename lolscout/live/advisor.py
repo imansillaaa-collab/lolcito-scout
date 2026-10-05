@@ -187,13 +187,14 @@ def ban_options(meta, my_role, pool, unavailable, dd, limit=8):
     total_mias = sum(g for _, g, _ in mios) or 1
     # nunca proponer banear un campeón que jugás vos: te quedarías sin él
     propios = {cid for cid, _, _ in mios}
-    rivales = [c for c in meta.get(my_role, []) if c["id"] not in unavailable and c["id"] not in propios]
+    rivales = [c for c in meta.get(my_role, []) if c["id"] not in unavailable and c["id"] not in propios
+               and c.get("pick", 0) >= MIN_PICK]   # banear algo que casi nadie juega es un baneo perdido
     if not rivales:
         return []
 
     opciones = []
     for c in rivales:
-        conf = min(c["games"] / 60, 1.0)
+        conf = min(c["games"] / CONF_PARTIDAS, 1.0)
         fuerza = (c["adj"] - 0.5) * conf            # qué tan fuerte está en el parche
         pick = min(c.get("pick", 0) / 0.06, 1.0)    # y qué tan seguido te lo vas a cruzar
         peligro = fuerza * 4 + pick * 0.012
@@ -233,6 +234,17 @@ def ban_options(meta, my_role, pool, unavailable, dd, limit=8):
 
 
 # ---------------------------------------------------------------- selección de campeones
+# Para recomendar un campeón tiene que jugarse de verdad en ese rol: un campeón raro con pocas partidas puede
+# tener 60% de victorias de pura casualidad (Aurelion Sol o Heimerdinger de ADC). Los tuyos entran siempre.
+MIN_PICK = 0.008       # que aparezca en al menos el 0,8% de las partidas de tu rango en ese rol
+MIN_ROL = 0.2          # y que ese rol sea de verdad uno de los suyos (al menos 1 de cada 5 de sus partidas)
+CONF_PARTIDAS = 300    # recién con tantas partidas se le cree del todo su winrate
+
+
+def jugable(c, role, dist, dd):
+    return c.get("pick", 0) >= MIN_PICK and _role_prob(c["id"], role, dist, dd) >= MIN_ROL
+
+
 def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="BOTTOM", pool=None, champs=None) -> dict:
     pool = pool or {}
     local = session.get("localPlayerCellId")
@@ -272,9 +284,9 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
 
     def evaluate(c):
         # 1) el meta del parche, pero creyéndole menos a los campeones con pocas partidas
-        conf = min(c["games"] / 60, 1.0)
+        conf = min(c["games"] / CONF_PARTIDAS, 1.0)
         score = 0.5 + (c["adj"] - 0.5) * conf
-        score += 0.012 * min(c.get("pick", 0) / 0.05, 1.0)  # lo que de verdad se juega en tu rango
+        score += 0.02 * min(c.get("pick", 0) / 0.08, 1.0)  # lo que de verdad se juega en tu rango pesa más
         why = [f"Meta: {c['wr']*100:.1f}% en {c['games']} partidas" + ("" if conf >= 1 else " (pocas partidas todavía)")]
         # 2) contra el campeón que te tocó en tu línea
         if lane_opp and str(lane_opp) in c["vs_all"]:
@@ -344,6 +356,8 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     for c in candidatos:
         if c["id"] in unavailable:
             continue
+        if pool.get(c["id"], [0])[0] < 3 and not jugable(c, my_role, dist, dd):
+            continue   # raro en este rol: no lo recomiendo (si es tuyo, sí)
         score, why, counters, mine, sinergia = evaluate(c)
         options.append({**_champ_card(dd, c["id"]), "tier": c["tier"], "score": score, "why": why,
                         "games": c["games"], "thin": c["games"] < 40, "counters": counters, "mine": mine,
@@ -389,7 +403,9 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         duo_list = partner_picks(dd, my_role, ally_partner, meta.get(my_role, []), duo_idx, unavailable)
         for o in duo_list:
             o["counters"] = any(x["id"] == o["id"] and x["counters"] for x in options)
-    bans_sug = ban_options(meta, my_role, pool, unavailable, dd) if paso == "ban" else []
+    # para banear también se descartan los que tus aliados tienen marcados (todavía sin bloquear)
+    bans_sug = ban_options(meta, my_role, pool, unavailable | {a["cid"] for a in allies if a["cid"]}, dd) \
+        if paso == "ban" else []
 
     # Runas y hechizos: para el campeón que ya elegiste, o para la primera opción mientras no elijas
     from . import runes as ru
