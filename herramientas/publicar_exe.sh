@@ -7,6 +7,15 @@ cd "$(dirname "$0")/.."
 NOTAS="${1:-}"
 EXE=dist/LolcitoScout.exe
 [ -f "$EXE" ] || { echo "Primero compilá: herramientas/construir_exe.sh"; exit 1; }
+
+# Antes de publicar: control automático de la selección de campeones (todos los roles y ligas). Si encuentra
+# errores no se publica. Solo para una urgencia: SIN_CONTROL=1 herramientas/publicar_exe.sh "..."
+if [ "${SIN_CONTROL:-0}" != "1" ]; then
+  PY_CONTROL="${PY_CONTROL:-python3}"
+  VENV="${LOCALAPPDATA:-}/Temp/lolcito-venv/Scripts/python.exe"
+  [ -n "${LOCALAPPDATA:-}" ] && [ -f "$VENV" ] && PY_CONTROL="$VENV"
+  "$PY_CONTROL" herramientas/control_seleccion.py | tail -8 || { echo "No publiqué: mirá control_seleccion.txt"; exit 1; }
+fi
 VERSION=$(python3 -c "import re;print(re.search(r'VERSION = \"(.+?)\"', open('lolscout/version.py').read()).group(1))")
 REMOTO=$(git remote get-url origin)
 
