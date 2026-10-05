@@ -370,12 +370,12 @@ def armar(dd, key, primary, sub, arq):
         return None
     menores = list(MENORES_CLAVE.get(key, ()))
     if len(menores) != 3 or any(menores[i] not in slots[i + 1] for i in range(3)):
-        menores = [slots[i][0] for i in range(1, 4)]
+        menores = [min(slots[i]) for i in range(1, 4)]   # (cada fila es un conjunto: no se puede pedir [0])
     estilo = _estilo(arq, key)
     s1, s2 = MENORES_SUB.get(sub, {}).get(estilo, (None, None))
     filas_sub = dd.rune_slots[sub]
     if not s1 or not any(s1 in f for f in filas_sub[1:]) or not any(s2 in f for f in filas_sub[1:]):
-        s1, s2 = filas_sub[1][0], filas_sub[3][0]
+        s1, s2 = min(filas_sub[1]), min(filas_sub[3])
     return {"primary": primary, "sub": sub, "perks": [key, *menores, s1, s2], "shards": _fragmentos(estilo, key)}
 
 

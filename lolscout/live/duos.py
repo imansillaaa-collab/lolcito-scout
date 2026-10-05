@@ -113,7 +113,7 @@ def synergy(dd, adc_cid, sup_cid, duo_idx):
     score, why = 0.0, []
     data = duo_idx.get((adc_cid, sup_cid))
     if data:
-        peso = min(data["games"] / 25, 1.0)
+        peso = min(data["games"] / 80, 1.0)   # con pocas partidas juntos casi no pesa (9 partidas no dicen nada)
         score += (data["adj"] - 0.5) * 0.8 * peso
         why.append(f"Juntos: {data['wr']*100:.0f}% en {data['games']} partidas de tu rango"
                    + (" (pocas)" if data["games"] < 15 else ""))
@@ -150,7 +150,7 @@ def partner_picks(dd, my_role, partner_cid, candidates, duo_idx, unavailable, li
         if not why:
             continue
         # que también sea bueno en el parche: un combo perfecto con un campeón flojo no sirve
-        meta = (c.get("adj", 0.5) - 0.5) * min(c.get("games", 0) / 60, 1.0)
+        meta = (c.get("adj", 0.5) - 0.5) * min(c.get("games", 0) / 300, 1.0)
         out.append({"id": cid, "name": dd.champ_name(cid), "img": dd.champ_img(cid), "tier": c.get("tier", "?"),
                     "score": s + meta * 0.5, "why": why, "combo": (_alias(dd, adc), _alias(dd, sup)) in COMBOS,
                     "duoWr": data["wr"] if data else None, "duoGames": data["games"] if data else 0})
