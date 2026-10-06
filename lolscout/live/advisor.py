@@ -256,11 +256,30 @@ def piso(c):
     return lo
 
 
+CRUCE_K = 150         # partidas de un cruce para creerle la mitad: con 38 partidas casi no pesa, con 600 bastante
+CRUCE_MAX = 0.04      # un cruce de línea suma o resta como mucho 4 puntos (menos que saber jugar el campeón)
+PESO_EQUIPO = 0.7     # lo que armó el rival (tanques, control, burst): reglas generales, lo que menos pesa
+MIO_MAX = 0.06        # saber jugar el campeón suma hasta 6 puntos (lo que más pesa, junto con lo fuerte del parche)
+CAMPO_MIN = 0.03      # a ciegas: los rivales posibles son los que se juegan en al menos el 3% de tu línea
+
+
+def cruce(c, opp_meta, g, w):
+    """Cuánto mejor (o peor) le va a este campeón contra ESE rival que contra cualquiera, ya achicado según
+    cuántas partidas hay. Lo esperado sale del winrate de los dos: si Jinx gana 52,9% en general y Draven
+    51,1%, contra Draven «lo normal» sería ~51,8%; si gana 59% le va 7 puntos mejor de lo normal."""
+    esperado = c.get("wr", 0.5) + (0.5 - (opp_meta or {}).get("wr", 0.5))
+    delta = (w - esperado) * g / (g + CRUCE_K)
+    return max(-CRUCE_MAX, min(CRUCE_MAX, delta)), w - esperado
+
+
 def jugable(c, role, dist, dd):
     return c.get("pick", 0) >= MIN_PICK and _role_prob(c["id"], role, dist, dd) >= MIN_ROL
 
 
-def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="BOTTOM", pool=None, champs=None) -> dict:
+def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="BOTTOM", pool=None, champs=None,
+                 confianza=None) -> dict:
+    """Orden de importancia: 1) lo que sabés jugar, cruzado con lo fuerte en el parche; 2) cómo le va contra tu
+    rival de línea (si ya se sabe; si no, qué tan seguro es a ciegas); 3) lo que armó el rival y tus aliados."""
     pool = pool or {}
     local = session.get("localPlayerCellId")
     my_team = session.get("myTeam", [])
@@ -289,6 +308,17 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
 
     enemy_roles = guess_roles(enemies, dist, dd)
     lane_opp = next((c for c, r in enemy_roles.items() if r == my_role), None)
+    # ¿qué tan seguro es que ese rival vaya a tu línea? Con los 5 elegidos, o si casi siempre juega ahí, seguro.
+    lane_seguro = 0.0
+    if lane_opp:
+        lane_seguro = 1.0 if len(enemies) >= 5 else _role_prob(lane_opp, my_role, dist, dd)
+        if lane_seguro >= 0.75:
+            lane_seguro = 1.0
+    modo = "counter" if lane_seguro >= 1.0 else ("probable" if lane_opp else "ciegas")
+    conf = (confianza or {}).get(my_role) or {}
+
+    def es_mio(cid):
+        return conf.get(cid, {}).get("k", 0) >= 0.3 or pool.get(cid, [0])[0] >= 3
     enemy_partner = next((c for c, r in enemy_roles.items() if r == BOT_PARTNER.get(my_role)), None)
     partner = next((a for a in allies if a["role"] == BOT_PARTNER.get(my_role) and a["cid"]), None)
     ally_partner = partner["cid"] if partner else None
@@ -296,6 +326,10 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     duo_idx = {(d["adc"], d["sup"]): d for d in duos}
     shape = enemy_shape(dd, enemies)
     my_cids = [a["cid"] for a in allies if a["cid"]]
+
+    opp_meta = next((x for x in meta.get(my_role, []) if x["id"] == lane_opp), None) if lane_opp else None
+    # los rivales posibles en tu línea (para elegir a ciegas): los que más se juegan y siguen disponibles
+    campo = [x for x in meta.get(my_role, []) if x.get("pick", 0) >= CAMPO_MIN and x["id"] not in unavailable]
 
     def evaluate(c):
         # 1) el meta del parche, mirando lo que como mínimo gana (ver piso): pocas partidas o de nicho bajan solos
@@ -306,14 +340,39 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         # 2) contra el campeón que te tocó en tu línea
         if lane_opp and str(lane_opp) in c["vs_all"]:
             g, w = c["vs_all"][str(lane_opp)]
-            # con 6 partidas de un cruce no se puede decir "le gana": el dato pesa según cuántas hay
-            a = adj_wr(w * g, g, 20)
-            score += (a - 0.5) * 1.2 * min(g / 25, 1.0)
-            why.append(f"vs {dd.champ_name(lane_opp)}: {w*100:.0f}% en {g} partida{'s' if g != 1 else ''}"
-                       + (" (pocas)" if g < 15 else ""))
+            # se mira cuánto mejor le va contra ESE rival que contra cualquiera, y con pocas partidas casi no pesa
+            suma, crudo = cruce(c, opp_meta, g, w)
+            score += suma * lane_seguro
+            why.append(("si va a tu línea, " if modo == "probable" else "")
+                       + f"vs {dd.champ_name(lane_opp)}: {w*100:.0f}% en {g} partida{'s' if g != 1 else ''}"
+                       + (f" ({abs(crudo)*100:.0f} punto{'' if round(abs(crudo)*100) == 1 else 's'} {'mejor' if crudo >= 0 else 'peor'} que contra cualquiera)"
+                          if g >= 30 and abs(crudo) >= 0.01 else "")
+                       + (" (pocas)" if g < 100 else ""))
+        # 2b) a ciegas (o sin saber seguro tu rival): cómo le va contra lo que más se juega en tu línea
+        if modo != "counter" and campo:
+            acc = peso = 0.0
+            peores = []
+            for o in campo:
+                vs = c.get("vs_all", {}).get(str(o["id"]))
+                if not vs:
+                    continue
+                d, crudo = cruce(c, o, *vs)
+                acc += o["pick"] * d
+                peso += o["pick"]
+                if crudo <= -0.06 and vs[0] >= 100 and o["pick"] >= 0.05:
+                    peores.append((crudo, o["id"], vs))
+            if peso:
+                score += acc / peso * (1 - lane_seguro)
+            peores.sort()
+            if peores:
+                nombres = [dd.champ_name(i) for _, i, _ in peores[:2]]
+                why.append(f"Ojo a ciegas: {' y '.join(nombres)} le gana{'n' if len(nombres) > 1 else ''} "
+                           f"y se juega{'n' if len(nombres) > 1 else ''} mucho en tu línea")
+            elif peso and acc / peso >= 0.005:
+                why.append("Seguro a ciegas: no pierde feo contra lo que más se juega en tu línea")
         # 3) contra el resto de lo que ya pickeó el rival
         fit, fit_why = team_fit(dd, c["id"], shape, my_cids)
-        score += fit
+        score += fit * PESO_EQUIPO
         why += fit_why
         # 3b) con el resto de tu equipo: combos entre líneas y lo que le falta al equipo
         #     (la dupla del bot no entra en los combos: la mira el punto 4)
@@ -330,31 +389,37 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
                     for w in why_duo]
         # 5) tus campeones: lo que ya sabés jugar pesa más que un campeón fuerte que nunca tocaste,
         #    salvo que esté injugable (muy flojo en el parche o muy contrarrestado por tu rival de línea)
-        mine = pool.get(c["id"], [0, 0])
-        if mine[0] >= 2:
+        cf = conf.get(c["id"])
+        mine = [cf["g"], cf["w"]] if cf else pool.get(c["id"], [0, 0])
+        if (cf and cf["k"] >= 0.15) or (not cf and mine[0] >= 2):
             g, w = mine
-            comodidad = 0.05 * min(g, 10) / 10               # hasta +5 puntos de winrate por saber jugarlo
-            propio = (adj_wr(w, g, 8) - 0.5) * 0.12          # cómo te va a vos, achicado si son pocas partidas
+            k = cf["k"] if cf else min(g, 10) / 10
+            comodidad = MIO_MAX * k                          # hasta +6 puntos por saber jugarlo
+            # cómo te va a vos con él: pesa poco y recién con 5 partidas (10 partidas son muy pocas para juzgarte)
+            propio = (adj_wr(w, g, 15) - 0.5) * 0.06 if g >= 5 else 0.0
             flojo = c.get("games", 0) >= 60 and c.get("adj", 0.5) < 0.47
             contra = False
             if lane_opp and str(lane_opp) in c.get("vs_all", {}):
                 vg, vw = c["vs_all"][str(lane_opp)]
                 contra = vg >= 15 and adj_wr(vw * vg, vg, 20) < 0.45
+            texto = cf["texto"] if cf else f"Lo sabés jugar: {g} partidas tuyas"
+            if g >= 3:
+                texto += f" · {w / g * 100:.0f}% de victorias"
             if flojo or contra:
                 comodidad *= 0.3
-                why.append(f"lo jugaste {g} veces ({w / g * 100:.0f}% de victorias), pero "
-                           + ("está muy flojo en este parche" if flojo else f"{dd.champ_name(lane_opp)} le gana mucho"))
+                why.append(texto + ", pero " + ("está muy flojo en este parche" if flojo
+                                                 else f"{dd.champ_name(lane_opp)} le gana mucho"))
             else:
-                why.insert(1, f"Lo sabés jugar: {g} partidas tuyas ({w / g * 100:.0f}% de victorias)")
+                why.insert(1, texto)
             score += comodidad + propio
-        return score, why, bool(fit_why), mine[0] >= 2, combo_team
+        return score, why, bool(fit_why), es_mio(c["id"]), combo_team
 
     # tus campeones que casi no aparecen en el meta de tu rango para este rol (pocas partidas en la base):
     # los sumo igual si se juegan en este rol, con los datos generales del campeón
     candidatos = list(meta.get(my_role, []))
     en_meta = {c["id"] for c in candidatos}
-    for cid, (g, w) in pool.items():
-        if g < 3 or cid in en_meta or cid in unavailable:
+    for cid in set(pool) | set(conf):
+        if not es_mio(cid) or cid in en_meta or cid in unavailable:
             continue
         roles = dist.get(cid) or dist.get(str(cid)) or {}
         total = sum(roles.values())
@@ -371,7 +436,7 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     for c in candidatos:
         if c["id"] in unavailable:
             continue
-        if pool.get(c["id"], [0])[0] < 3 and not jugable(c, my_role, dist, dd):
+        if not es_mio(c["id"]) and not jugable(c, my_role, dist, dd):
             continue   # raro en este rol: no lo recomiendo (si es tuyo, sí)
         score, why, counters, mine, sinergia = evaluate(c)
         options.append({**_champ_card(dd, c["id"]), "tier": c["tier"], "score": score, "why": why,
@@ -394,15 +459,15 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             current = {**_champ_card(dd, my_champ), "tier": "?", "why": ["Pocas partidas en el meta de tu rango"],
                        "build": [], "boots": None, "keystone": None}
 
-    if lane_opp:
-        situation = (f"Enfrente tenés a {dd.champ_name(lane_opp)}: primero miro a quién le va bien contra ese campeón, "
-                     "después cómo le va contra el resto del equipo rival y qué anda en el parche.")
-    elif enemies:
-        situation = (f"El rival ya pickeó {len(enemies)} campeón{'es' if len(enemies) > 1 else ''}: te muestro lo que "
-                     "mejor funciona contra lo que armaron, más lo que anda en el parche.")
+    if modo == "counter":
+        situation = (f"Ya sabés tu rival: {dd.champ_name(lane_opp)}. Primero lo que sabés jugar y está fuerte, "
+                     "y entre esos, lo que mejor le va contra él.")
+    elif modo == "probable":
+        situation = (f"Elegís casi a ciegas: {dd.champ_name(lane_opp)} probablemente vaya a tu línea, pero no es seguro. "
+                     "Te muestro lo que sabés jugar y no pierde feo contra lo que más se juega.")
     else:
-        situation = ("Todavía no pickeó nadie del rival, así que te muestro lo mejor del parche en tu rango "
-                     "y los campeones que más jugás.")
+        situation = ("Elegís a ciegas: todavía no se sabe tu rival. Primero lo que sabés jugar y está fuerte, "
+                     "y te aviso si algo pierde feo contra lo que más se juega en tu línea.")
     my_champs = [{**_champ_card(dd, cid), "games": g, "wr": w / g}
                  for cid, (g, w) in sorted(pool.items(), key=lambda kv: -kv[1][0])[:5]
                  if cid not in unavailable and g >= 3]
@@ -435,7 +500,7 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             alt["img"] = dd.spell_img(alt["id"])
 
     return {
-        "phase": "draft",
+        "phase": "draft", "modo": modo,
         "myRole": my_role, "myRoleEs": ROLE_ES.get(my_role, my_role),
         "situation": situation, "myChamps": my_champs,
         "step": paso, "myTurn": bool(accion), "actionId": (accion or {}).get("id"),

@@ -274,6 +274,11 @@ class LCU:
         return {"tier": q["tier"], "division": q.get("division", ""), "lp": q.get("leaguePoints", 0),
                 "wins": q.get("wins", 0), "losses": q.get("losses", 0)}
 
+    def maestria(self):
+        """Puntos de maestría de cada campeón de la cuenta logueada, con la fecha en que lo jugaste por última vez."""
+        data = self.get("/lol-champion-mastery/v1/local-player/champion-mastery", timeout=10)
+        return data if isinstance(data, list) else []
+
     def ranked_de(self, puuid: str):
         """Rango en Solo/Dúo de cualquier jugador (lo mismo que se ve en su perfil del cliente), o None."""
         data = self.get(f"/lol-ranked/v1/ranked-stats/{puuid}", timeout=10) or {}

@@ -134,6 +134,22 @@ class Assistant:
                 c[1] += int(bool((p.get("stats") or {}).get("win")))
         self.pool = pool
 
+    def confianza_cuenta(self):
+        """Qué tan bien sabés jugar cada campeón, por rol (historial guardado + maestría). Se recalcula cada 2 min."""
+        from . import confianza
+        if getattr(self, "_conf", None) is not None and time.time() - self._conf_t < 120:
+            return self._conf
+        puuid = (self.account or {}).get("puuid")
+        try:
+            partidas = self.history.games(puuid)["games"] if puuid else []
+            maestria = self.lcu.maestria() if hasattr(self.lcu, "maestria") and not self.simulated else []
+            self._conf = confianza.calcular(partidas, maestria)
+        except Exception as e:  # noqa: BLE001
+            print(f"[confianza] no pude calcular: {e}", flush=True)
+            self._conf = {}
+        self._conf_t = time.time()
+        return self._conf
+
     def account_view(self):
         if not self.account:
             return None
@@ -210,7 +226,7 @@ class Assistant:
                 ses = self.lcu.champ_select() or {}
                 st = draft_advice(ses, self.meta, self.duos, self.dist, self.dd,
                                   default_role=config.ROLES[0] if config.ROLES else "BOTTOM", pool=self.pool,
-                                  champs=self.champs)
+                                  champs=self.champs, confianza=self.confianza_cuenta())
                 self.role_memory = st["myRole"]
                 self.runas_solas(ses, st)
             elif self.postgame and not self.postgame_hidden and phase not in ("InProgress", "GameStart", "Reconnect"):
