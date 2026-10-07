@@ -136,6 +136,37 @@ def habilidades(conn, patches, ph):
             for k, a in acc.items()}
 
 
+# Ítems: mientras se suma el parche anterior (ver pick_patches), los ítems de un campeón salen SOLO del parche
+# nuevo apenas ese campeón tiene estas partidas en él. Así un buff o un nerf de un ítem se ve en horas en los
+# campeones populares, sin esperar los 2 o 3 días que tarda el parche entero.
+ITEMS_PARCHE_MIN = 150
+
+
+def _items_por(rows, dd, clave):
+    """Partidas, ítems y botas (con victorias) agrupados por `clave(fila)`."""
+    acc = defaultdict(lambda: {"games": 0, "items": Counter(), "item_wins": Counter(),
+                               "boots": Counter(), "boot_wins": Counter()})
+    for r in rows:
+        s = acc[clave(r)]
+        w = r["win"]
+        s["games"] += 1
+        for iid in {int(x) for x in (r["items"] or "").split(",") if x and x != "0"}:
+            info = dd.items.get(iid)
+            if not info or not info["completed"]:
+                continue
+            k = "boots" if info["boots"] else "items"
+            s[k][iid] += 1
+            s[k[:-1] + "_wins" if k == "boots" else "item_wins"][iid] += w
+    return acc
+
+
+def _items_vista(s, top, min_share, n_boots):
+    g = s["games"]
+    items = [i for i in sorted(s["items"], key=lambda i: s["items"][i], reverse=True) if s["items"][i] / g >= min_share][:top]
+    return ([{"id": i, "share": s["items"][i] / g, "wr": s["item_wins"][i] / s["items"][i]} for i in items],
+            [{"id": b, "share": n / g, "wr": s["boot_wins"][b] / n} for b, n in s["boots"].most_common(n_boots)])
+
+
 def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
     patches, n_matches = pick_patches(conn, patch)
     if not n_matches:
@@ -143,7 +174,7 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
     ph = ",".join("?" * len(patches))
 
     rows = conn.execute(
-        f"""SELECT p.* FROM participants p JOIN matches m USING(match_id)
+        f"""SELECT p.*, m.patch AS patch FROM participants p JOIN matches m USING(match_id)
             WHERE m.patch IN ({ph})""",
         patches,
     ).fetchall()
@@ -296,6 +327,23 @@ def analyze(conn, dd, patch: str = None, my_puuid: str = None) -> dict:
             "keystones": [{"id": k, "share": n / g} for k, n in s["keystones"].most_common(2)],
         }
     result["champs"] = champs
+
+    # parche nuevo + anterior sumados: los ítems de los campeones que ya tienen partidas en el nuevo, solo del nuevo
+    if len(patches) > 1:
+        nuevas = [r for r in rows if r["patch"] == patches[0]]
+        por_rol = _items_por(nuevas, dd, lambda r: (r["position"], r["champion_id"]))
+        for role, cs in result["roles"].items():
+            for c in cs:
+                s = por_rol.get((role, c["id"]))
+                if s and s["games"] >= ITEMS_PARCHE_MIN:
+                    c["items"], c["boots"] = _items_vista(s, 15, 0.02, 4)
+                    c["itemsParche"] = patches[0]
+        por_champ = _items_por(nuevas, dd, lambda r: r["champion_id"])
+        for cid, c in champs.items():
+            s = por_champ.get(cid)
+            if s and s["games"] >= ITEMS_PARCHE_MIN:
+                c["items"], c["boots"] = _items_vista(s, 12, 0.05, 3)
+                c["itemsParche"] = patches[0]
 
     # Sinergias ADC + Support
     if "BOTTOM" in config.ROLES and "UTILITY" in config.ROLES:

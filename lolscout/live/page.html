@@ -520,6 +520,9 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .skc.on.next{background:var(--good);border-color:var(--good);color:#010a13;font-weight:800;animation:skglow 1.1s ease-in-out infinite var(--skfase,0s)}
 .skl.next img,.skk.next img{border-color:var(--good);animation:skglow 1.1s ease-in-out infinite var(--skfase,0s)}
 @keyframes skglow{0%,100%{box-shadow:0 0 3px var(--good);filter:brightness(1)}50%{box-shadow:0 0 14px 3px var(--good);filter:brightness(1.45)}}
+.tag.cambio.up{color:#34c77b;border-color:#34c77b}.tag.cambio.down{color:#e0484b;border-color:#e0484b}
+.tag.cambio.chg{color:#e0b24f;border-color:#e0b24f}
+.ps.pcambio::after{content:'';position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#e0b24f}
 .duob{display:inline-block;font:700 10px var(--title);letter-spacing:1px;padding:1px 6px;margin-left:4px;vertical-align:1px;
   color:#010a13;background:var(--dc);box-shadow:0 0 8px color-mix(in srgb,var(--dc) 55%,transparent)}
 .gboard .slot.enduo{box-shadow:inset 3px 0 0 var(--dc)}
@@ -1070,6 +1073,12 @@ function layoutSplashes(){
 }
 window.addEventListener('resize',layoutSplashes);
 
+// Si el ítem fue mejorado / empeorado / cambiado en este parche (sale de comparar con el parche anterior)
+function cambioTag(o){
+  if(!o||!o.cambio) return '';
+  const c=o.cambio.startsWith('mejorado')?'up':o.cambio.startsWith('empeorado')?'down':'chg';
+  return `<span class="tag cambio ${c}" title="Comparado con el parche anterior">${esc(o.cambio)}</span>`;
+}
 function chTags(o, kind){
   return `${tier(o.tier)}${o.counters?`<span class="tag">${esc(typeof o.counters==='string'?o.counters:(kind==='ban'?'le gana a tus campeones':'le gana a tu rival'))}</span>`:''}${o.mine?`<span class="tag mio">${esc(typeof o.mine==='string'?o.mine:'lo jugaste')}</span>`:''}${o.combo?'<span class="tag mio">combo conocido</span>':''}${o.sinergia?'<span class="tag mio">combina con tu equipo</span>':''}`;
 }
@@ -1365,7 +1374,7 @@ function game(s){
     <div class="mydef">Tus defensas: <b>${me.armor}</b> armadura · <b>${me.mr}</b> resistencia mágica · tu daño es ${esc(me.damage)}</div>
     <div class="alerts">${s.alerts.map(a=>`<div class="al lv-${a.level}"><b>${esc(a.text)}</b>${a.detail?`<span>${esc(a.detail)}</span>`:''}</div>`).join('')}</div>`;
   const opts=s.options.map((o,i)=>`<div class="card ${o.primary?'best':''}">${iimg(o,'it')}<div style="min-width:0">
-      <div class="t">${esc(o.name)}${o.situational?'<span class="tag">para esta partida</span>':''}</div>
+      <div class="t">${esc(o.name)}${o.situational?'<span class="tag">para esta partida</span>':''}${cambioTag(o)}</div>
       <div><span class="cost">${o.gold}</span> ${o.affordable?'<span class="ok">te alcanza</span>':`<span class="no">te faltan ${o.missing}</span>`}</div>
       <div class="why">${o.why.map(w=>`<div>${esc(w)}</div>`).join('')}</div></div></div>`).join('');
   const sh=s.shopping; let shop='';
@@ -1374,7 +1383,7 @@ function game(s){
       : `<div class="shop">Te faltan <b>${sh.cost-me.gold_now}</b> de oro para la próxima parte.</div>`; }
   const slots=[...s.plan]; while(slots.length<(s.nItems||5)) slots.push(null);
   const changed=new Set(s.changes.map(c=>c.add.id));
-  const plan=`<div class="plan">${slots.map((p,i)=>p?`<div class="ps ${p.owned?'own':''} ${changed.has(p.id)?'chg':''}" title="${esc(p.name)}${p.reasons&&p.reasons.length?' — '+esc(p.reasons.join(', ')):''}">${iimg(p,'it')}<span>${i+1}</span></div>`:'<div class="ps"><div class="empty-slot"></div></div>').join('')}
+  const plan=`<div class="plan">${slots.map((p,i)=>p?`<div class="ps ${p.owned?'own':''} ${changed.has(p.id)?'chg':''} ${p.cambio?'pcambio':''}" title="${esc(p.name)}${p.cambio?' ('+esc(p.cambio)+')':''}${p.reasons&&p.reasons.length?' — '+esc(p.reasons.join(', ')):''}">${iimg(p,'it')}<span>${i+1}</span></div>`:'<div class="ps"><div class="empty-slot"></div></div>').join('')}
      ${s.boots?`<div class="ps boots ${s.boots.owned?'own':''} ${changed.has(s.boots.id)?'chg':''}" title="${esc(s.boots.name)}">${iimg(s.boots,'it')}<span>B</span></div>`:''}</div>
      <div class="changes">${s.changes.length?s.changes.map(c=>`<div class="chrow">${iimg(c.add)} <b>${esc(c.add.name)}</b>${c.remove?` <span class="small">en lugar de</span> ${iimg(c.remove)} <s>${esc(c.remove.name)}</s>`:''}<div class="why">${c.reasons.map(r=>`<div>${esc(r)}</div>`).join('')}</div></div>`).join(''):'<div class="small">Esta partida no pide cambios: la build de siempre ya cubre lo que hace falta.</div>'}</div>`;
   const events=s.events.length?s.events.map(e=>`<div class="ev ev-${e.kind}"><span class="t">${e.t}</span>${esc(e.text)}</div>`).join(''):'<div class="small">Acá van apareciendo las compras importantes de los rivales y los cambios en la partida.</div>';

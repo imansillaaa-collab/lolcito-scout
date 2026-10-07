@@ -84,7 +84,7 @@ CHAMPS = {
 # suficientes partidas de ese campeón en las estadísticas; sirven para que el primer ítem no sea
 # siempre el más "eficiente en oro" (un Sombrero de Rabadon de primer ítem, por ejemplo).
 CORE = {
-    "tanque":       (3068, 3084, 3083, 3742, 3143, 3075, 6665, 8020, 3193),
+    "tanque":       (3068, 3084, 3083, 3742, 3143, 3075, 6665, 8020),   # (sin Armadura Pétrea 3193: ya no se compra en la Grieta)
     "tanque_ap":    (3068, 6662, 8020, 6653, 4633, 3116, 3084),
     "tanque_sup":   (3190, 3109, 3050, 2524, 3742, 8020, 6665, 3068),
     "peleador":     (3078, 3748, 6333, 3161, 6631, 6609, 3053, 3071),

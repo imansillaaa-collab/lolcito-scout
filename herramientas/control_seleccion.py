@@ -45,9 +45,29 @@ def sesion(rol, enemigos=(), aliado=None, banear=False):
             "theirTeam": [{"cellId": 5 + i, "championId": c} for i, c in enumerate(enemigos)]}
 
 
+def listas_a_mano(dd, errores, ojos):
+    """Las listas escritas a mano (ítems típicos por tipo de campeón, runas chicas por runa clave) tienen que
+    existir en el parche actual; si un ítem de esas listas cambió en el parche, se avisa para revisarlo."""
+    from lolscout.live import builds
+    for tipo, ids in builds.CORE.items():
+        for iid in ids:
+            info = dd.items.get(iid)
+            if not info or not info.get("sr"):
+                errores.append(f"Ítems típicos de «{tipo}»: el ítem {iid} ya no existe o no se compra en la Grieta")
+            elif dd.cambios.get(iid):
+                ojos.append(f"Ítems típicos de «{tipo}»: {dd.item_name(iid)} fue {dd.cambios[iid]} en el parche {dd.patch}")
+    for clave, menores in runes.MENORES_CLAVE.items():
+        for r in (clave, *menores):
+            if r not in dd.runes:
+                errores.append(f"Runas chicas de {clave}: la runa {r} ya no existe")
+            elif r in dd.cambios_runas:
+                ojos.append(f"Runas chicas: {dd.rune_name(r)} cambió en el parche {dd.patch}")
+
+
 def main():
     dd = ddragon.DDragon()
     errores, ojos, tabla = [], [], []
+    listas_a_mano(dd, errores, ojos)
     for liga, liga_es in LIGAS.items():
         r, err = online.load(liga)
         if not r or not r.get("roles"):
@@ -119,6 +139,7 @@ def main():
             if len(rs) >= 3:
                 ojos.append(f"{liga_es}: {n} sale primero en {len(rs)} roles ({', '.join(rs)})")
 
+    ojos = list(dict.fromkeys(ojos))   # sin repetidos
     salida = ["RECOMENDACIONES SIN RIVALES (los 10 primeros de cada rol)", *tabla, ""]
     salida += [f"ERRORES: {len(errores)}", *[f"  ✗ {e}" for e in errores], ""]
     salida += [f"PARA MIRAR: {len(ojos)}", *[f"  · {o}" for o in ojos]]

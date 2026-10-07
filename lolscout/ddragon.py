@@ -33,7 +33,9 @@ class DDragon:
         if offline and f.exists():
             return f.read_text().strip()
         try:
-            v = requests.get(f"{BASE}/api/versions.json", timeout=15).json()[0]
+            versiones = requests.get(f"{BASE}/api/versions.json", timeout=15).json()
+            (self.cache / "versions.json").write_text(json.dumps(versiones[:20]))
+            v = versiones[0]
             f.write_text(v)
             return v
         except Exception:
@@ -41,14 +43,15 @@ class DDragon:
                 return f.read_text().strip()
             raise
 
-    def _fetch(self, name: str, lang: str = None):
+    def _fetch(self, name: str, lang: str = None, version: str = None):
         lang = lang or config.LANGUAGE
-        folder = self.cache / self.version / lang
+        version = version or self.version
+        folder = self.cache / version / lang
         folder.mkdir(parents=True, exist_ok=True)
         f = folder / name
         if f.exists():
             return json.loads(f.read_text(encoding="utf-8"))
-        url = f"{BASE}/cdn/{self.version}/data/{lang}/{name}"
+        url = f"{BASE}/cdn/{version}/data/{lang}/{name}"
         data = requests.get(url, timeout=30).json()
         f.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         return data
@@ -108,6 +111,60 @@ class DDragon:
 
         for s in self._fetch("summoner.json")["data"].values():
             self.spells[int(s["key"])] = {"name": s["name"], "img": s["image"]["full"]}
+
+        self.cambios, self.cambios_runas, self.parche_anterior = {}, set(), None
+        try:   # si no hay internet o falta el parche anterior, simplemente no se marcan cambios
+            self._cambios()
+        except Exception as e:  # noqa: BLE001
+            print(f"[ddragon] no pude comparar con el parche anterior: {e}", flush=True)
+
+    def _version_anterior(self):
+        """La última versión del parche anterior (ej. 16.19.1 si el actual es 16.20.1)."""
+        try:
+            versiones = json.loads((self.cache / "versions.json").read_text())
+        except (OSError, ValueError):
+            versiones = requests.get(f"{BASE}/api/versions.json", timeout=15).json()[:20]
+        return next((v for v in versiones if ".".join(v.split(".")[:2]) != self.patch
+                     and tuple(int(x) for x in v.split(".")[:2]) < tuple(int(x) for x in self.patch.split("."))), None)
+
+    def _cambios(self):
+        """Compara los ítems y runas oficiales con los del parche anterior: qué subió, qué bajó, qué cambió.
+        «Mejorado»: da más estadísticas o cuesta menos (y nada bajó). «Empeorado»: al revés. Si cambió solo
+        el texto (la pasiva) o subió una cosa y bajó otra, «cambiado»: Data Dragon no dice si es para bien."""
+        ant = self._version_anterior()
+        if not ant:
+            return
+        self.parche_anterior = ".".join(ant.split(".")[:2])
+        nuevos = self._fetch("item.json", "en_US")["data"]
+        viejos = self._fetch("item.json", "en_US", version=ant)["data"]
+        limpio = lambda d: re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", d or "")).strip()  # noqa: E731
+        for iid, it in nuevos.items():
+            if int(iid) not in self.items or not self.items[int(iid)].get("sr"):
+                continue
+            old = viejos.get(iid)
+            if not old:
+                continue   # ítem nuevo: no hay con qué comparar
+            sn, so = self._parse_stats(it), self._parse_stats(old)
+            gn, go = (it.get("gold") or {}).get("total", 0), (old.get("gold") or {}).get("total", 0)
+            sube = any(sn.get(k, 0) > so.get(k, 0) for k in sn) or gn < go
+            baja = any(so.get(k, 0) > sn.get(k, 0) for k in so) or gn > go
+            if sube and not baja:
+                self.cambios[int(iid)] = "mejorado"
+            elif baja and not sube:
+                self.cambios[int(iid)] = "empeorado"
+            elif sube or baja or limpio(it.get("description")) != limpio(old.get("description")):
+                self.cambios[int(iid)] = "cambiado"
+        runas_n = {r["id"]: r for s in self._fetch("runesReforged.json", "en_US") for sl in s["slots"] for r in sl["runes"]}
+        runas_v = {r["id"]: r for s in self._fetch("runesReforged.json", "en_US", version=ant) for sl in s["slots"]
+                   for r in sl["runes"]}
+        for rid, r in runas_n.items():
+            if rid in runas_v and limpio(r.get("longDesc")) != limpio(runas_v[rid].get("longDesc")):
+                self.cambios_runas.add(rid)
+
+    def cambio_item(self, iid):
+        """«mejorado en 16.20», «empeorado en 16.20», «cambiado en 16.20» o "" si no cambió."""
+        c = getattr(self, "cambios", {}).get(iid)
+        return f"{c} en {self.patch}" if c else ""
 
     @staticmethod
     def _kit(c) -> dict:

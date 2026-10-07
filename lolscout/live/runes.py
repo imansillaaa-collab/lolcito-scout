@@ -458,7 +458,18 @@ def options(dd, cid, role, shape, champ_meta=None, lane_opp=None):
             continue
         opciones.append({"id": f"alt{len(opciones)}", "title": f"Con {dd.rune_name(d['pg']['perks'][0])}",
                          "why": d["why"], **_view(dd, d["pg"])})
-    return opciones[:3]
+    return _avisar_cambios(dd, opciones[:3])
+
+
+def _avisar_cambios(dd, opciones):
+    """Si alguna runa de la página cambió en este parche, lo dice (Data Dragon no aclara si es buff o nerf)."""
+    cambiadas = getattr(dd, "cambios_runas", set())
+    for o in opciones:
+        nombres = [dd.rune_name(r) for r in o.get("perks", []) if r in cambiadas]
+        if nombres:
+            o["why"] = list(o.get("why", [])) + [f"Ojo: {', '.join(nombres)} cambi{'aron' if len(nombres) > 1 else 'ó'} "
+                                                 f"en el parche {dd.patch}."]
+    return opciones
 
 
 def opciones_por_tipo(dd, cid, role, shape, champ_meta=None, lane_opp=None):

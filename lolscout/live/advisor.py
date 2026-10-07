@@ -77,7 +77,9 @@ def _champ_card(dd, cid):
 
 
 def _item_card(dd, iid):
-    return {"id": iid, "name": dd.item_name(iid), "img": dd.item_img(iid), "gold": dd.items.get(iid, {}).get("gold", 0)}
+    """Lleva «cambio»: si el ítem fue mejorado, empeorado o cambiado en este parche ("" si no)."""
+    return {"id": iid, "name": dd.item_name(iid), "img": dd.item_img(iid), "gold": dd.items.get(iid, {}).get("gold", 0),
+            "cambio": dd.cambio_item(iid) if hasattr(dd, "cambio_item") else ""}
 
 
 def _ap_ratio(dd, cid):
