@@ -176,15 +176,20 @@ def my_pending_pick(session, local):
     return None
 
 
-def ban_options(meta, my_role, pool, unavailable, dd, limit=8):
+def ban_options(meta, my_role, pool, unavailable, dd, limit=8, conf=None):
     """Qué conviene banear: lo que está fuerte en tu línea y lo que le gana a tus campeones.
 
     Se mira el rol que vas a jugar, porque el baneo que más te cambia la partida es el del
-    campeón que te toca enfrente.
+    campeón que te toca enfrente. «Tus campeones» son los de ESTE rol (confianza: historial + maestría), y
+    «le gana a tu X» solo cuenta con datos firmes: 30+ partidas y claramente mejor que lo normal.
     """
-    # tus campeones: los que más jugás, con cuánto peso tiene cada uno en tu pool
-    mios = sorted(((cid, g, w) for cid, (g, w) in pool.items() if g >= 3), key=lambda x: -x[1])[:4]
+    # tus campeones de este rol, con cuánto peso tiene cada uno (sin confianza: tus últimas partidas)
+    if conf:
+        mios = sorted(((cid, x["k"], 0) for cid, x in conf.items() if x["k"] >= 0.3), key=lambda x: -x[1])[:4]
+    else:
+        mios = sorted(((cid, g, w) for cid, (g, w) in pool.items() if g >= 3), key=lambda x: -x[1])[:4]
     total_mias = sum(g for _, g, _ in mios) or 1
+    por_id = {c["id"]: c for c in meta.get(my_role, [])}
     # nunca proponer banear un campeón que jugás vos: te quedarías sin él
     propios = {cid for cid, _, _ in mios}
     rivales = [c for c in meta.get(my_role, []) if c["id"] not in unavailable and c["id"] not in propios
@@ -204,24 +209,26 @@ def ban_options(meta, my_role, pool, unavailable, dd, limit=8):
             if not m:
                 continue
             mg, mw = m
-            if mg >= 6 and mw >= 0.55:
+            d, crudo = cruce(c, por_id.get(cid), mg, mw)   # cuánto mejor que lo normal le va contra tu campeón
+            if mg >= 30 and crudo >= 0.03 and d > 0:
                 peso = g / total_mias
-                peligro += (mw - 0.5) * 1.6 * peso * min(mg / 20, 1.0)
-                contra.append((mw, mg, cid))
+                peligro += d * 1.6 * peso
+                contra.append((crudo, mw, mg, cid))
         if fuerza > 0:
             why.append(f"Está fuerte en {ROLE_ES.get(my_role, my_role)}: {c['wr']*100:.1f}% en {c['games']} partidas"
                        + ("" if conf >= 1 else " (pocas todavía)"))
         if pick >= 0.5:
             why.append(f"Lo vas a cruzar seguido: lo juega el {c.get('pick', 0)*100:.1f}% de las partidas de tu rango.")
         contra.sort(reverse=True)
-        for mw, mg, cid in contra[:2]:
-            why.append(f"Le gana a tu {dd.champ_name(cid)}: {mw*100:.0f}% en {mg} partidas"
-                       + (" (pocas)" if mg < 15 else ""))
+        for crudo, mw, mg, cid in contra[:2]:
+            why.append(f"Le gana a tu {dd.champ_name(cid)}: {mw*100:.0f}% en {mg} partidas "
+                       f"({crudo*100:.0f} punto{'' if round(crudo*100) == 1 else 's'} más que lo normal)")
         if c.get("ban", 0) >= 0.05:
             why.append(f"En tu rango ya lo banea el {c['ban']*100:.0f}% de las partidas.")
         if why:
+            nombres = [dd.champ_name(cid) for *_, cid in contra[:2]]
             opciones.append({**_champ_card(dd, c["id"]), "tier": c["tier"], "danger": peligro, "why": why,
-                             "counters": bool(contra)})
+                             "counters": ("le gana a tu " + " y tu ".join(nombres)) if nombres else ""})
     opciones.sort(key=lambda o: -o["danger"])
     # que al menos uno de los primeros sea "te contra a vos" si existe
     contras = [o for o in opciones if o["counters"]]
@@ -319,6 +326,12 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
 
     def es_mio(cid):
         return conf.get(cid, {}).get("k", 0) >= 0.3 or pool.get(cid, [0])[0] >= 3
+
+    def nivel_mio(cid):
+        """La etiqueta de la tarjeta: «tu campeón» si lo jugás mucho, «lo jugaste» si algunas veces."""
+        if conf.get(cid, {}).get("k", 0) >= 0.5 or pool.get(cid, [0])[0] >= 5:
+            return "tu campeón"
+        return "lo jugaste" if es_mio(cid) else ""
     enemy_partner = next((c for c, r in enemy_roles.items() if r == BOT_PARTNER.get(my_role)), None)
     partner = next((a for a in allies if a["role"] == BOT_PARTNER.get(my_role) and a["cid"]), None)
     ally_partner = partner["cid"] if partner else None
@@ -334,6 +347,7 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
     def evaluate(c):
         # 1) el meta del parche, mirando lo que como mínimo gana (ver piso): pocas partidas o de nicho bajan solos
         score = piso(c)
+        gana = ""
         nicho = c.get("pick", 0) < NICHO and c.get("games", 0) > 0
         why = [f"Meta: {c['wr']*100:.1f}% en {c['games']} partidas"
                + (" (de nicho: lo juegan sobre todo sus mains)" if nicho else "")]
@@ -343,6 +357,8 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             # se mira cuánto mejor le va contra ESE rival que contra cualquiera, y con pocas partidas casi no pesa
             suma, crudo = cruce(c, opp_meta, g, w)
             score += suma * lane_seguro
+            if g >= 100 and crudo >= 0.03 and modo == "counter":
+                gana = f"le gana a {dd.champ_name(lane_opp)}"
             why.append(("si va a tu línea, " if modo == "probable" else "")
                        + f"vs {dd.champ_name(lane_opp)}: {w*100:.0f}% en {g} partida{'s' if g != 1 else ''}"
                        + (f" ({abs(crudo)*100:.0f} punto{'' if round(abs(crudo)*100) == 1 else 's'} {'mejor' if crudo >= 0 else 'peor'} que contra cualquiera)"
@@ -412,7 +428,7 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
             else:
                 why.insert(1, texto)
             score += comodidad + propio
-        return score, why, bool(fit_why), es_mio(c["id"]), combo_team
+        return score, why, gana, nivel_mio(c["id"]), combo_team
 
     # tus campeones que casi no aparecen en el meta de tu rango para este rol (pocas partidas en la base):
     # los sumo igual si se juegan en este rol, con los datos generales del campeón
@@ -484,8 +500,8 @@ def draft_advice(session: dict, meta: dict, duos: list, dist, dd, default_role="
         for o in duo_list:
             o["counters"] = any(x["id"] == o["id"] and x["counters"] for x in options)
     # para banear también se descartan los que tus aliados tienen marcados (todavía sin bloquear)
-    bans_sug = ban_options(meta, my_role, pool, unavailable | {a["cid"] for a in allies if a["cid"]}, dd) \
-        if paso == "ban" else []
+    bans_sug = ban_options(meta, my_role, pool, unavailable | {a["cid"] for a in allies if a["cid"]}, dd,
+                           conf=conf) if paso == "ban" else []
 
     # Runas y hechizos: para el campeón que ya elegiste, o para la primera opción mientras no elijas
     from . import runes as ru

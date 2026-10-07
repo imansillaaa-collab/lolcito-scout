@@ -1071,7 +1071,7 @@ function layoutSplashes(){
 window.addEventListener('resize',layoutSplashes);
 
 function chTags(o, kind){
-  return `${tier(o.tier)}${o.counters?`<span class="tag">${kind==='ban'?'te contra a vos':'contra este rival'}</span>`:''}${o.mine?'<span class="tag mio">lo jugás seguido</span>':''}${o.combo?'<span class="tag mio">combo conocido</span>':''}${o.sinergia?'<span class="tag mio">combina con tu equipo</span>':''}`;
+  return `${tier(o.tier)}${o.counters?`<span class="tag">${esc(typeof o.counters==='string'?o.counters:(kind==='ban'?'le gana a tus campeones':'le gana a tu rival'))}</span>`:''}${o.mine?`<span class="tag mio">${esc(typeof o.mine==='string'?o.mine:'lo jugaste')}</span>`:''}${o.combo?'<span class="tag mio">combo conocido</span>':''}${o.sinergia?'<span class="tag mio">combina con tu equipo</span>':''}`;
 }
 // Motivos que hablan de tu compañero de bot («Con Thresh: …»): se muestran primero y resaltados
 function duoWhy(o, s){

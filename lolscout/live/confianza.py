@@ -17,7 +17,8 @@ ROL_ES = {"Top": "TOP", "Jungla": "JUNGLE", "Mid": "MIDDLE", "ADC": "BOTTOM", "S
 VIDA_MEDIA = 60          # días en que una partida (o la maestría sin jugar) pasa a valer la mitad
 OTRO_ROL = 0.3           # una partida de ese campeón en otro rol
 PUNTOS_POR_PARTIDA = 1000
-PESO_MAESTRIA = 0.3
+PESO_MAESTRIA = 0.1      # la maestría no sabe en qué rol ni en qué cola lo jugaste: pesa poco
+MAESTRIA_MAX = 3.0       # y sola nunca vale más que 3 partidas recientes en este rol
 ESCALA = 6.0             # k = 1 - e^(-total/ESCALA)
 
 
@@ -37,7 +38,7 @@ def calcular(partidas, maestria, ahora=None):
         if not cid or pts <= 0:
             continue
         dias = (ahora - (m.get("lastPlayTime") or 0) / 1000) / 86400
-        m_eq[cid] = min(pts / PUNTOS_POR_PARTIDA * _decae(dias) * PESO_MAESTRIA, 12.0)
+        m_eq[cid] = min(pts / PUNTOS_POR_PARTIDA * _decae(dias) * PESO_MAESTRIA, MAESTRIA_MAX)
         m_info[cid] = (pts, dias)
     for rol in ROL_ES.values():
         eff, g, w, ultima = {}, {}, {}, {}
@@ -77,5 +78,7 @@ def _texto(g, ultima, maestria, k):
         meses = max(1, round(dias_m / 30))
         return f"Lo jugabas mucho ({pts_txt}), pero hace {meses} mes{'es' if meses > 1 else ''} que no"
     if g >= 1:
-        return f"Lo jugaste {g} {'vez' if g == 1 else 'veces'} en este rol"
+        return f"Lo jugaste {g} {'vez' if g == 1 else 'veces'} en este rol" + (f" · {pts_txt}" if pts_txt else "")
+    if pts_txt:
+        return f"Lo jugaste en otros modos o roles: {pts_txt}"
     return "Lo jugaste algunas veces" if k >= 0.3 else "Lo probaste poco"

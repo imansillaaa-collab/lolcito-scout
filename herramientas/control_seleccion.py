@@ -53,6 +53,8 @@ def main():
         if not r or not r.get("roles"):
             errores.append(f"{liga_es}: no pude bajar las estadísticas ({err})")
             continue
+        if r.get("matches", 0) < 10000:   # pasó con el parche nuevo: 300 partidas y recomendaciones al azar
+            ojos.append(f"{liga_es}: las estadísticas tienen solo {r.get('matches', 0)} partidas (¿parche nuevo?)")
         meta = r["roles"]
         dist = {int(k): v for k, v in (r.get("dist") or {}).items()}
         champs = r.get("champs")

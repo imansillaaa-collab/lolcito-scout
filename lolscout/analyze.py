@@ -23,7 +23,13 @@ def tier_of(adj: float) -> str:
     return "D"
 
 
-def pick_patches(conn, patch: str = None, min_matches: int = 300):
+# Cuántas partidas tiene que juntar un parche nuevo para usarlo solo. Antes eran 300 y el día que salía un
+# parche las estadísticas quedaban casi vacías (Lux con 59 partidas, Pyke primero con 29): con 15.000 se sigue
+# sumando el parche anterior unos 2 o 3 días, hasta que el nuevo tiene datos de verdad.
+MIN_PARCHE_NUEVO = 15000
+
+
+def pick_patches(conn, patch: str = None, min_matches: int = MIN_PARCHE_NUEVO):
     """Usa el parche pedido; si no, el más nuevo (sumando el anterior si todavía hay pocas partidas)."""
     rows = conn.execute("SELECT patch, COUNT(*) n FROM matches GROUP BY patch").fetchall()
     if not rows:
