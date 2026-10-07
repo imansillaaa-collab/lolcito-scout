@@ -579,10 +579,12 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 .hlp{margin-bottom:14px}.hlph{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .hlph img{width:44px;height:44px;border:1px solid var(--gold-lo)}.hlph b{color:var(--gold-hi);font:700 15px var(--title)}
 .hlph .good{color:var(--good)}.hlph .bad{color:var(--bad)}.hlph b.good,.hlph b.bad{font:700 12px inherit}
-.hlbig{display:none;width:100%;max-height:62vh;background:#000;margin-bottom:10px}
 .hlth5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 .hlth{position:relative;cursor:pointer;border:1px solid var(--line);background:#000;aspect-ratio:16/9;overflow:hidden}
-.hlth.on{border-color:var(--gold)}.hlth img,.hlth .hlsin{width:100%;height:100%;object-fit:cover;display:block}
+.hlth:hover{border-color:var(--gold)}.hlth video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
+.hlth video:fullscreen{object-fit:contain}
+#hlover{position:fixed;inset:0;z-index:9999;background:rgba(1,10,19,.94);display:flex;align-items:center;justify-content:center}
+#hlover video{max-width:96vw;max-height:92vh;background:#000}#hlover .pb{position:absolute;top:14px;right:18px;font-size:18px}.hlth:hover .hlthx{opacity:.15}.hlthx{transition:opacity .2s}
 .hlthx{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 5px;background:linear-gradient(transparent,rgba(1,10,19,.92))}
 .hlthx b{display:block;color:var(--gold-hi);font:700 12px var(--title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hlthx span{font-size:11px;color:var(--text)}
@@ -969,9 +971,8 @@ function pintarHL(){
       <div class="hlph">${c0.campeonImg?`<img src="${c0.campeonImg}" alt="">`:''}<div>
         <b>${esc(c0.campeon||'')}</b>${c0.resultado?` · ${res(c0.resultado)}`:''} · ${esc(c0.kdaFinal||c0.kda||'')}
         <div class="small">${fmtFecha(p.fecha)}${c0.liga?` · ${esc(c0.liga)}`:''}${c0.lp?` · <b class="${c0.lp.startsWith('+')?'good':'bad'}">${esc(c0.lp)}</b>`:''} · ${p.clips.length} momento${p.clips.length===1?'':'s'}</div></div></div>
-      <video class="hlbig" id="hlv-${p.k}" controls preload="none"></video>
-      <div class="hlth5">${p.clips.map(c=>`<div class="hlth" onclick="hlVer('${p.k}','${c.video}',this)" title="Ver este momento">
-          ${c.miniatura?`<img src="${c.miniatura}" alt="">`:'<div class="hlsin"></div>'}
+      <div class="hlth5">${p.clips.map(c=>`<div class="hlth" onmouseenter="hlPrevia(this,true)" onmouseleave="hlPrevia(this,false)" onclick="hlGrande(this)" title="Pasá el mouse para verlo · click para pantalla completa">
+          <video src="${c.video}" ${c.miniatura?`poster="${c.miniatura}"`:''} muted loop playsinline preload="none"></video>
           <div class="hlthx"><b>${esc(c.tipo)}</b><span>minuto ${esc(c.minuto)}</span></div>
           <button class="pb" title="Borrar este clip" onclick="event.stopPropagation();if(confirm('¿Borrar este clip?'))hlAccion({accion:'borrar',id:'${c.id}'})">✕</button></div>`).join('')}</div>
     </div>`; };
@@ -983,11 +984,32 @@ function pintarHL(){
       :`<div class="panel"><div class="idle" style="padding:30px 10px"><h1>Todavía no hay highlights${nombre?' de '+esc(nombre):''}</h1><p>Jugá una partida con la grabación prendida: se guardan solo tus mejores momentos (solo kills, kills con poca vida, shutdowns, multikills, robos de objetivos), como mucho 5 por partida.</p></div></div>`}
     <div class="note">Los clips se guardan solo en tu compu. Cada pelea es un solo clip y se guardan los 5 mejores momentos de cada partida. Se graba en 720p sin sonido; como mucho 200 clips en total (los más viejos se borran solos).</div>`;
 }
-function hlVer(k,src,el){
-  const v=document.getElementById('hlv-'+k); if(!v) return;
-  el.parentNode.querySelectorAll('.hlth').forEach(x=>x.classList.toggle('on',x===el));
-  v.style.display='block'; if(v.getAttribute('src')!==src) v.src=src; v.play().catch(()=>{});
+// pasar el mouse por la miniatura: arranca el video ahí mismo; sacarlo: vuelve al principio
+function hlPrevia(el,on){
+  const v=el.querySelector('video'); if(!v||document.fullscreenElement===v) return;
+  if(on){ v.play().catch(()=>{}); } else { v.pause(); try{ v.currentTime=0; }catch(e){} }
 }
+// click: pantalla completa, con controles y desde el principio (Esc o el botón del video para salir)
+function hlGrande(el){
+  const v=el.querySelector('video'); if(!v) return;
+  v.controls=true; try{ v.currentTime=0; }catch(e){} v.play().catch(()=>{});
+  // si Windows o el navegador no dejan pantalla completa: el video ocupa toda la ventana de Lolcito
+  (v.requestFullscreen?v.requestFullscreen():Promise.reject()).catch(()=>{});
+  setTimeout(()=>{ if(document.fullscreenElement!==v) hlVentana(v); },500);   // no entró (o se quedó colgado)
+}
+function hlVentana(v){
+  hlCerrarVentana();
+  const o=document.createElement('div'); o.id='hlover';
+  o.innerHTML=`<video src="${v.getAttribute('src')}" controls autoplay playsinline></video><button class="pb" title="Cerrar (Esc)">✕</button>`;
+  o.onclick=e=>{ if(e.target===o||e.target.tagName==='BUTTON') hlCerrarVentana(); };
+  document.body.appendChild(o);
+  v.controls=false; v.pause(); try{ v.currentTime=0; }catch(e){}
+}
+function hlCerrarVentana(){ const o=document.getElementById('hlover'); if(o) o.remove(); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') hlCerrarVentana(); });
+document.addEventListener('fullscreenchange',()=>{
+  if(!document.fullscreenElement) document.querySelectorAll('.hlth video').forEach(v=>{ v.controls=false; v.pause(); try{ v.currentTime=0; }catch(e){} });
+});
 async function cargarHL(){
   clearTimeout(hlTimer);
   try{ HL=await api('/api/highlights'); pintarHL(); }catch(e){}
