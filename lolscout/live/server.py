@@ -266,6 +266,8 @@ class Assistant:
         except Exception:
             traceback.print_exc()
         if summary:
+            if not self.simulated:
+                self.highlights.cerrar_partida(summary)
             summary["_live_t"] = rec.game.get("gameData", {}).get("gameTime")
             summary["_rec"] = rec  # para rehacerlo cuando llegue el historial
             # LP ganados o perdidos: el rango de antes de la partida (durante la partida no se relee) y
@@ -731,7 +733,9 @@ class App:
                     h.borrar(body.get("id"))
                 elif acc == "probar":
                     return h.probar_ahora()
-            return h.vista(self.assistant.cuenta_hl())
+            cuentas = [{"puuid": a.get("puuid"), "nombre": a.get("name", "") + (f"#{a['tag']}" if a.get("tag") else "")}
+                       for a in self.assistant.history.accounts() if a.get("puuid")]
+            return h.vista(self.assistant.cuenta_hl(), cuentas)
         if path == "/api/auto-runas" and method == "POST":
             config.save_settings({"RUNAS_SOLAS": bool(body.get("on"))})   # queda guardado en ajustes.json
             return {"ok": True, "on": config.RUNAS_SOLAS}

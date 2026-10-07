@@ -17,6 +17,7 @@ import subprocess
 import threading
 import time
 import zipfile
+from collections import deque
 from pathlib import Path
 
 from .. import config
@@ -27,7 +28,11 @@ URL_SUMAS = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/chec
 TRAMO = 4                 # segundos por tramo grabado
 GUARDAR = 100             # segundos de grabación que se conservan hacia atrás
 ANTES, DESPUES = 12, 4    # segundos de clip antes y después de cada momento
-MIN_PUNTOS = 20           # lo que tiene que valer un momento para guardarlo
+MIN_PUNTOS = 45           # lo que tiene que valer un momento para guardarlo (una kill común no llega: 10)
+POR_PARTIDA = 5           # como mucho los 5 mejores momentos de cada partida
+JUNTAR = 25               # lo que pasa a menos de 25 s de lo anterior es la misma pelea: un solo clip
+MAX_VENTANA = 60          # pero un clip no abarca más de 60 s de pelea (la grabación guarda 100 s hacia atrás)
+SOBREVIVIR = 10           # «kill y sobreviviste»: no te mataron en los 10 s siguientes
 MAX_CLIPS = 200           # más que esto: se borran los más viejos
 SIN_VENTANA = 0x08000000
 
@@ -38,7 +43,7 @@ ENCODERS = {
     "libx264": (["-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", "-crf", "28", "-g", "60"],
                 "el procesador"),
 }
-MULTI = {2: ("Doble kill", 40), 3: ("Triple kill", 60), 4: ("Cuádruple kill", 80), 5: ("PENTAKILL", 100)}
+MULTI = {2: ("Doble kill", 40), 3: ("Triple kill", 70), 4: ("Cuádruple kill", 90), 5: ("PENTAKILL", 120)}
 OBJ_ES = {"DragonKill": "el dragón", "BaronKill": "el Barón", "HeraldKill": "el Heraldo", "HordeKill": "las larvas"}
 
 
@@ -118,6 +123,9 @@ class Highlights:
         self._lock = threading.Lock()
         self._partida_t = None
         self._ultima = None          # clave de la última partida grabada (para anotarle los LP al final)
+        self._ultima_res = None      # la misma, para anotarle el resultado y el KDA final
+        self._vida = deque(maxlen=900)   # (tiempo de partida, vida en %) de tu campeón, para «kill con poca vida»
+        self._ult = None             # lo último que se vio de la partida (para cortar lo pendiente al terminar)
 
     def _limpiar_viejos_sin_cuenta(self):
         """Una sola vez: borra los clips de antes de que se guardara la cuenta y la liga (arrancamos en limpio)."""
@@ -324,47 +332,101 @@ class Highlights:
                     pass
 
     # ---------- momentos
+    def _vida_en(self, t):
+        """Tu vida (0 a 1) en el segundo `t` de la partida, o None si no se sabe."""
+        antes = [v for tt, v in self._vida if tt <= t + 0.5]
+        return antes[-1] if antes else None
+
+    def _kill(self, t, asist, victima, racha_victima, campeon, mas_fuerte, mis_muertes):
+        """Cuánto vale una kill tuya y cómo se llama. Una kill común vale 10 (no llega sola a MIN_PUNTOS): suman
+        hacerla solo, con poca vida, cortarle la racha al rival, que sea el que más oro tiene, y sobrevivir."""
+        pts, vida = 10, ""
+        solo = not asist
+        if solo:
+            pts += 25
+        hp = self._vida_en(t)
+        if hp is not None and hp < 0.15:
+            pts, vida = pts + 35, " con muy poca vida"
+        elif hp is not None and hp < 0.30:
+            pts, vida = pts + 25, " con poca vida"
+        shutdown = racha_victima >= 3
+        if shutdown:
+            pts += 20
+        if victima and victima == mas_fuerte:
+            pts += 15
+        if any(t < m <= t + SOBREVIVIR for m in mis_muertes):
+            pts -= 15                 # la cambiaste por tu vida: vale menos
+        cv = campeon.get(victima, "")
+        if shutdown:
+            nombre = f"Shutdown a {cv}"
+        elif solo:
+            nombre = f"Solo kill a {cv}" if cv else "Solo kill"
+        elif victima == mas_fuerte:
+            nombre = f"Kill al más fuerte ({cv})"
+        else:
+            nombre = f"Kill a {cv}" if cv else "Kill"
+        return pts, nombre + vida
+
     def _momentos(self, game, yo):
-        """Ventanas [desde, hasta] (en tiempo de partida) de tus mejores momentos, ya unidas."""
-        ventanas = []
-        for e in (game.get("events") or {}).get("Events", []):
+        """Tus mejores momentos, una ventana por pelea: [(desde, hasta, puntos, nombre, último evento)] en tiempo
+        de partida. Cada pelea junta lo que pasa a menos de JUNTAR segundos (sin pasar de MAX_VENTANA)."""
+        campeon, equipo, oro = {}, {}, {}
+        for p in game.get("allPlayers") or []:
+            for n in {_norm(p.get(k)) for k in ("riotIdGameName", "riotId", "summonerName")} - {""}:
+                campeon[n] = p.get("championName") or ""
+                equipo[n] = p.get("team")
+                oro[n] = sum((i.get("price") or 0) * (i.get("count") or 1) for i in p.get("items") or [])
+        mi_equipo = next((equipo[n] for n in yo if n in equipo), None)
+        rivales = {n: g for n, g in oro.items() if equipo.get(n) != mi_equipo}
+        mas_fuerte = max(rivales, key=rivales.get) if rivales else None
+        eventos = sorted((game.get("events") or {}).get("Events", []), key=lambda e: e.get("EventTime", 0))
+        mis_muertes = [e.get("EventTime", 0) for e in eventos
+                       if e.get("EventName") == "ChampionKill" and _norm(e.get("VictimName")) in yo]
+        racha, momentos = {}, []
+        for e in eventos:
             n, t = e.get("EventName"), e.get("EventTime", 0)
-            puntos, texto, ini = 0, None, t - ANTES
             asist = {_norm(a) for a in e.get("Assisters") or []}
             if n == "ChampionKill":
-                if _norm(e.get("KillerName")) in yo:
-                    puntos, texto = 20, "Kill"
-                elif yo & asist:
-                    puntos, texto = 6, "Asistencia"
+                killer, victima = _norm(e.get("KillerName")), _norm(e.get("VictimName"))
+                racha_victima = racha.get(victima, 0)
+                racha[killer] = racha.get(killer, 0) + 1
+                racha[victima] = 0
+                if killer in yo:
+                    pts, nombre = self._kill(t, asist, victima, racha_victima, campeon, mas_fuerte, mis_muertes)
+                    momentos.append((t, pts, nombre, "kill"))
             elif n == "Multikill" and _norm(e.get("KillerName")) in yo:
-                k = int(e.get("KillStreak") or 2)
-                texto, puntos = MULTI.get(min(k, 5), MULTI[2])
-                ini = t - ANTES - TRAMO * (k - 1)
+                nombre, pts = MULTI.get(min(int(e.get("KillStreak") or 2), 5), MULTI[2])
+                momentos.append((t, pts, nombre, "multi"))
             elif n == "FirstBlood" and _norm(e.get("Recipient")) in yo:
-                puntos, texto = 25, "First blood"
+                momentos.append((t, 20, "First blood", "otro"))
             elif n == "Ace" and _norm(e.get("Acer")) in yo:
-                puntos, texto = 30, "Ace"
+                momentos.append((t, 25, "Ace", "otro"))
             elif n in OBJ_ES and (_norm(e.get("KillerName")) in yo or yo & asist):
-                robado = str(e.get("Stolen", "")).lower() == "true"
-                puntos, texto = (70, f"Robaste {OBJ_ES[n]}") if robado else (15 if n == "BaronKill" else 0, f"Tomaste {OBJ_ES[n]}")
-            if puntos:
-                ventanas.append([max(0, ini), t + DESPUES, puntos, texto])
-        ventanas.sort()
-        unidas = []
-        for v in ventanas:
-            if unidas and v[0] <= unidas[-1][1] + 3:
-                u = unidas[-1]
-                u[1] = max(u[1], v[1])
-                u[4].append((v[2], v[3]))
+                if str(e.get("Stolen", "")).lower() == "true":
+                    momentos.append((t, 70, f"Robaste {OBJ_ES[n]}", "otro"))
+                elif n == "BaronKill":
+                    momentos.append((t, 15, "Tomaste el Barón", "otro"))
+        grupos = []
+        for m in sorted(momentos):
+            g = grupos[-1] if grupos else None
+            if g and m[0] - g["ult"] <= JUNTAR and m[0] - g["ini"] <= MAX_VENTANA:
+                g["lista"].append(m)
+                g["ult"] = m[0]
             else:
-                unidas.append([v[0], v[1], v[2], v[3], [(v[2], v[3])]])
+                grupos.append({"ini": m[0], "ult": m[0], "lista": [m]})
         out = []
-        for d, h, _, _, lista in unidas:
-            mejor = max(lista)
-            puntos = mejor[0] + 0.3 * (sum(p for p, _ in lista) - mejor[0])
-            kills = sum(1 for _, tx in lista if tx == "Kill")
-            texto = mejor[1] if mejor[1] != "Kill" or kills < 2 else f"{kills} kills"
-            out.append((d, h, round(puntos), texto))
+        for g in grupos:
+            lista = sorted(g["lista"], key=lambda m: -m[1])
+            puntos = lista[0][1] + 0.5 * sum(m[1] for m in lista[1:])
+            kills = sum(1 for m in lista if m[3] == "kill")
+            multi = next((m for m in lista if m[3] == "multi"), None)
+            if multi:
+                nombre = multi[2]
+            elif kills >= 2 and lista[0][3] == "kill":
+                nombre = f"{lista[0][2]} y {kills - 1} kill{'s' if kills > 2 else ''} más"
+            else:
+                nombre = lista[0][2]
+            out.append((max(0, g["ini"] - ANTES), g["ult"] + DESPUES, round(puntos), nombre, g["ult"]))
         return out
 
     def en_partida(self, game, me, cuenta=None):
@@ -383,11 +445,24 @@ class Highlights:
             self._arrancar()
         t = game.get("gameData", {}).get("gameTime", 0)
         self._offset = time.time() - t
+        st = (game.get("activePlayer") or {}).get("championStats") or {}
+        if st.get("maxHealth"):
+            self._vida.append((t, (st.get("currentHealth") or 0) / st["maxHealth"]))
+        self._ult = (game, me, cuenta)
+        self._evaluar(game, me, cuenta, t)
+        self._procesar_pendientes()
+        self._limpiar_buffer()
+
+    def _evaluar(self, game, me, cuenta, t, forzar=False):
+        """Agenda el corte de las peleas que ya terminaron (o todas, si `forzar`: terminó la partida)."""
         act = game.get("activePlayer", {})
         yo = {_norm(act.get(k)) for k in ("riotIdGameName", "riotId", "summonerName")} - {""}
-        for d, h, puntos, texto in self._momentos(game, yo):
+        for d, h, puntos, texto, ultimo in self._momentos(game, yo):
             clave = round(d)
-            if clave in self._hechos or puntos < MIN_PUNTOS or h > t - 1:
+            if clave in self._hechos or puntos < MIN_PUNTOS:
+                continue
+            # se espera a que la pelea termine (y a saber si sobreviviste) antes de cortar
+            if not forzar and t < ultimo + max(JUNTAR, SOBREVIVIR):
                 continue
             self._hechos.add(clave)
             info = {"tipo": texto, "puntos": puntos, "minuto": f"{int(d + ANTES) // 60}:{int(d + ANTES) % 60:02d}",
@@ -396,10 +471,8 @@ class Highlights:
                     "partida": int(self._partida_t * 1000)}
             if cuenta:
                 info.update({"puuid": cuenta.get("puuid"), "cuenta": cuenta.get("nombre"), "liga": cuenta.get("liga")})
-            self._ultima = info["partida"]
+            self._ultima = self._ultima_res = info["partida"]
             self._pendientes.append((self._offset + d, self._offset + h, info))
-        self._procesar_pendientes()
-        self._limpiar_buffer()
 
     def _procesar_pendientes(self, forzar=False):
         listos = [p for p in self._pendientes if forzar or time.time() >= p[1] + TRAMO + 1]
@@ -430,7 +503,14 @@ class Highlights:
                     "fecha": int(tramos[0][0] * 1000), "segundos": round(len(tramos) * TRAMO)}
             (self.clips / f"{nombre}.json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
             print(f"[highlights] clip guardado: {info['tipo']} ({info['puntos']} puntos)", flush=True)
+            self._limitar_partida(info["partida"])
             self._recortar_viejos()
+
+    def _limitar_partida(self, partida):
+        """Deja solo los POR_PARTIDA mejores momentos de esa partida."""
+        de_esta = [c for c in self.listar() if c.get("partida") == partida]
+        for c in sorted(de_esta, key=lambda c: (c.get("puntos", 0), c.get("fecha", 0)))[:-POR_PARTIDA]:
+            self.borrar(c["id"])
 
     def _recortar_viejos(self):
         todos = sorted(self.clips.glob("*.json"))
@@ -441,6 +521,11 @@ class Highlights:
         """Terminó la partida: corta lo que quedó pendiente y deja de grabar."""
         if not self.grabando:
             return
+        if self._ult:   # las peleas del final (no llegaron a «terminar»): se cortan igual
+            game, me, cuenta = self._ult
+            self._evaluar(game, me, cuenta, game.get("gameData", {}).get("gameTime", 0), forzar=True)
+            self._ult = None
+
         def cerrar():
             time.sleep(TRAMO + 1)
             self._parar()
@@ -455,16 +540,25 @@ class Highlights:
     def anotar_lp(self, texto):
         """Cuando Riot actualiza el rango después de la partida: le anota a sus clips los LP que ganaste o perdiste."""
         partida, self._ultima = self._ultima, None
-        if not partida or not texto:
-            return
+        if partida and texto:
+            self._anotar(partida, {"lp": texto})
+
+    def cerrar_partida(self, resumen):
+        """Con el resumen de la partida: le anota a sus clips si ganaste y tu KDA final (para la tarjeta)."""
+        partida, self._ultima_res = self._ultima_res, None
+        if partida and resumen:
+            self._anotar(partida, {"resultado": resumen.get("result"),
+                                   "kdaFinal": f"{resumen.get('k', 0)}/{resumen.get('d', 0)}/{resumen.get('a', 0)}"})
+
+    def _anotar(self, partida, campos):
         def anotar():
-            time.sleep(40)                       # que terminen de cortarse los últimos clips
+            time.sleep(45)                       # que terminen de cortarse los últimos clips
             with self._lock:
                 for f in self.clips.glob("*.json"):
                     try:
                         info = json.loads(f.read_text(encoding="utf-8"))
                         if info.get("partida") == partida:
-                            info["lp"] = texto
+                            info.update(campos)
                             f.write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
                     except (OSError, ValueError):
                         pass
@@ -489,12 +583,12 @@ class Highlights:
                 pass
         return {"ok": True}
 
-    def vista(self, cuenta=None):
+    def vista(self, cuenta=None, cuentas=None):
         captura, e = _partes(self.encoder)
         enc = (ENCODERS[e][1] + (" (captura clásica de Windows)" if captura == "gdigrab" else "")) if self.encoder else None
         return {"on": bool(config.HIGHLIGHTS), "estado": self.estado, "progreso": self.progreso, "error": self.error,
                 "grabando": self.grabando, "con": enc, "clips": self.listar(),
-                "cuenta": (cuenta or {}).get("puuid")}
+                "cuenta": (cuenta or {}).get("puuid"), "cuentas": cuentas or []}
 
     def archivo(self, nombre):
         f = (self.clips / nombre).resolve()

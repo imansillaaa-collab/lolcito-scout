@@ -570,6 +570,22 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
 /* Highlights */
 #v-hl{padding-bottom:20px}
 .hlhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.hltabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:4px 0 14px;flex-wrap:wrap}
+.hltab{background:none;border:0;border-bottom:2px solid transparent;color:var(--text);opacity:.75;padding:9px 16px;
+  font:700 13px var(--title);letter-spacing:.5px;cursor:pointer}
+.hltab.on{opacity:1;color:var(--gold-hi);border-bottom-color:var(--gold)}.hltab small{font-weight:400;opacity:.7}
+.hlp{margin-bottom:14px}.hlph{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.hlph img{width:44px;height:44px;border:1px solid var(--gold-lo)}.hlph b{color:var(--gold-hi);font:700 15px var(--title)}
+.hlph .good{color:var(--good)}.hlph .bad{color:var(--bad)}.hlph b.good,.hlph b.bad{font:700 12px inherit}
+.hlbig{display:none;width:100%;max-height:62vh;background:#000;margin-bottom:10px}
+.hlth5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.hlth{position:relative;cursor:pointer;border:1px solid var(--line);background:#000;aspect-ratio:16/9;overflow:hidden}
+.hlth.on{border-color:var(--gold)}.hlth img,.hlth .hlsin{width:100%;height:100%;object-fit:cover;display:block}
+.hlthx{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 5px;background:linear-gradient(transparent,rgba(1,10,19,.92))}
+.hlthx b{display:block;color:var(--gold-hi);font:700 12px var(--title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hlthx span{font-size:11px;color:var(--text)}
+.hlth .pb{position:absolute;top:4px;right:4px;opacity:0}.hlth:hover .pb{opacity:1}
+@media (max-width:1100px){.hlth5{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .hlrec{color:#ff5a5a;font-weight:700;animation:pulso 1.6s ease-in-out infinite}
 .hlgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
 .hlc{border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
@@ -934,26 +950,41 @@ function hlSwitch(on){ return `<label class="sw" title="Graba la pantalla mientr
 function fmtFecha(ms){ const d=new Date(ms); return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}); }
 function pintarHL(){
   const h=HL; if(!h) return;
-  const partidas=[...new Set(h.clips.map(c=>c.partida))];
-  // cuentas con clips: por defecto se ven los de la cuenta conectada al LoL (si está cerrado, todos)
-  const cuentas=[...new Map(h.clips.filter(c=>c.puuid).map(c=>[c.puuid,c.cuenta||'Cuenta'])).entries()];
-  if(hlCuenta===null || (hlCuenta!=='todas' && !cuentas.some(([p])=>p===hlCuenta)))
-    hlCuenta = h.cuenta && cuentas.some(([p])=>p===h.cuenta) ? h.cuenta : 'todas';
-  let clips=hlCuenta==='todas'?h.clips:h.clips.filter(c=>c.puuid===hlCuenta);
-  if(hlFiltro==='mejores') clips=[...clips].sort((a,b)=>b.puntos-a.puntos);
-  const selCuenta=cuentas.length>1||(cuentas.length===1&&h.clips.some(c=>!c.puuid))
-    ?`<select class="sel" onchange="hlCuenta=this.value;pintarHL()"><option value="todas" ${hlCuenta==='todas'?'selected':''}>Todas las cuentas</option>${cuentas.map(([p,n])=>`<option value="${esc(p)}" ${hlCuenta===p?'selected':''}>${esc(n)}${p===h.cuenta?' (conectada)':''}</option>`).join('')}</select>`:'';
-  const tarjeta=c=>`<div class="hlc ${c.puntos>=60?'top':''}">
-      <video src="${c.video}" ${c.miniatura?`poster="${c.miniatura}"`:''} controls preload="none"></video>
-      <div class="hli">${c.campeonImg?`<img src="${c.campeonImg}" alt="">`:''}<div><b>${esc(c.tipo)}</b>
-        <div class="small">${esc(c.campeon||'')} · minuto ${esc(c.minuto)} · ${fmtFecha(c.fecha)}</div>
-        ${c.cuenta||c.liga?`<div class="small hlcta">${c.cuenta?`<span>${esc(c.cuenta)}</span>`:''}${c.liga?` · ${esc(c.liga)}`:''}${c.lp?` · <b class="${c.lp.startsWith('+')?'good':'bad'}">${esc(c.lp)}</b>`:''}</div>`:''}</div>
-        <button class="pb" title="Borrar este clip" onclick="if(confirm('¿Borrar este clip?'))hlAccion({accion:'borrar',id:'${c.id}'})">✕</button></div></div>`;
+  // una sub-solapa por cuenta (todas las que usaste en Lolcito, tengan clips o no); arranca en la conectada
+  const cuentas=(h.cuentas||[]).slice();
+  for(const c of h.clips) if(c.puuid && !cuentas.some(x=>x.puuid===c.puuid)) cuentas.push({puuid:c.puuid,nombre:c.cuenta||'Cuenta'});
+  if(!hlCuenta || !cuentas.some(x=>x.puuid===hlCuenta))
+    hlCuenta=(h.cuenta && cuentas.some(x=>x.puuid===h.cuenta)) ? h.cuenta : ((cuentas[0]||{}).puuid||null);
+  const clips=h.clips.filter(c=>c.puuid===hlCuenta);
+  const grupos={}; for(const c of clips) (grupos[c.partida]=grupos[c.partida]||[]).push(c);
+  const partidas=Object.entries(grupos).map(([k,cs])=>({k, clips:cs.sort((a,b)=>a.fecha-b.fecha),
+      total:cs.reduce((s,c)=>s+(c.puntos||0),0), fecha:Math.max(...cs.map(c=>c.fecha||0))}));
+  partidas.sort(hlFiltro==='mejores'?(a,b)=>b.total-a.total:(a,b)=>b.fecha-a.fecha);
+  const tabs=cuentas.length?`<div class="hltabs">${cuentas.map(c=>`<button class="hltab ${c.puuid===hlCuenta?'on':''}" onclick="hlCuenta='${esc(c.puuid)}';pintarHL()">${esc(c.nombre||'Cuenta')}${c.puuid===h.cuenta?' <small>· conectada</small>':''}</button>`).join('')}</div>`:'';
+  const res=r=>r==='win'?'<span class="good">Victoria</span>':r==='loss'||r==='lose'?'<span class="bad">Derrota</span>':'';
+  const tarjeta=p=>{ const c0=p.clips[p.clips.length-1];
+    return `<div class="panel hlp">
+      <div class="hlph">${c0.campeonImg?`<img src="${c0.campeonImg}" alt="">`:''}<div>
+        <b>${esc(c0.campeon||'')}</b>${c0.resultado?` · ${res(c0.resultado)}`:''} · ${esc(c0.kdaFinal||c0.kda||'')}
+        <div class="small">${fmtFecha(p.fecha)}${c0.liga?` · ${esc(c0.liga)}`:''}${c0.lp?` · <b class="${c0.lp.startsWith('+')?'good':'bad'}">${esc(c0.lp)}</b>`:''} · ${p.clips.length} momento${p.clips.length===1?'':'s'}</div></div></div>
+      <video class="hlbig" id="hlv-${p.k}" controls preload="none"></video>
+      <div class="hlth5">${p.clips.map(c=>`<div class="hlth" onclick="hlVer('${p.k}','${c.video}',this)" title="Ver este momento">
+          ${c.miniatura?`<img src="${c.miniatura}" alt="">`:'<div class="hlsin"></div>'}
+          <div class="hlthx"><b>${esc(c.tipo)}</b><span>minuto ${esc(c.minuto)}</span></div>
+          <button class="pb" title="Borrar este clip" onclick="event.stopPropagation();if(confirm('¿Borrar este clip?'))hlAccion({accion:'borrar',id:'${c.id}'})">✕</button></div>`).join('')}</div>
+    </div>`; };
+  const nombre=(cuentas.find(x=>x.puuid===hlCuenta)||{}).nombre;
   $('#hl').innerHTML = `<div class="panel hlhead"><div>${hlSwitch(h.on)}<div class="small" style="margin-top:4px">${hlEstado(h)}</div></div>
-      <div class="row"><button class="btn sec" onclick="hlAccion({accion:'probar'})" title="Prueba de nuevo qué forma de grabar anda en esta compu (placa NVIDIA, AMD, Intel o el procesador)">Probar grabación</button>${selCuenta}${h.clips.length?`<select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro==='todas'?'selected':''}>Más nuevos primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select>`:''}</div></div>
-    ${clips.length?`<div class="hlgrid">${clips.map(tarjeta).join('')}</div>`
-      :`<div class="panel"><div class="idle" style="padding:30px 10px"><h1>Todavía no hay highlights</h1><p>Jugá una partida con la grabación prendida: cada kill, multikill, first blood, ace o robo de objetivo queda acá como un clip.</p></div></div>`}
-    <div class="note">Los clips se guardan solo en tu compu (${partidas.length} partida${partidas.length===1?'':'s'}, ${h.clips.length} clip${h.clips.length===1?'':'s'}). Se graba en 720p sin sonido; se guardan como mucho 200 clips (los más viejos se borran solos).</div>`;
+      <div class="row"><button class="btn sec" onclick="hlAccion({accion:'probar'})" title="Prueba de nuevo qué forma de grabar anda en esta compu (placa NVIDIA, AMD, Intel o el procesador)">Probar grabación</button><select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro!=='mejores'?'selected':''}>Más nuevas primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select></div></div>
+    ${tabs}
+    ${partidas.length?partidas.map(tarjeta).join('')
+      :`<div class="panel"><div class="idle" style="padding:30px 10px"><h1>Todavía no hay highlights${nombre?' de '+esc(nombre):''}</h1><p>Jugá una partida con la grabación prendida: se guardan solo tus mejores momentos (solo kills, kills con poca vida, shutdowns, multikills, robos de objetivos), como mucho 5 por partida.</p></div></div>`}
+    <div class="note">Los clips se guardan solo en tu compu. Cada pelea es un solo clip y se guardan los 5 mejores momentos de cada partida. Se graba en 720p sin sonido; como mucho 200 clips en total (los más viejos se borran solos).</div>`;
+}
+function hlVer(k,src,el){
+  const v=document.getElementById('hlv-'+k); if(!v) return;
+  el.parentNode.querySelectorAll('.hlth').forEach(x=>x.classList.toggle('on',x===el));
+  v.style.display='block'; if(v.getAttribute('src')!==src) v.src=src; v.play().catch(()=>{});
 }
 async function cargarHL(){
   clearTimeout(hlTimer);
