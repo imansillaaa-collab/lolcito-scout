@@ -517,6 +517,8 @@ iframe{width:100%;height:calc(100vh - 150px);border:1px solid var(--gold-lo);bac
   border:1px solid #1e2d3a;font:600 10px var(--body,inherit);color:#010a13}
 .skc.on{background:var(--gold-lo);color:#f0e6d2}
 .skc.on.done{background:#1d5a47;border-color:#2f8a6c;color:#d8fff1}
+.skc.on.prox{outline:1px solid var(--good);color:#f0e6d2}
+.skc.era{outline:1px dashed #9a8d88;outline-offset:-3px}
 .skc.on.next{background:var(--good);border-color:var(--good);color:#010a13;font-weight:800;animation:skglow 1.1s ease-in-out infinite var(--skfase,0s)}
 .skl.next img,.skk.next img{border-color:var(--good);animation:skglow 1.1s ease-in-out infinite var(--skfase,0s)}
 @keyframes skglow{0%,100%{box-shadow:0 0 3px var(--good);filter:brightness(1)}50%{box-shadow:0 0 14px 3px var(--good);filter:brightness(1.45)}}
@@ -1245,15 +1247,35 @@ function laneChips(c,lo,corto){
 // Franja de arriba en partida: vos y tu rival de línea con sus splash, y en el medio marcador, reloj y oro
 function habilidadesHtml(h, nivel){
   if(!h) return '<div class="small">Todavía no hay datos de este campeón: se van juntando con cada tanda de estadísticas.</div>';
-  const prox_k=nivel>=0&&nivel<18?h.niveles[nivel]:null;
-  // la pantalla se redibuja cada segundo: el desfase según el reloj hace que el titileo siga sin cortarse
+  // lo que de verdad subiste (lo dice el juego); sin ese dato, se supone que vas al día con tu nivel
+  const sub=Array.isArray(h.subidas)?h.subidas:h.niveles.slice(0,nivel);
+  const libres=Math.max(0,nivel-sub.length);           // puntos que tenés para usar ahora
+  // el plan: lo que subiste + lo que sigue (lo recomendado si se puede, si no lo que más conviene)
+  const pts={Q:0,W:0,E:0,R:0}; sub.forEach(k=>pts[k]++);
+  const plan=sub.slice();
+  const puede=(k,lvl)=>k==='R'?pts.R<(lvl>=16?3:lvl>=11?2:lvl>=6?1:0):(pts[k]<5&&pts[k]<Math.ceil(lvl/2));
+  for(let i=sub.length;i<18;i++){
+    const lvl=i+1; let k=h.niveles[i];
+    if(!puede(k,lvl)) k=puede('R',lvl)?'R':(h.maxeo.find(x=>puede(x,lvl))||['Q','W','E'].find(x=>pts[x]<5)||'R');
+    pts[k]++; plan.push(k);
+  }
+  const nx=sub.length<18?sub.length:-1, prox_k=nx>=0?plan[nx]:null;
   document.documentElement.style.setProperty('--skfase', `-${(Date.now()%1100)/1000}s`);
-  const ic=kk=>`<span class="skk ${kk===prox_k?'next':''}">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}<b>${kk}</b></span>`;
+  const glow=libres>0;   // titila solo si tenés un punto para usar
+  const ic=kk=>`<span class="skk ${kk===prox_k&&glow?'next':''}">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}<b>${kk}</b></span>`;
   const orden=`<div class="skord">${h.maxeo.map(ic).join('<span class="sksep">›</span>')}<span class="sksep">›</span>${ic('R')}</div>`;
-  const filas=['Q','W','E','R'].map(kk=>`<div class="skrow"><span class="skl ${kk===prox_k?'next':''}">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}${kk}</span>${
-    h.niveles.map((x,i)=>`<span class="skc ${x===kk?'on':''} ${i+1<=nivel&&x===kk?'done':''} ${i===nivel&&x===kk?'next':''}" title="Nivel ${i+1}">${x===kk?i+1:''}</span>`).join('')}</div>`).join('');
-  const prox=nivel>=1&&nivel<=18?`<div class="small" style="margin-top:6px">Sos nivel ${nivel}: ${nivel<18?`el próximo punto va a la <b style="color:var(--good)">${h.niveles[nivel]}</b>`:'ya tenés todo'}. <span style="color:#6fd0b0">■</span> ya subidas · <span style="color:var(--gold)">■</span> las que vienen</div>`:'';
-  return `${orden}<div class="skgrid">${filas}</div>${prox}<div class="why"><div>${esc(h.why)}</div></div>`;
+  const filas=['Q','W','E','R'].map(kk=>`<div class="skrow"><span class="skl ${kk===prox_k&&glow?'next':''}">${h.img[kk]?`<img src="${h.img[kk]}" alt="">`:''}${kk}</span>${
+    plan.map((x,i)=>{
+      const hecho=i<sub.length, era=hecho&&h.niveles[i]===kk&&sub[i]!==kk;
+      const cls=[x===kk?'on':'', hecho&&x===kk?'done':'', i===nx&&x===kk?(glow?'next':'prox'):'', era?'era':''].join(' ');
+      const tit=`Nivel ${i+1}`+(hecho&&x===kk?' · la subiste':'')+(era?` · lo recomendado era ${kk}`:'');
+      return `<span class="skc ${cls}" title="${tit}">${x===kk?i+1:''}</span>`;}).join('')}</div>`).join('');
+  const txt=nx<0?'Ya subiste todo.'
+    :glow?`Tenés ${libres===1?'un punto':libres+' puntos'} para usar: subí la <b style="color:var(--good)">${prox_k}</b>.`
+    :`Sos nivel ${nivel}: en el próximo nivel subí la <b style="color:var(--good)">${prox_k}</b>.`;
+  const leyenda=`<span style="color:#6fd0b0">■</span> las que subiste · <span style="color:var(--gold)">■</span> las que vienen`
+    +(sub.some((k,i)=>k!==h.niveles[i])?' · <span style="color:#9a8d88">□</span> lo recomendado, si subiste otra':'');
+  return `${orden}<div class="skgrid">${filas}</div><div class="small" style="margin-top:6px">${txt} ${leyenda}</div><div class="why"><div>${esc(h.why)}</div></div>`;
 }
 function gameHead(s){
   const me=s.me, lo=s.laneOpponent, [ga,ge]=s.teamGold, tot=(ga+ge)||1;

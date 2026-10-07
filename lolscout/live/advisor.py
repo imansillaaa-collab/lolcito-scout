@@ -661,6 +661,13 @@ def _habilidades(dd, cid, role, champ_meta, meta):
                    f"{mx['wr'] * 100:.0f}%. La R siempre que puedas (niveles 6, 11 y 16)."}
 
 
+def _con_subidas(h, subidas):
+    """Le suma al orden recomendado lo que de verdad subiste (en orden), para marcarlo y saber qué punto sigue."""
+    if h and subidas is not None:
+        h["subidas"] = subidas
+    return h
+
+
 def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=None, champs=None) -> dict:
     from . import gameplan as gp
     from . import objectives as ob
@@ -777,7 +784,8 @@ def game_advice(game: dict, meta: dict, dist, dd, remembered_role=None, tracker=
         "quest": quest, "nItems": n_items,
         "apoyo": _apoyo(dd, me, allies, enemies, fight, my_role),
         "inicial": _inicial(dd, me["cid"], my_role, lane["cid"] if lane else None) if t < 150 else None,
-        "habilidades": _habilidades(dd, me["cid"], my_role, champ_meta, meta),
+        "habilidades": _con_subidas(_habilidades(dd, me["cid"], my_role, champ_meta, meta),
+                                    tracker.habilidades(act.get("abilities")) if tracker else None),
         "enemies": enemy_rows,
         "allies": sorted((row(p) for p in allies), key=by_role),
         "teamGold": [sum(p["gold"] for p in allies), sum(p["gold"] for p in enemies)],

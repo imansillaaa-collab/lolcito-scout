@@ -427,6 +427,21 @@ class GameTracker:
         self.prev_items, self.prev_kills, self.events, self.last_time = {}, {}, [], -1
         self.prev_alerts, self.announced = set(), set()
         self.prev_plan, self.last_cause = None, None
+        self.hab_prev, self.hab_seq = {}, []
+
+    def habilidades(self, abilities):
+        """Anota en qué orden vas subiendo las habilidades (el juego solo dice cuántos puntos tiene cada una ahora).
+        Devuelve la lista de lo que subiste, en orden, o None si el juego no pasó las habilidades."""
+        if not abilities:
+            return None
+        act = {k: int((abilities.get(k) or {}).get("abilityLevel") or 0) for k in "QWER"}
+        for k in "QWER":
+            for _ in range(act[k] - self.hab_prev.get(k, 0)):
+                self.hab_seq.append(k)
+        if sum(act.values()) != len(self.hab_seq):   # abriste Lolcito con la partida empezada: no se sabe el orden
+            self.hab_seq = [k for k in "QWER" for _ in range(act[k])]
+        self.hab_prev = act
+        return list(self.hab_seq)
 
     def update(self, t, enemies, report, dd, lane=None, me=None):
         if t < self.last_time - 5:
