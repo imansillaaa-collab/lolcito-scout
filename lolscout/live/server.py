@@ -725,7 +725,9 @@ class App:
             h = self.assistant.highlights
             if method == "POST":
                 acc = body.get("accion")
-                if acc in ("on", "off"):
+                if acc in ("sonido_on", "sonido_off"):   # se aplica desde la próxima partida
+                    config.save_settings({"HIGHLIGHTS_SONIDO": acc == "sonido_on"})
+                elif acc in ("on", "off"):
                     config.save_settings({"HIGHLIGHTS": acc == "on"})
                     if acc == "on":
                         h.preparar()

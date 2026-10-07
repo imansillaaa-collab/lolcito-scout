@@ -8,7 +8,8 @@ Cómo funciona:
 - Los eventos de la partida (Live Client Data API: kills, multikills, first blood, ace, robos de objetivos)
   marcan los momentos; los que valen la pena se cortan en un MP4 con su miniatura en highlights/clips.
 - Se puede apagar desde la solapa Highlights o Configuración (config.HIGHLIGHTS).
-Sin audio por ahora (capturar el sonido de Windows con ffmpeg requiere un dispositivo extra).
+Sonido: solo el del juego (audio_juego.py toma el sonido del proceso del LoL y nada más: ni Discord ni música).
+Le llega a ffmpeg por una conexión local (127.0.0.1) y se graba en los mismos tramos que la imagen.
 """
 import hashlib
 import json
@@ -262,7 +263,17 @@ class Highlights:
         for f in self.buffer.glob("*.ts"):
             f.unlink(missing_ok=True)
         captura, enc = _partes(self.encoder)
-        cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", *_entrada(captura), *ENCODERS[enc][0],
+        sonido = []
+        self._puerto = None
+        if config.HIGHLIGHTS_SONIDO:
+            import socket
+            with socket.socket() as s:    # un puerto libre para que ffmpeg espere el sonido
+                s.bind(("127.0.0.1", 0))
+                self._puerto = s.getsockname()[1]
+            sonido = ["-f", "s16le", "-ar", "48000", "-ac", "2", "-thread_queue_size", "4096",
+                      "-i", f"tcp://127.0.0.1:{self._puerto}?listen=1"]
+        cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", *_entrada(captura), *sonido,
+               *(["-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "128k"] if sonido else []), *ENCODERS[enc][0],
                "-f", "segment", "-segment_time", str(TRAMO), "-reset_timestamps", "1", "-strftime", "1",
                str(self.buffer / "t_%Y%m%d%H%M%S.ts")]
         self._log = open(self.dir / "ffmpeg.log", "w", encoding="utf-8", errors="replace")
@@ -272,7 +283,41 @@ class Highlights:
         _atar_a_lolcito(self.proc)
         self._hechos, self._pendientes, self._offset = set(), [], None
         self._partida_t = time.time()
-        print(f"[highlights] grabando con {self.encoder}", flush=True)
+        if self._puerto:
+            threading.Thread(target=self._alimentar_sonido, args=(self._puerto,), daemon=True).start()
+        print(f"[highlights] grabando con {self.encoder}" + (" y el sonido del juego" if self._puerto else ""), flush=True)
+
+    def _alimentar_sonido(self, puerto):
+        """Le pasa a ffmpeg el sonido del juego. Si no se puede (Windows viejo, no encontró el juego...), le pasa
+        silencio: ffmpeg igual tiene que recibir sonido para seguir grabando la imagen."""
+        from . import audio_juego as aj
+        self._cap = None
+        try:
+            conexion = aj.conectar(puerto)
+        except Exception as e:  # noqa: BLE001
+            print(f"[audio] {e}", flush=True)
+            return
+        self._conexion = conexion
+        pid = aj.pid_del_juego()
+        if pid:
+            self._cap = aj.CapturaJuego(pid, conexion.sendall)
+            self._cap.iniciar()
+            self._cap.hilo.join()      # sigue hasta que se para la grabación (o falla)
+            if not self._cap.error or not self.grabando:
+                return
+            print(f"[audio] sin sonido del juego: {self._cap.error}", flush=True)
+        else:
+            print("[audio] no encontré el proceso del juego: grabo sin sonido", flush=True)
+        inicio, escritos = time.perf_counter(), 0    # silencio a ritmo de reloj
+        try:
+            while self.grabando:
+                deberia = int((time.perf_counter() - inicio) * aj.TASA)
+                if deberia > escritos:
+                    conexion.sendall(bytes((deberia - escritos) * aj.CUADRO))
+                    escritos = deberia
+                time.sleep(0.05)
+        except OSError:
+            pass
 
     def _se_cayo(self):
         """ffmpeg se cerró solo en plena partida: se anota por qué y se pasa a la próxima forma de grabar."""
@@ -300,6 +345,8 @@ class Highlights:
     def _parar(self):
         if not self.proc:
             return
+        if getattr(self, "_cap", None):
+            self._cap.parar()
         try:
             self.proc.stdin.write(b"q")
             self.proc.stdin.flush()
@@ -307,6 +354,10 @@ class Highlights:
         except Exception:  # noqa: BLE001
             self.proc.kill()
         self.proc = None
+        try:
+            self._conexion.close()
+        except Exception:  # noqa: BLE001
+            pass
         try:
             self._log.close()
         except Exception:  # noqa: BLE001
@@ -586,7 +637,7 @@ class Highlights:
     def vista(self, cuenta=None, cuentas=None):
         captura, e = _partes(self.encoder)
         enc = (ENCODERS[e][1] + (" (captura clásica de Windows)" if captura == "gdigrab" else "")) if self.encoder else None
-        return {"on": bool(config.HIGHLIGHTS), "estado": self.estado, "progreso": self.progreso, "error": self.error,
+        return {"on": bool(config.HIGHLIGHTS), "sonido": bool(config.HIGHLIGHTS_SONIDO), "estado": self.estado, "progreso": self.progreso, "error": self.error,
                 "grabando": self.grabando, "con": enc, "clips": self.listar(),
                 "cuenta": (cuenta or {}).get("puuid"), "cuentas": cuentas or []}
 

@@ -61,6 +61,7 @@ LOL_PATH = os.environ.get("LOL_PATH", "")
 STATS_SOURCE = os.environ.get("STATS_SOURCE", "online")
 BRACKET = os.environ.get("BRACKET", "auto")               # auto = según el rango de tu cuenta
 HIGHLIGHTS = os.environ.get("HIGHLIGHTS", "1") == "1"      # grabar clips de tus mejores momentos (se puede apagar)
+HIGHLIGHTS_SONIDO = os.environ.get("HIGHLIGHTS_SONIDO", "1") == "1"   # con el sonido del juego (solo el LoL)
 RUNAS_SOLAS = os.environ.get("RUNAS_SOLAS", "0") == "1"    # switch «Runas automáticas»: apagado hasta que lo prendas
 
 PLAYERS_PER_RUN = _int("PLAYERS_PER_RUN", 250)
@@ -77,7 +78,7 @@ ROLE_NAMES = {"TOP": "Top", "JUNGLE": "Jungla", "MIDDLE": "Mid", "BOTTOM": "ADC"
 
 EDITABLE = ["RIOT_API_KEY", "MY_RIOT_ID", "PLATFORM", "REGION", "TIERS", "ROLES", "AUTO_UPDATE", "LOL_PATH",
             "PLAYERS_PER_RUN", "MAX_NEW_MATCHES", "MIN_GAMES", "STATS_SOURCE", "STATS_REPO", "BRACKET", "LAYOUT",
-            "RUNAS_SOLAS", "HIGHLIGHTS"]
+            "RUNAS_SOLAS", "HIGHLIGHTS", "HIGHLIGHTS_SONIDO"]
 LAYOUT = {}  # orden de los paneles en la vista de partida (lo acomoda cada usuario)
 
 
@@ -112,7 +113,7 @@ def apply_settings(data: dict) -> None:
             v = int(v)
         if k == "LAYOUT" and not isinstance(v, dict):
             continue
-        if k in ("AUTO_UPDATE", "RUNAS_SOLAS", "HIGHLIGHTS"):
+        if k in ("AUTO_UPDATE", "RUNAS_SOLAS", "HIGHLIGHTS", "HIGHLIGHTS_SONIDO"):
             v = v if isinstance(v, bool) else str(v).lower() in ("1", "true", "si", "sí", "on")
         if k in ("RIOT_API_KEY", "MY_RIOT_ID", "LOL_PATH", "STATS_REPO", "STATS_SOURCE", "BRACKET") and isinstance(v, str):
             v = v.strip()

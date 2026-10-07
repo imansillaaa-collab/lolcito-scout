@@ -951,6 +951,9 @@ function hlEstado(h){
 function hlSwitch(on){ return `<label class="sw" title="Graba la pantalla mientras jugás y guarda solo tus mejores momentos. Si notás la compu lenta en partida, apagalo.">
     <input type="checkbox" ${on?'checked':''} onchange="hlAccion({accion:this.checked?'on':'off'})"><span class="sw-tr"><span class="sw-kn"></span></span>
     <span class="sw-tx">Grabar highlights</span><b class="sw-es">${on?'ON':'OFF'}</b></label>`; }
+function hlSwitchSonido(on){ return `<label class="sw" title="Graba solo el sonido del juego: no se escucha Discord, música ni nada más de tu compu. Se aplica desde la próxima partida." style="margin-left:18px">
+    <input type="checkbox" ${on?'checked':''} onchange="hlAccion({accion:this.checked?'sonido_on':'sonido_off'})"><span class="sw-tr"><span class="sw-kn"></span></span>
+    <span class="sw-tx">Con sonido del juego</span><b class="sw-es">${on?'ON':'OFF'}</b></label>`; }
 function fmtFecha(ms){ const d=new Date(ms); return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}); }
 function pintarHL(){
   const h=HL; if(!h) return;
@@ -977,12 +980,12 @@ function pintarHL(){
           <button class="pb" title="Borrar este clip" onclick="event.stopPropagation();if(confirm('¿Borrar este clip?'))hlAccion({accion:'borrar',id:'${c.id}'})">✕</button></div>`).join('')}</div>
     </div>`; };
   const nombre=(cuentas.find(x=>x.puuid===hlCuenta)||{}).nombre;
-  $('#hl').innerHTML = `<div class="panel hlhead"><div>${hlSwitch(h.on)}<div class="small" style="margin-top:4px">${hlEstado(h)}</div></div>
+  $('#hl').innerHTML = `<div class="panel hlhead"><div>${hlSwitch(h.on)}${h.on?hlSwitchSonido(h.sonido):''}<div class="small" style="margin-top:4px">${hlEstado(h)}</div></div>
       <div class="row"><button class="btn sec" onclick="hlAccion({accion:'probar'})" title="Prueba de nuevo qué forma de grabar anda en esta compu (placa NVIDIA, AMD, Intel o el procesador)">Probar grabación</button><select class="sel" onchange="hlFiltro=this.value;pintarHL()"><option value="todas" ${hlFiltro!=='mejores'?'selected':''}>Más nuevas primero</option><option value="mejores" ${hlFiltro==='mejores'?'selected':''}>Mejores primero</option></select></div></div>
     ${tabs}
     ${partidas.length?partidas.map(tarjeta).join('')
       :`<div class="panel"><div class="idle" style="padding:30px 10px"><h1>Todavía no hay highlights${nombre?' de '+esc(nombre):''}</h1><p>Jugá una partida con la grabación prendida: se guardan solo tus mejores momentos (solo kills, kills con poca vida, shutdowns, multikills, robos de objetivos), como mucho 5 por partida.</p></div></div>`}
-    <div class="note">Los clips se guardan solo en tu compu. Cada pelea es un solo clip y se guardan los 5 mejores momentos de cada partida. Se graba en 720p sin sonido; como mucho 200 clips en total (los más viejos se borran solos).</div>`;
+    <div class="note">Los clips se guardan solo en tu compu. Cada pelea es un solo clip y se guardan los 5 mejores momentos de cada partida. Se graba en 720p con el sonido del juego (solo el LoL); como mucho 200 clips en total (los más viejos se borran solos).</div>`;
 }
 // pasar el mouse por la miniatura: arranca el video ahí mismo; sacarlo: vuelve al principio
 function hlPrevia(el,on){
@@ -992,7 +995,7 @@ function hlPrevia(el,on){
 // click: pantalla completa, con controles y desde el principio (Esc o el botón del video para salir)
 function hlGrande(el){
   const v=el.querySelector('video'); if(!v) return;
-  v.controls=true; try{ v.currentTime=0; }catch(e){} v.play().catch(()=>{});
+  v.controls=true; v.muted=false; try{ v.currentTime=0; }catch(e){} v.play().catch(()=>{});
   // si Windows o el navegador no dejan pantalla completa: el video ocupa toda la ventana de Lolcito
   (v.requestFullscreen?v.requestFullscreen():Promise.reject()).catch(()=>{});
   setTimeout(()=>{ if(document.fullscreenElement!==v) hlVentana(v); },500);   // no entró (o se quedó colgado)
@@ -1003,12 +1006,12 @@ function hlVentana(v){
   o.innerHTML=`<video src="${v.getAttribute('src')}" controls autoplay playsinline></video><button class="pb" title="Cerrar (Esc)">✕</button>`;
   o.onclick=e=>{ if(e.target===o||e.target.tagName==='BUTTON') hlCerrarVentana(); };
   document.body.appendChild(o);
-  v.controls=false; v.pause(); try{ v.currentTime=0; }catch(e){}
+  v.controls=false; v.muted=true; v.pause(); try{ v.currentTime=0; }catch(e){}
 }
 function hlCerrarVentana(){ const o=document.getElementById('hlover'); if(o) o.remove(); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') hlCerrarVentana(); });
 document.addEventListener('fullscreenchange',()=>{
-  if(!document.fullscreenElement) document.querySelectorAll('.hlth video').forEach(v=>{ v.controls=false; v.pause(); try{ v.currentTime=0; }catch(e){} });
+  if(!document.fullscreenElement) document.querySelectorAll('.hlth video').forEach(v=>{ v.controls=false; v.muted=true; v.pause(); try{ v.currentTime=0; }catch(e){} });
 });
 async function cargarHL(){
   clearTimeout(hlTimer);
