@@ -56,15 +56,31 @@ def open_window(url):
     exe = find_app_browser()
     if exe:
         try:
+            # prioridad baja (la heredan todos sus procesos): mientras jugás, el LoL siempre va primero
             subprocess.Popen([exe, f"--app={url}", "--window-size=1360,900", "--no-first-run",
-                              "--no-default-browser-check", f"--user-data-dir={config.DATA_DIR / 'ventana'}"])
+                              "--no-default-browser-check", f"--user-data-dir={config.DATA_DIR / 'ventana'}"],
+                             creationflags=0x00004000 if os.name == "nt" else 0)   # BELOW_NORMAL_PRIORITY_CLASS
             return
         except OSError:
             pass
     webbrowser.open(url)
 
 
+def prioridad_baja():
+    """Lolcito corre con prioridad «por debajo de lo normal»: si el procesador está ocupado, el juego va primero."""
+    if os.name == "nt":
+        try:
+            import ctypes
+            k32 = ctypes.windll.kernel32
+            k32.GetCurrentProcess.restype = ctypes.c_void_p
+            k32.SetPriorityClass.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+            k32.SetPriorityClass(k32.GetCurrentProcess(), 0x00004000)
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def main():
+    prioridad_baja()
     ap = argparse.ArgumentParser(description="Lolcito Scout")
     ap.add_argument("--simular", choices=["draft", "partida", "resumen", "inicio"], help="probar sin abrir el LoL")
     ap.add_argument("--lan", action="store_true", help="permitir abrirlo desde el celular")

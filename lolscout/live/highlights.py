@@ -48,6 +48,7 @@ MULTI = {2: ("Doble kill", 40), 3: ("Triple kill", 70), 4: ("Cuádruple kill", 9
 OBJ_ES = {"DragonKill": "el dragón", "BaronKill": "el Barón", "HeraldKill": "el Heraldo", "HordeKill": "las larvas"}
 
 
+BAJA = 0x00004000   # BELOW_NORMAL_PRIORITY_CLASS: el grabador nunca le gana el procesador al juego
 _JOB = None
 
 
@@ -177,7 +178,7 @@ class Highlights:
         if not curl.exists():
             raise RuntimeError("no pude conectarme de forma segura para bajar el grabador")
         r = subprocess.run([str(curl), "-L", "-f", "-s", "-S", "--retry", "3", "-o", str(destino), url],
-                           capture_output=True, creationflags=SIN_VENTANA, timeout=1800)
+                           capture_output=True, creationflags=SIN_VENTANA | BAJA, timeout=1800)
         if r.returncode != 0:
             raise RuntimeError(f"no pude bajar el grabador: {r.stderr.decode('utf-8', 'replace').strip()[:150]}")
 
@@ -217,7 +218,7 @@ class Highlights:
         cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", *_entrada(captura), "-t", str(segundos),
                *ENCODERS[enc][0], "-f", "null", "-"]
         try:
-            r = subprocess.run(cmd, capture_output=True, creationflags=SIN_VENTANA, timeout=40)
+            r = subprocess.run(cmd, capture_output=True, creationflags=SIN_VENTANA | BAJA, timeout=40)
         except subprocess.TimeoutExpired:
             return False, "tardó demasiado"
         err = r.stderr.decode("utf-8", "replace").strip().splitlines()
@@ -278,7 +279,7 @@ class Highlights:
                str(self.buffer / "t_%Y%m%d%H%M%S.ts")]
         self._log = open(self.dir / "ffmpeg.log", "w", encoding="utf-8", errors="replace")
         self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=self._log,
-                                     creationflags=SIN_VENTANA)
+                                     creationflags=SIN_VENTANA | BAJA)
         self._arranque = time.time()
         _atar_a_lolcito(self.proc)
         self._hechos, self._pendientes, self._offset = set(), [], None
@@ -543,14 +544,14 @@ class Highlights:
             mp4, jpg = self.clips / f"{nombre}.mp4", self.clips / f"{nombre}.jpg"
             r = subprocess.run([str(self.bin), "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
                                 "-i", str(lista), "-c", "copy", "-movflags", "+faststart", str(mp4)],
-                               capture_output=True, creationflags=SIN_VENTANA, timeout=120)
+                               capture_output=True, creationflags=SIN_VENTANA | BAJA, timeout=120)
             if r.returncode != 0 or not mp4.exists():
                 print(f"[highlights] no pude cortar el clip: {r.stderr[-300:]!r}", flush=True)
                 return
             medio = max(0.0, (desde + ANTES) - tramos[0][0])
             subprocess.run([str(self.bin), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{medio:.1f}", "-i",
                             str(mp4), "-frames:v", "1", "-vf", "scale=480:-2", str(jpg)],
-                           capture_output=True, creationflags=SIN_VENTANA, timeout=60)
+                           capture_output=True, creationflags=SIN_VENTANA | BAJA, timeout=60)
             info = {**info, "id": nombre, "video": f"/hl/{mp4.name}", "miniatura": f"/hl/{jpg.name}" if jpg.exists() else None,
                     "fecha": int(tramos[0][0] * 1000), "segundos": round(len(tramos) * TRAMO)}
             (self.clips / f"{nombre}.json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
