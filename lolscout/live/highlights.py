@@ -452,7 +452,8 @@ class Highlights:
                 momentos.append((t, 20, "First blood", "otro"))
             elif n == "Ace" and _norm(e.get("Acer")) in yo:
                 momentos.append((t, 25, "Ace", "otro"))
-            elif n in OBJ_ES and (_norm(e.get("KillerName")) in yo or yo & asist):
+            elif n in OBJ_ES and _norm(e.get("KillerName")) in yo:
+                # solo si el golpe final fue tuyo: una asistencia al robo de tu jungla no es tu jugada
                 if str(e.get("Stolen", "")).lower() == "true":
                     momentos.append((t, 70, f"Robaste {OBJ_ES[n]}", "otro"))
                 elif n == "BaronKill":
