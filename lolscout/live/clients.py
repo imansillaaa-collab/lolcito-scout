@@ -234,7 +234,7 @@ class LCU:
     def ids_partidas(self, puuid: str, n: int = 20) -> list | None:
         """Números de las últimas partidas de un jugador, de la más nueva a la más vieja (las que muestra su perfil
         en el cliente). None si el cliente no las devolvió."""
-        data = self.get(f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={n}", timeout=25)
+        data = self.get(f"/lol-match-history/v1/products/lol/{puuid}/matches?begIndex=0&endIndex={n}", timeout=40)
         games = ((data or {}).get("games") or {}).get("games") if isinstance(data, dict) else None
         if games is None:
             return None

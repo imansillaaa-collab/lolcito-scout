@@ -475,7 +475,7 @@ class Assistant:
             return out
         d = getattr(self, "_duos", None)
         if d is None or (d.get("hasta") and time.time() > d["hasta"] and not d.get("map")):
-            self._duos = {"estado": "buscando", "map": {}, "hasta": time.time() + 120}
+            self._duos = {"estado": "buscando", "map": {}, "hasta": time.time() + 300}   # (10 historiales: ~1 min)
             threading.Thread(target=self._buscar_duos, daemon=True).start()
             return {}
         return d.get("map", {})
@@ -514,10 +514,11 @@ class Assistant:
             if not jugadores:
                 print("[duos] el cliente no pasó los jugadores de la partida", flush=True)
                 return
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(5) as ex:      # los 10 historiales a la vez de a 5: tarda mucho menos
-                listas = dict(zip([pu for pu, _, _ in jugadores],
-                                  ex.map(lambda j: self.lcu.ids_partidas(j[0]), jugadores)))
+            # de a uno: el cliente atiende los historiales de a uno (~6 s cada uno) y si se le piden varios a la vez,
+            # los que quedan esperando se cortan y vuelven vacíos. Los que fallan se piden una vez más al final.
+            listas = {pu: self.lcu.ids_partidas(pu) for pu, _, _ in jugadores}
+            for pu in [p for p, v in listas.items() if v is None]:
+                listas[pu] = self.lcu.ids_partidas(pu)
             sin = sum(1 for v in listas.values() if v is None)
             listas = {pu: [x for x in (v or []) if x != gid] for pu, v in listas.items()}
             hist = {pu: set(v) for pu, v in listas.items()}
