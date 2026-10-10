@@ -9,7 +9,9 @@ Cómo funciona:
   marcan los momentos; los que valen la pena se cortan en un MP4 con su miniatura en highlights/clips.
 - Se puede apagar desde la solapa Highlights o Configuración (config.HIGHLIGHTS).
 Sonido: solo el del juego (audio_juego.py toma el sonido del proceso del LoL y nada más: ni Discord ni música).
-Le llega a ffmpeg por una conexión local (127.0.0.1) y se graba en los mismos tramos que la imagen.
+Se graba APARTE de la imagen, en archivos de 30 s con la hora exacta de su primera muestra (buffer/a_<ms>.pcm), y se
+junta con la imagen recién al cortar cada clip. Cuando ffmpeg recibía imagen y sonido juntos, la captura de pantalla
+se frenaba (de 30 a ~18 cuadros por segundo) y los clips se veían trabados.
 """
 import hashlib
 import json
@@ -261,64 +263,105 @@ class Highlights:
         return self.proc is not None and self.proc.poll() is None
 
     def _arrancar(self):
-        for f in self.buffer.glob("*.ts"):
+        for f in list(self.buffer.glob("*.ts")) + list(self.buffer.glob("a_*.pcm")) + list(self.buffer.glob("*.csv")):
             f.unlink(missing_ok=True)
         captura, enc = _partes(self.encoder)
-        sonido = []
-        self._puerto = None
-        if config.HIGHLIGHTS_SONIDO:
-            import socket
-            with socket.socket() as s:    # un puerto libre para que ffmpeg espere el sonido
-                s.bind(("127.0.0.1", 0))
-                self._puerto = s.getsockname()[1]
-            sonido = ["-f", "s16le", "-ar", "48000", "-ac", "2", "-thread_queue_size", "4096",
-                      "-i", f"tcp://127.0.0.1:{self._puerto}?listen=1"]
-        cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", *_entrada(captura), *sonido,
-               *(["-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "128k"] if sonido else []), *ENCODERS[enc][0],
+        # la lista de tramos dice en qué segundo de la grabación empieza cada uno: con eso se ubica el sonido justo
+        cmd = [str(self.bin), "-hide_banner", "-loglevel", "error", *_entrada(captura), *ENCODERS[enc][0],
                "-f", "segment", "-segment_time", str(TRAMO), "-reset_timestamps", "1", "-strftime", "1",
+               "-segment_list", str(self.buffer / "tramos.csv"), "-segment_list_type", "csv",
                str(self.buffer / "t_%Y%m%d%H%M%S.ts")]
         self._log = open(self.dir / "ffmpeg.log", "w", encoding="utf-8", errors="replace")
+        # prioridad normal: si el juego le saca el procesador a la captura, repite cuadros y el clip sale trabado
         self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=self._log,
-                                     creationflags=SIN_VENTANA | BAJA)
+                                     creationflags=SIN_VENTANA)
         self._arranque = time.time()
         _atar_a_lolcito(self.proc)
         self._hechos, self._pendientes, self._offset = set(), [], None
         self._partida_t = time.time()
-        if self._puerto:
-            threading.Thread(target=self._alimentar_sonido, args=(self._puerto,), daemon=True).start()
-        print(f"[highlights] grabando con {self.encoder}" + (" y el sonido del juego" if self._puerto else ""), flush=True)
+        self._cap, self._archivo_son = None, None
+        if config.HIGHLIGHTS_SONIDO:
+            threading.Thread(target=self._grabar_sonido, daemon=True).start()
+        print(f"[highlights] grabando con {self.encoder}" + (" y el sonido del juego" if config.HIGHLIGHTS_SONIDO else ""),
+              flush=True)
 
-    def _alimentar_sonido(self, puerto):
-        """Le pasa a ffmpeg el sonido del juego. Si no se puede (Windows viejo, no encontró el juego...), le pasa
-        silencio: ffmpeg igual tiene que recibir sonido para seguir grabando la imagen."""
+    # ---------- sonido (aparte de la imagen)
+    def _grabar_sonido(self):
+        """Graba el sonido del juego en archivos de 30 s (a_<ms de la primera muestra>.pcm, 48 kHz estéreo 16 bits)."""
         from . import audio_juego as aj
-        self._cap = None
-        try:
-            conexion = aj.conectar(puerto)
-        except Exception as e:  # noqa: BLE001
-            print(f"[audio] {e}", flush=True)
-            return
-        self._conexion = conexion
         pid = aj.pid_del_juego()
-        if pid:
-            self._cap = aj.CapturaJuego(pid, conexion.sendall)
-            self._cap.iniciar()
-            self._cap.hilo.join()      # sigue hasta que se para la grabación (o falla)
-            if not self._cap.error or not self.grabando:
-                return
-            print(f"[audio] sin sonido del juego: {self._cap.error}", flush=True)
-        else:
-            print("[audio] no encontré el proceso del juego: grabo sin sonido", flush=True)
-        inicio, escritos = time.perf_counter(), 0    # silencio a ritmo de reloj
-        try:
-            while self.grabando:
-                deberia = int((time.perf_counter() - inicio) * aj.TASA)
-                if deberia > escritos:
-                    conexion.sendall(bytes((deberia - escritos) * aj.CUADRO))
-                    escritos = deberia
-                time.sleep(0.05)
-        except OSError:
+        if not pid:
+            print("[audio] no encontré el proceso del juego: los clips van sin sonido", flush=True)
+            return
+        try:   # este hilo con prioridad alta: si se atrasa, se pierde sonido (la imagen no se entera)
+            import ctypes
+            k32 = ctypes.windll.kernel32
+            k32.GetCurrentThread.restype = ctypes.c_void_p
+            k32.SetThreadPriority.argtypes = [ctypes.c_void_p, ctypes.c_int]
+            k32.SetThreadPriority(k32.GetCurrentThread(), 2)   # THREAD_PRIORITY_HIGHEST
+        except Exception:  # noqa: BLE001
             pass
+        self._son_inicio, self._son_escritos = time.time(), 0
+        self._cap = aj.CapturaJuego(pid, self._escribir_sonido)
+        self._cap._correr()            # en este mismo hilo, hasta que se para la grabación
+        if self._cap.error:
+            print(f"[audio] sin sonido del juego: {self._cap.error}", flush=True)
+        self._cerrar_sonido()
+
+    def _escribir_sonido(self, datos):
+        from . import audio_juego as aj
+        por_archivo = 30 * aj.TASA * aj.CUADRO
+        if self._archivo_son is None or self._archivo_son.tell() >= por_archivo:
+            self._cerrar_sonido()
+            ms = int((self._son_inicio + self._son_escritos / (aj.TASA * aj.CUADRO)) * 1000)
+            self._archivo_son = open(self.buffer / f"a_{ms}.pcm", "wb")
+        self._archivo_son.write(datos)
+        self._son_escritos += len(datos)
+
+    def _cerrar_sonido(self):
+        try:
+            if self._archivo_son:
+                self._archivo_son.close()
+        except Exception:  # noqa: BLE001
+            pass
+        self._archivo_son = None
+
+    def _sonido_entre(self, desde, segundos):
+        """Los bytes de sonido de [desde, desde+segundos] (hora de pared), con silencio donde no hay. None si no hay nada."""
+        from . import audio_juego as aj
+        por_seg = aj.TASA * aj.CUADRO
+        total = int(segundos * aj.TASA) * aj.CUADRO
+        out, alguno = bytearray(total), False
+        for f in self.buffer.glob("a_*.pcm"):
+            try:
+                ini = int(f.stem[2:]) / 1000
+                datos = f.read_bytes()
+            except (ValueError, OSError):
+                continue
+            a, b = max(desde, ini), min(desde + segundos, ini + len(datos) / por_seg)
+            if b <= a:
+                continue
+            o = int((a - ini) * aj.TASA) * aj.CUADRO
+            d = int((a - desde) * aj.TASA) * aj.CUADRO
+            n = min(int((b - a) * aj.TASA) * aj.CUADRO, len(datos) - o, total - d)
+            out[d:d + n] = datos[o:o + n]
+            alguno = True
+        return bytes(out) if alguno else None
+
+    def _inicio_real(self, tramos):
+        """En qué hora exacta empieza el primer tramo (para que el sonido coincida con la imagen). La lista de ffmpeg
+        dice el segundo de la grabación en que empieza cada tramo; la hora en que se creó cada archivo dice dónde cae
+        el segundo 0. Sin la lista, la hora del nombre del archivo (con un margen de hasta 1 s)."""
+        try:
+            filas = [x.split(",") for x in (self.buffer / "tramos.csv").read_text(encoding="utf-8").split()]
+            inicios = {fila[0]: float(fila[1]) for fila in filas if len(fila) >= 3}
+            ceros = [(self.buffer / n).stat().st_ctime - s for n, s in inicios.items() if (self.buffer / n).exists()]
+            if ceros and tramos[0][1].name in inicios:
+                ceros.sort()
+                return ceros[len(ceros) // 2] + inicios[tramos[0][1].name]
+        except (OSError, ValueError):
+            pass
+        return tramos[0][0]
 
     def _se_cayo(self):
         """ffmpeg se cerró solo en plena partida: se anota por qué y se pasa a la próxima forma de grabar."""
@@ -347,7 +390,7 @@ class Highlights:
         if not self.proc:
             return
         if getattr(self, "_cap", None):
-            self._cap.parar()
+            self._cap.parar()           # (el hilo del sonido cierra su archivo solo)
         try:
             self.proc.stdin.write(b"q")
             self.proc.stdin.flush()
@@ -355,10 +398,6 @@ class Highlights:
         except Exception:  # noqa: BLE001
             self.proc.kill()
         self.proc = None
-        try:
-            self._conexion.close()
-        except Exception:  # noqa: BLE001
-            pass
         try:
             self._log.close()
         except Exception:  # noqa: BLE001
@@ -382,6 +421,12 @@ class Highlights:
                     f.unlink()
                 except OSError:
                     pass
+        for f in self.buffer.glob("a_*.pcm"):   # sonido: también se guardan solo los últimos ~100 s
+            try:
+                if int(f.stem[2:]) / 1000 + 30 < viejo - 30 and (not self._archivo_son or self._archivo_son.name != str(f)):
+                    f.unlink()
+            except (ValueError, OSError):
+                pass
 
     # ---------- momentos
     def _vida_en(self, t):
@@ -542,8 +587,16 @@ class Highlights:
             lista = self.dir / "lista.txt"
             lista.write_text("".join(f"file '{f.as_posix()}'\n" for _, f in tramos), encoding="utf-8")
             mp4, jpg = self.clips / f"{nombre}.mp4", self.clips / f"{nombre}.jpg"
+            # el sonido de esos mismos segundos (grabado aparte), si hay
+            sonido = self._sonido_entre(self._inicio_real(tramos), len(tramos) * TRAMO + 1)
+            entrada_son = []
+            if sonido:
+                corte = self.buffer / "corte.pcm"
+                corte.write_bytes(sonido)
+                entrada_son = ["-f", "s16le", "-ar", "48000", "-ac", "2", "-i", str(corte),
+                               "-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "128k", "-shortest"]
             r = subprocess.run([str(self.bin), "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
-                                "-i", str(lista), "-c", "copy", "-movflags", "+faststart", str(mp4)],
+                                "-i", str(lista), *entrada_son, "-c:v", "copy", "-movflags", "+faststart", str(mp4)],
                                capture_output=True, creationflags=SIN_VENTANA | BAJA, timeout=120)
             if r.returncode != 0 or not mp4.exists():
                 print(f"[highlights] no pude cortar el clip: {r.stderr[-300:]!r}", flush=True)
